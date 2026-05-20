@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./tokens": "./src/tokens.ts",
     "./job-categories": "./src/job-categories.ts",
-    "./schemas": "./src/schemas.ts"
+    "./schemas": "./src/schemas.ts",
+    "./email": "./src/email/index.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -19,7 +20,22 @@
   "dependencies": {
     "zod": "^3.24.1"
   },
+  "peerDependencies": {
+    "@react-email/components": "*",
+    "react": "*"
+  },
+  "peerDependenciesMeta": {
+    "@react-email/components": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@react-email/components": "^0.0.31",
+    "@types/react": "^18.3.12",
+    "react": "^18.3.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

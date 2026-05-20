@@ -10,11 +10,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-email/components": "^0.0.31",
+    "@react-email/render": "^1.0.3",
     "@theone/db": "workspace:*",
     "@theone/shared": "workspace:*",
     "next": "^14.2.18",
+    "posthog-js": "^1.194.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "resend": "^4.0.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

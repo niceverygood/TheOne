@@ -38,7 +38,54 @@ pnpm typecheck && pnpm lint
 
 ## 로드맵
 
-Phase 0 (셋업) ✅ → 1 (LP+웨이팅리스트, 검증 게이트) → 2 (인증 SOP/개인정보) → 3 (DB+심사콘솔) → 4 (모바일) → 5 (결제+매칭+채팅) → 6 (출시). 상세는 `CLAUDE.md` §7.
+Phase 0 (셋업) ✅ → 1 (LP+웨이팅리스트, 검증 게이트) ✅ → 2 (인증 SOP/개인정보) → 3 (DB+심사콘솔) → 4 (모바일) → 5 (결제+매칭+채팅) → 6 (출시). 상세는 `CLAUDE.md` §7.
+
+---
+
+## 부록 — Phase 1 외부 키 발급 절차
+
+`.env` 의 빈 값들을 아래 절차로 채운다. 키가 없어도 빌드·로컬 구동은 되며, 해당 기능만 비활성(no-op)된다.
+
+### 1. Supabase (Postgres)
+1. <https://supabase.com> 프로젝트 생성 (Region: Northeast Asia / Seoul `icn1` 권장)
+2. Settings → Database → Connection string
+   - `DATABASE_URL`: **Transaction Pooler** (포트 6543, 끝에 `?pgbouncer=true&connection_limit=1`)
+   - `DIRECT_URL`: **Direct connection** (포트 5432) — 마이그레이션용
+3. 마이그레이션 적용:
+   ```bash
+   pnpm --filter @theone/db exec prisma migrate deploy
+   ```
+
+### 2. Resend (확인 메일)
+1. <https://resend.com> 가입 → API Keys → 키 발급 → `RESEND_API_KEY`
+2. Domains → 발신 도메인 추가 → 안내된 **DNS TXT/MX 레코드 등록** (반영 ~30분)
+3. 인증 완료 후 `RESEND_FROM="THE ONE <noreply@도메인>"`
+
+### 3. Cloudflare Turnstile (봇 차단)
+1. Cloudflare 대시보드 → Turnstile → 위젯 추가 (도메인 등록)
+2. **Site Key** → `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, **Secret Key** → `TURNSTILE_SECRET_KEY`
+3. 무료티어 월 100만 호출. 키 미설정 시 검증 자동 비활성(개발 편의).
+
+### 4. PostHog (분석)
+1. <https://posthog.com> 프로젝트 → Project API Key → `NEXT_PUBLIC_POSTHOG_KEY`
+2. `NEXT_PUBLIC_POSTHOG_HOST` (기본 `https://us.i.posthog.com`)
+3. 발화 이벤트: `waitlist_form_view` / `_submit_attempt` / `_submit_success` / `_submit_fail`(reason)
+
+### 5. GA4 + Microsoft Clarity
+- GA4: 측정 ID(`G-XXXX`) → `NEXT_PUBLIC_GA4_ID`
+- Clarity: 프로젝트 ID → `NEXT_PUBLIC_CLARITY_ID`
+
+### 6. Sentry (선택 · Phase 1.5)
+현재는 `apps/web/instrumentation.ts` 가드만 존재. 활성화 시:
+```bash
+pnpm --filter @theone/web add @sentry/nextjs
+```
+이후 `sentry.client/server.config.ts` 추가 + `NEXT_PUBLIC_SENTRY_DSN` 설정.
+
+### 7. 배포 (Vercel)
+- web / admin 각각 별도 Vercel 프로젝트로 import. Root Directory를 `apps/web` / `apps/admin` 으로 지정 (`vercel.json` 포함).
+- 환경변수는 각 프로젝트 Settings에 등록. admin은 `ADMIN_BASIC_AUTH_*` 필수.
+- Region: `icn1`(서울).
 
 ## 라이선스
 

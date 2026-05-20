@@ -1,21 +1,52 @@
 'use client';
 
 import { useEffect } from 'react';
+import Script from 'next/script';
+import posthog from 'posthog-js';
+
+const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID;
+const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
 
 /**
- * PostHog / GA4 / Clarity 자리만 잡아둔 컴포넌트 (Phase 0).
- * DSN/키는 .env (NEXT_PUBLIC_*) 로 주입. 값이 비어 있으면 no-op.
- * 정식 계측 연결은 Phase 1 (LP 검증 게이트)에서.
+ * 계측 초기화. 키가 없으면 각각 no-op.
+ * - PostHog: 자동 pageview + waitlist_* 이벤트(폼에서 capture)
+ * - GA4 / Microsoft Clarity: 스니펫만
  */
 export function AnalyticsProvider() {
   useEffect(() => {
-    const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    if (posthogKey) {
-      // TODO(Phase 1): posthog-js init
-      // import('posthog-js').then(({ default: posthog }) => posthog.init(posthogKey, {...}))
+    if (POSTHOG_KEY && !posthog.__loaded) {
+      posthog.init(POSTHOG_KEY, {
+        api_host: POSTHOG_HOST,
+        capture_pageview: true,
+        capture_pageleave: true,
+        person_profiles: 'identified_only',
+      });
     }
-    // TODO(Phase 1): GA4 (NEXT_PUBLIC_GA4_ID), Microsoft Clarity (NEXT_PUBLIC_CLARITY_ID)
   }, []);
 
-  return null;
+  return (
+    <>
+      {/* GA4 */}
+      {GA4_ID && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga4-init" strategy="afterInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA4_ID}');`}
+          </Script>
+        </>
+      )}
+
+      {/* Microsoft Clarity */}
+      {CLARITY_ID && (
+        <Script id="ms-clarity" strategy="afterInteractive">
+          {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");`}
+        </Script>
+      )}
+    </>
+  );
 }

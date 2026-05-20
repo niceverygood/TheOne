@@ -18,11 +18,23 @@ const config: Config = {
         hair: { light: '#EDE8DE', dark: '#1F222B' },
       },
       fontFamily: {
-        'serif-kr': ["'Noto Serif KR'", 'serif'],
-        'serif-en': ["'Playfair Display'", 'serif'],
-        'sans-kr': ["'Pretendard'", '-apple-system', 'system-ui', 'sans-serif'],
-        'sans-en': ["'Inter'", '-apple-system', 'system-ui', 'sans-serif'],
+        'serif-kr': ['var(--font-serif-kr)', "'Noto Serif KR'", 'serif'],
+        'sans-kr': [
+          'var(--font-sans-kr)',
+          "'Pretendard'",
+          '-apple-system',
+          'system-ui',
+          'sans-serif',
+        ],
+        'sans-en': ['var(--font-sans-en)', "'Inter'", 'system-ui', 'sans-serif'],
         mono: ["'JetBrains Mono'", "'SF Mono'", 'ui-monospace', 'monospace'],
+      },
+      letterSpacing: {
+        kr: '-0.02em',
+        en: '-0.01em',
+      },
+      maxWidth: {
+        frame: '520px',
       },
       borderRadius: {
         card: '2px',

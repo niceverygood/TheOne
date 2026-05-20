@@ -18,18 +18,28 @@ enum Gender {
 }
 
 /// Phase 1 — 사전등록(웨이팅리스트).
-/// 운영상 Supabase 무료티어를 우선 쓰되, 동일 스키마를 여기에 미러링해 Phase 3 이관을 대비.
+/// 운영상 Supabase Postgres를 사용. 동일 스키마를 여기에 미러링해 Phase 3 이관을 대비.
 model Waitlist {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  /// 등록 순번 (성공 화면 "#142번째" + 공유 초대코드 베이스)
+  seq          Int       @unique @default(autoincrement())
+  email        String    @unique
   gender       Gender
-  jobCategory  String
-  referralCode String?
-  utmSource    String?
-  utmMedium    String?
-  utmCampaign  String?
-  createdAt    DateTime @default(now())
+  jobCategory  String    @map("job_category")
+  referralCode String?   @map("referral_code")
+  utmSource    String?   @map("utm_source")
+  utmMedium    String?   @map("utm_medium")
+  utmCampaign  String?   @map("utm_campaign")
+  utmTerm      String?   @map("utm_term")
+  utmContent   String?   @map("utm_content")
+  /// 분석용 메타 — CSV export 시 제외
+  userAgent    String?   @map("user_agent")
+  ipHash       String?   @map("ip_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  /// 확인 메일 클릭 시각 (오픈/확인율 추적)
+  confirmedAt  DateTime? @map("confirmed_at")
 
   @@index([createdAt])
   @@index([jobCategory])
+  @@map("waitlist")
 }
