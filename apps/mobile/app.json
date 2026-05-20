@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "THE ONE",
+    "slug": "theone",
+    "scheme": "theone",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "kr.theone.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "kr.theone.app"
+    },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* tokens.ts 미러 — hairline / radius / 자간 */
+  --ink: #0f1014;
+  --ivory: #faf7f2;
+  --champagne: #b8956a;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.02em;
+}
+
+body {
+  background: var(--ivory);
+  color: #1a1f2e;
+  line-height: 1.55;
+}

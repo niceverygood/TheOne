@@ -1,2 +1,48 @@
+# OS
 .DS_Store
+
+# Editor / harness
 .claude/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Expo / React Native
+apps/mobile/.expo/
+apps/mobile/web-build/
+*.orig.*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test / coverage
+coverage/
+
+# Prisma
+packages/db/prisma/*.db
+packages/db/prisma/migrations/dev.db*
+
+# Sentry
+.sentryclirc
+
+# Next.js generated
+next-env.d.ts

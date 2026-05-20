@@ -1,0 +1,25 @@
+{
+  "name": "@theone/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@theone/shared": "workspace:*",
+    "expo": "~51.0.0",
+    "expo-font": "~12.0.0",
+    "expo-router": "~3.5.0",
+    "expo-status-bar": "~1.12.0",
+    "react": "18.2.0",
+    "react-native": "0.74.5"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.79",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,100 @@
+# CLAUDE.md — THE ONE (더원)
+
+> Claude Code 작업 시 이 파일을 먼저 읽는다. 제품 컨셉·디자인 원칙·금기·인프라가 모두 여기 있다.
+
+## 0. 운영 주체
+
+**주식회사 바틀**의 정식 신규 제품. 별도 법인 아님 — 바틀 명의로 통신판매업 신고·결제·약관을 처리한다.
+
+## 1. 제품 컨셉
+
+- **한 줄**: "인생에 한 번뿐인 매칭. 결혼정보회사가 디지털로 옮긴다면."
+- **타겟**: 28~42세 전문직 · 고소득 미혼
+- **핵심 차별점**: 가입 심사제(통과율 23%) + **4종 인증**(학력·재산·차량·부동산) + 무한 스와이프 금지(매일 1명 큐레이션) + 골드스푼식 만남 신청제
+- **비즈니스 모델**: 가입 심사 + 크레딧 충전제 + 추가 인증제
+
+### 인증 4종 (더원의 본질)
+| 인증 | SLA | 방식 |
+|---|---|---|
+| 학력 | 24h | 정부24 학위증명서 PDF → 운영자 검토 → (추후 OCR) |
+| 재산 | 24h | 트랙 A 잔고증명서 PDF / 트랙 B CODEF 자산조회 동의 |
+| 차량 | 24h | 자동차등록증 + 본인명의 일치 |
+| 부동산 | 24h | 인터넷등기소 등기부등본 + 본인 소유 확인 |
+
+- 인증 유효기간 **1년**, 만료 30일 전 갱신 푸시.
+- 서류는 **S3 + KMS 암호화**, 검토 완료 **30일 후 자동 파기**. 매칭 상대에게는 **뱃지만** 노출.
+- 운영 절차의 진실의 원천: `docs/verification-sop.md` (Phase 2). 코드는 이 문서를 따른다.
+
+## 2. 디자인 원칙
+
+진실의 원천: **`docs/reference/theone-standalone.html`** (24개 화면 목업) + `packages/shared/src/tokens.ts`.
+
+- **컬러**: 잉크블랙 `#0F1014` / 본문 `#1A1F2E` / 아이보리 `#FAF7F2` / 뮤트 샴페인 `#B8956A` / 검증 sage `#6B8E7F` / 거절 terra `#A85547`
+- **타이포**: 헤드라인 **Noto Serif KR**, 영문 보조 **Playfair Display(italic)**, 본문 **Pretendard**, 영문 본문 Inter, 캡션 JetBrains Mono. 행간 1.55 / 한글 자간 -2% / 영문 -1%
+- **레이아웃**: 모바일 375×812 기준, 좌우 패딩 24, 간격 8/16/24/40/64
+- **형태**: 카드 radius **2**(날카롭게), **그림자 없음** — 구분은 **hairline border**(라이트 `#EDE8DE` / 다크 `#1F222B`)
+
+## 3. 금기 (절대 금지)
+
+- ❌ 골드 그라데이션 · 반짝임 · 별 · 하트 강조
+- ❌ 화면에 "프리미엄" 단어 노출 (티 내지 말고 보여줄 것)
+- ❌ 핑크 · 코랄 · 바이올렛 등 일반 데이팅앱 컬러
+- ❌ 무한 스와이프 · 카드 덱 · 좋아요 카운터
+- ❌ 외부 placeholder 이미지(Unsplash 등) / 가짜 AI 일러스트 — 반드시 자체 SVG placeholder
+- ❌ 카드 radius 12 이상, 박스 그림자
+
+## 4. 기술 스택 (모노레포)
+
+`pnpm` workspace + `turborepo`.
+
+```
+apps/web      Next.js 14 App Router — 랜딩 + 웨이팅리스트 (Phase 1)
+apps/admin    Next.js — 운영자 인증심사 콘솔 (Basic Auth → Phase 3 권한 분리)
+apps/mobile   Expo SDK 51 + RN + Expo Router — 본 앱 (Phase 4)
+packages/shared  Zod 스키마, 타입, 디자인 토큰, 직업 카테고리(남11/여13)
+packages/db      Prisma + PostgreSQL 16
+packages/auth    인증 검증 로직 (CODEF 등 보비 인프라 재사용)
+```
+
+명령:
+```bash
+pnpm install
+pnpm dev          # 전체 turbo dev
+pnpm --filter @theone/web dev
+pnpm db:generate  # prisma generate
+pnpm typecheck && pnpm lint
+```
+
+## 5. 활용 가능한 기존 인프라 (보비 BOBI 재사용 — 재작성 금지)
+
+| 용도 | 인프라 | 비고 |
+|---|---|---|
+| 재산 인증(트랙 B) | **CODEF** 자산조회 | `packages/auth` 에서 보비 코드 이식 |
+| 결제 | **PortOne v2** + KG이니시스 | Phase 5 |
+| 정기결제 | **카카오페이 CID `CT97630018`** | 멤버십 v1.1 |
+| 인증 결과 통지 | **카카오 알림톡** | 승인/반려 푸시 |
+
+## 6. 관측 / 분석
+
+- **Sentry**(에러) — `apps/web/instrumentation.ts` 자리만 잡힘, 키는 `NEXT_PUBLIC_SENTRY_DSN`
+- **PostHog**(분석) — `apps/web/components/analytics-provider.tsx`, `NEXT_PUBLIC_POSTHOG_KEY`
+- Phase 1 LP: GA4 + Microsoft Clarity 추가
+
+## 7. 단계별 로드맵
+
+| Phase | 내용 | 게이트 |
+|---|---|---|
+| 0 | 모노레포 셋업 + CLAUDE.md ✅ | — |
+| 1 | LP + 웨이팅리스트 | **등록자 200명 미만이면 컨셉 재고** |
+| 2 | 인증 SOP + 개인정보 설계 (docs, 변호사 검토 전 외부 비공개) | 1과 병행 |
+| 3 | DB 스키마 + 인증 백엔드 + 심사 콘솔 | |
+| 4 | 모바일 24개 화면 이식 | PR마다 목업/RN 스크린샷 대조 |
+| 5 | 결제 + 매칭 v1(룰베이스) + 채팅 v1 | |
+| 6 | 출시 준비 (스토어/법무/콜드스타트) | |
+
+## 8. 작업 규칙
+
+- **각 Phase 종료 시 `CHANGELOG.md`에 결과 요약**을 남긴다.
+- Phase 2 docs(약관·개인정보처리방침)는 변호사 검토 완료 시점에 `v1.0` 태깅, 그 전 외부 노출 금지.
+- 디자인 변경 시 `tokens.ts` ↔ 목업 ↔ Tailwind 설정을 항상 동기화.
+- 환경변수는 `.env.example`에 자리만, 실제 값은 절대 커밋 금지.

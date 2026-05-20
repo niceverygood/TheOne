@@ -1,0 +1,35 @@
+// THE ONE · Prisma 스키마
+// Phase 0: 골격 + 웨이팅리스트만. 도메인 전체 모델(User/Verification*/Match/Credit 등)은
+// Phase 3에서 docs/verification-sop.md 를 코드로 옮기며 확장한다.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Gender {
+  male
+  female
+}
+
+/// Phase 1 — 사전등록(웨이팅리스트).
+/// 운영상 Supabase 무료티어를 우선 쓰되, 동일 스키마를 여기에 미러링해 Phase 3 이관을 대비.
+model Waitlist {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  gender       Gender
+  jobCategory  String
+  referralCode String?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([jobCategory])
+}
