@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THE ONE · 더원 — 디자인 시스템</title>
+
+  <!-- 폰트 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+
+  <!-- 디자인 시스템 -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- React 18 + Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- 1. 공통 컴포넌트 (의존성 먼저) -->
+  <script type="text/babel" src="components/phone-frame.jsx"></script>
+  <script type="text/babel" src="components/design-canvas.jsx"></script>
+  <script type="text/babel" src="components/app-shell.jsx"></script>
+  <script type="text/babel" src="components/verification-lib.jsx"></script>
+
+  <!-- 2. 진입 -->
+  <script type="text/babel" src="screens/entry/splash.jsx"></script>
+
+  <!-- 3. 매칭 -->
+  <script type="text/babel" src="screens/matching/curation.jsx"></script>
+  <script type="text/babel" src="screens/matching/profile.jsx"></script>
+  <script type="text/babel" src="screens/matching/interest-letter.jsx"></script>
+  <script type="text/babel" src="screens/matching/inbox.jsx"></script>
+  <script type="text/babel" src="screens/matching/chat.jsx"></script>
+
+  <!-- 4. 경제 -->
+  <script type="text/babel" src="screens/economy/credits.jsx"></script>
+  <script type="text/babel" src="screens/economy/chemistry.jsx"></script>
+
+  <!-- 5. 가입 심사 -->
+  <script type="text/babel" src="screens/signup/intro.jsx"></script>
+  <script type="text/babel" src="screens/signup/step01-identity.jsx"></script>
+  <script type="text/babel" src="screens/signup/step02-job-male.jsx"></script>
+  <script type="text/babel" src="screens/signup/step02-job-female.jsx"></script>
+  <script type="text/babel" src="screens/signup/step03-education.jsx"></script>
+  <script type="text/babel" src="screens/signup/step04-photos.jsx"></script>
+  <script type="text/babel" src="screens/signup/step05-survey.jsx"></script>
+  <script type="text/babel" src="screens/signup/step06-referral.jsx"></script>
+  <script type="text/babel" src="screens/signup/complete.jsx"></script>
+
+  <!-- 6. 안전 -->
+  <script type="text/babel" src="screens/safety/privacy.jsx"></script>
+
+  <!-- 7. 추가 인증 -->
+  <script type="text/babel" src="screens/verification/_lib.jsx"></script>
+  <script type="text/babel" src="screens/verification/hub.jsx"></script>
+  <script type="text/babel" src="screens/verification/education.jsx"></script>
+  <script type="text/babel" src="screens/verification/wealth.jsx"></script>
+  <script type="text/babel" src="screens/verification/vehicle.jsx"></script>
+  <script type="text/babel" src="screens/verification/realestate.jsx"></script>
+  <script type="text/babel" src="screens/verification/reviewing.jsx"></script>
+
+  <!-- 8. 캔버스 조립 -->
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
