@@ -19,7 +19,14 @@ packages/
   auth     인증 검증 로직 (CODEF 등 보비 재사용)
 docs/
   reference/   목업 HTML + 원본 프롬프트 (디자인 SoT)
+  verification-sop.md      인증 4종 운영 표준 절차 (수집·검증·SLA·권한·반려)
+  privacy-design.md        개인정보 설계 ★ (처분사례·수집표·파기·안전성조치·침해대응)
+  privacy-policy-v0.1.md   개인정보처리방침 초안 (변호사 검토 전)
+  trust-safety.md          신뢰·안전 (사진검증·신고/강퇴·마스킹·미성년차단)
+  legal-checklist.md       출시 전 법무 체크리스트 (인허가·약관·법령·D-7)
 ```
+
+> ⚠️ `docs/` 정책 문서(reference 제외)는 **변호사 검토(v1.0) 전 초안**입니다. 외부 노출·실제 처리방침 사용 금지.
 
 ## 시작하기
 
