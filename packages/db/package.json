@@ -20,7 +20,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "^6.1.0",
+    "@theone/shared": "workspace:*"
   },
   "devDependencies": {
     "prisma": "^6.1.0",

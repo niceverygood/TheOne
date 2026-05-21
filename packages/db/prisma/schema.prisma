@@ -142,6 +142,11 @@ model User {
   reportsRecv  ReportLog[]               @relation("reported")
   blocksMade   BlockList[]               @relation("blocker")
   blocksRecv   BlockList[]               @relation("blocked")
+  curationsFor CurationLog[]             @relation("curationViewer")
+  curationsAs  CurationLog[]             @relation("curationCandidate")
+  orders       Order[]
+  /// 누적 정지 횟수 (신고 3회 자동 일시정지 — trust-safety §3-2)
+  suspendCount Int                       @default(0) @map("suspend_count")
 
   @@index([status])
   @@map("users")
@@ -354,4 +359,65 @@ model BlockList {
 
   @@unique([blockerId, blockedId])
   @@map("block_lists")
+}
+
+// ============================================================
+// 매칭 큐레이션 로그 / 결제 (Phase 5)
+// ============================================================
+
+enum CurationAction {
+  sent // 발송됨(노출)
+  viewed
+  passed
+  liked
+  superliked
+}
+
+/// 매일 1명 큐레이션 발송·반응 로그 (ML 학습 데이터 축적)
+model CurationLog {
+  id          String         @id @default(cuid())
+  userId      String         @map("user_id")
+  candidateId String         @map("candidate_id")
+  user        User           @relation("curationViewer", fields: [userId], references: [id], onDelete: Cascade)
+  candidate   User           @relation("curationCandidate", fields: [candidateId], references: [id], onDelete: Cascade)
+  action      CurationAction @default(sent)
+  /// 매칭 점수(룰베이스) 스냅샷
+  score       Int?
+  sentAt      DateTime       @default(now()) @map("sent_at")
+  viewedAt    DateTime?      @map("viewed_at")
+
+  @@unique([userId, candidateId, sentAt])
+  @@index([userId, sentAt])
+  @@map("curation_logs")
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  cancelled
+  refunded
+  partial_refunded
+}
+
+/// 크레딧 충전 주문 (PortOne v2)
+model Order {
+  id            String        @id @default(cuid())
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId     String        @map("package_id")
+  amountWon     Int           @map("amount_won")
+  credits       Int // 보너스 포함 지급 크레딧
+  baseCredits   Int           @map("base_credits") // 환불 단가 계산용(보너스 제외)
+  status        PaymentStatus @default(pending)
+  /// PortOne 결제 식별자
+  paymentId     String?       @map("payment_id")
+  provider      String        @default("portone")
+  refundedWon   Int           @default(0) @map("refunded_won")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  paidAt        DateTime?     @map("paid_at")
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("orders")
 }

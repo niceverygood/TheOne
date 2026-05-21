@@ -59,7 +59,7 @@ async function main() {
             photos: [`seed/portrait_${i}.svg`],
             bio: '시드 더미 자기소개입니다.',
             jobDetail: '시드 직무',
-            region: pick(['서초', '강남', '한남', '판교', '분당'], i),
+            region: pick(['서울', '서울', '경기', '인천', '부산'], i),
           },
         },
         credit: { create: { balance: 100 + i } },
@@ -133,7 +133,46 @@ async function main() {
     }
   }
 
-  console.log('seed done: 3 operators, 50 users, 20 applications');
+  // 4) Trust & Safety 데모: 신고 (한 명에게 3건 → 자동정지 대상)
+  const reportCats = ['fraud', 'harassment', 'external_contact', 'abuse', 'no_show'] as const;
+  const heavy = users[7]!; // 집중 신고 대상
+  for (let k = 0; k < 3; k++) {
+    await prisma.reportLog.create({
+      data: {
+        reporterId: users[10 + k]!.id,
+        reportedId: heavy.id,
+        category: reportCats[k]!,
+        detail: '시드 신고 사유',
+      },
+    });
+  }
+  // 분산 신고 2건
+  await prisma.reportLog.create({
+    data: { reporterId: users[20]!.id, reportedId: users[8]!.id, category: 'abuse' },
+  });
+  await prisma.reportLog.create({
+    data: { reporterId: users[21]!.id, reportedId: users[9]!.id, category: 'no_show' },
+  });
+
+  // 5) 결제 데모: 충전 주문 1건 paid
+  const buyer = users[0]!;
+  const order = await prisma.order.create({
+    data: {
+      userId: buyer.id,
+      packageId: 'c50',
+      amountWon: 50000,
+      credits: 280,
+      baseCredits: 260,
+      status: 'paid',
+      paymentId: 'seed-pay-001',
+      paidAt: new Date(),
+    },
+  });
+  await prisma.creditTransaction.create({
+    data: { userId: buyer.id, delta: 280, reason: 'charge', refId: order.id },
+  });
+
+  console.log('seed done: 3 operators, 50 users, 20 applications, 5 reports, 1 paid order');
 }
 
 main()

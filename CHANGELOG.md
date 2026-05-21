@@ -2,6 +2,35 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 5 — 결제 + 매칭 v1 + 채팅 v1 + Trust & Safety ✅ (백엔드)
+
+매칭 엔진·결제·채팅·신뢰안전을 백엔드 + 어드민 중심으로 구현. 도메인 로직은 단위테스트로 검증.
+
+**packages/shared (순수 로직 + vitest 13 통과)**
+- `matching.ts`: 광역시도 인접 그래프, 나이 ±5, 뱃지 겹침 점수, `pickTodayCuration`(가중치 룰베이스).
+- `masking.ts`: 외부 연락처(휴대폰/카톡/인스타/텔레그램/라인/이메일) 자동 마스킹 + 전각·연결부 우회 대응.
+- `credits.ts`: 충전 패키지(3/5/10만원), 신청서 비용(20/50C), `refundableAmount`(7일·미사용분 환불 정책 코드화).
+
+**packages/db**
+- 스키마 확장: `CurationLog`(발송·반응 로그, ML 데이터), `Order`(PortOne 충전) + enum, User.suspendCount. 마이그레이션 `20260522000000_phase5_matching_payment`.
+- 연산: `getTodayCuration`/`runDailyCuration`(매칭+로그), `createOrder`/`markOrderPaid`(멱등)/`refundOrder`, `sendMessage`(마스킹)/`getMessages`(폴링), `createReport`(누적 3회 자동정지)/`moderateUser`/`listReportQueue`.
+
+**apps/web**
+- 결제 API: `/api/payment/create`·`/webhook`(금액 재검증+적립, 멱등)·`/refund`. PortOne v2 검증/취소(`lib/portone.ts`, 키 없으면 mock). 카카오 정기결제 CID 자리.
+- `/api/cron/curation`(매일 자정 KST, `CRON_SECRET` 보호) + `vercel.json` crons.
+
+**apps/admin**
+- `/reports` Trust & Safety: 신고 누적순 큐, 카테고리별 사유, 일시정지/영구강퇴/복구(reviewer+ 게이트, AccessLog), 3건 임계 빨강 표시.
+
+**검증**: shared vitest 13/13 · web/admin `next build` OK · 로컬 DB 재시드(신고 5건·결제 1건) · `/reports` 브라우저 렌더 확인.
+
+**미해결 / 후속**
+- 모바일 UI(채팅 폴링 화면·크레딧 충전·매칭함·신청서)는 Phase 4 백로그와 함께 연동.
+- 실시간 채팅(Pusher/Ably)·ML 매칭(데이터 1만 건 후)·PortOne 실계약/웹훅 서명검증·사진검증 liveness(v1.1).
+- 결제 실패/취소/부분환불 E2E 테스트 매트릭스(실 PortOne 연동 후).
+
+---
+
 ## Phase 4 — 모바일 앱 (Expo) 착수 ✅ (진행 중)
 
 `apps/mobile`을 Expo SDK 51 + React Native + Expo Router로 본격 구현 시작. 목업 24개 중 1순위(가입 플로우) + 톤세터를 이식하고 **Expo Web으로 브라우저 미리보기**까지 동작.

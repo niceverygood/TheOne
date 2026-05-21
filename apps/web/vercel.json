@@ -3,5 +3,6 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && pnpm --filter @theone/web build",
   "installCommand": "cd ../.. && pnpm install",
-  "regions": ["icn1"]
+  "regions": ["icn1"],
+  "crons": [{ "path": "/api/cron/curation", "schedule": "0 15 * * *" }]
 }
