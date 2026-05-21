@@ -1,6 +1,6 @@
 // THE ONE · Prisma 스키마
-// Phase 0: 골격 + 웨이팅리스트만. 도메인 전체 모델(User/Verification*/Match/Credit 등)은
-// Phase 3에서 docs/verification-sop.md 를 코드로 옮기며 확장한다.
+// Phase 3: docs/verification-sop.md / privacy-design.md 를 코드로 옮긴 도메인 모델.
+// Match/Conversation/Message/Credit 등 매칭·경제 모델은 스키마만 정의(로직은 Phase 5).
 
 generator client {
   provider = "prisma-client-js"
@@ -12,16 +12,86 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ============================================================
+// Enums
+// ============================================================
+
 enum Gender {
   male
   female
 }
 
+enum UserStatus {
+  pending // 가입 심사 대기
+  active // 활동
+  suspended // 정지
+  withdrawn // 탈퇴
+}
+
+enum VerificationType {
+  education // 학력
+  wealth // 재산
+  vehicle // 차량
+  realestate // 부동산
+}
+
+enum VerificationStatus {
+  submitted // 제출됨(검토 시작 전)
+  reviewing // 검토 중
+  approved // 승인
+  rejected // 반려(재제출 가능)
+}
+
+/// 운영자 권한 3단계 (verification-sop §5-1)
+enum OperatorRole {
+  viewer // 메타만
+  reviewer // 문서 열람·승인·반려
+  admin // 정책·계정·강제파기
+}
+
+/// AccessLog 액션 (privacy-design §2-4)
+enum AccessAction {
+  view_meta
+  view_document
+  approve
+  reject
+  export
+  purge
+}
+
+enum MatchStatus {
+  pending
+  accepted
+  declined
+  ended
+}
+
+enum CreditReason {
+  charge // 충전
+  letter // 만남 신청서
+  super_letter // 슈퍼 신청서
+  refund // 환불
+  bonus // 보너스
+}
+
+enum ReportCategory {
+  fraud // 사기·금전요구
+  harassment // 성희롱·외설
+  external_contact // 외부 연락 유도
+  inappropriate_photo // 부적절한 사진
+  abuse // 비속어·모욕
+  impersonation // 사칭·가짜 프로필
+  no_show // 노쇼·약속위반
+  other
+}
+
+// ============================================================
+// Waitlist (Phase 1)
+// ============================================================
+
 /// Phase 1 — 사전등록(웨이팅리스트).
-/// 운영상 Supabase Postgres를 사용. 동일 스키마를 여기에 미러링해 Phase 3 이관을 대비.
 model Waitlist {
   id           String    @id @default(cuid())
-  /// 등록 순번 (성공 화면 "#142번째" + 공유 초대코드 베이스)
   seq          Int       @unique @default(autoincrement())
   email        String    @unique
   gender       Gender
@@ -32,14 +102,256 @@ model Waitlist {
   utmCampaign  String?   @map("utm_campaign")
   utmTerm      String?   @map("utm_term")
   utmContent   String?   @map("utm_content")
-  /// 분석용 메타 — CSV export 시 제외
   userAgent    String?   @map("user_agent")
   ipHash       String?   @map("ip_hash")
   createdAt    DateTime  @default(now()) @map("created_at")
-  /// 확인 메일 클릭 시각 (오픈/확인율 추적)
   confirmedAt  DateTime? @map("confirmed_at")
 
   @@index([createdAt])
   @@index([jobCategory])
   @@map("waitlist")
+}
+
+// ============================================================
+// User / Profile
+// ============================================================
+
+model User {
+  id          String     @id @default(cuid())
+  phone       String?    @unique // 본인인증 후 (암호화 대상)
+  email       String?    @unique
+  gender      Gender
+  birth       DateTime?
+  jobCategory String     @map("job_category")
+  status      UserStatus @default(pending)
+  /// 본인인증 고유식별 (암호화 컬럼 — privacy-design §2-4)
+  ciHash      String?    @unique @map("ci_hash")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  withdrawnAt DateTime?  @map("withdrawn_at")
+
+  profile      Profile?
+  applications VerificationApplication[]
+  badges       VerificationBadge[]
+  credit       Credit?
+  creditTxns   CreditTransaction[]
+  sentMatches  Match[]                   @relation("matchFrom")
+  recvMatches  Match[]                   @relation("matchTo")
+  messages     Message[]
+  reportsMade  ReportLog[]               @relation("reporter")
+  reportsRecv  ReportLog[]               @relation("reported")
+  blocksMade   BlockList[]               @relation("blocker")
+  blocksRecv   BlockList[]               @relation("blocked")
+
+  @@index([status])
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos    String[] // S3 key 목록
+  bio       String?  @db.Text
+  jobDetail String?  @map("job_detail")
+  region    String?
+  mbti      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+// ============================================================
+// 인증 (verification-sop)
+// ============================================================
+
+model Operator {
+  id           String       @id @default(cuid())
+  username     String       @unique
+  name         String
+  role         OperatorRole @default(viewer)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  reviewedApps VerificationApplication[] @relation("reviewer")
+  accessLogs   AccessLog[]
+
+  @@map("operators")
+}
+
+model VerificationApplication {
+  id           String             @id @default(cuid())
+  userId       String             @map("user_id")
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         VerificationType
+  status       VerificationStatus @default(submitted)
+  /// 재산/부동산 가액 구간 (예: "10억~30억")
+  valueTier    String?            @map("value_tier")
+  reviewerId   String?            @map("reviewer_id")
+  reviewer     Operator?          @relation("reviewer", fields: [reviewerId], references: [id])
+  rejectReason String?            @map("reject_reason")
+  submittedAt  DateTime           @default(now()) @map("submitted_at")
+  reviewedAt   DateTime?          @map("reviewed_at")
+  /// SLA 마감 (제출 + 24h)
+  slaDueAt     DateTime           @map("sla_due_at")
+
+  documents VerificationDocument[]
+
+  @@index([status, slaDueAt])
+  @@index([userId])
+  @@map("verification_applications")
+}
+
+model VerificationDocument {
+  id            String                  @id @default(cuid())
+  applicationId String                  @map("application_id")
+  application   VerificationApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  /// S3 객체 키 (KMS 암호화 저장). 평문 URL 보관 금지.
+  s3Key         String                  @map("s3_key")
+  label         String // 서류명 (예: "졸업증명서")
+  mime          String
+  size          Int
+  sha256        String
+  uploadedAt    DateTime                @default(now()) @map("uploaded_at")
+  /// 검토 완료 후 30일 자동 파기 시각 기록
+  purgedAt      DateTime?               @map("purged_at")
+
+  @@index([applicationId])
+  @@map("verification_documents")
+}
+
+model VerificationBadge {
+  id         String           @id @default(cuid())
+  userId     String           @map("user_id")
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       VerificationType
+  valueTier  String?          @map("value_tier")
+  verifiedAt DateTime         @default(now()) @map("verified_at")
+  /// 유효기간 1년 (verification-sop §5-3)
+  expiresAt  DateTime         @map("expires_at")
+
+  @@unique([userId, type])
+  @@index([expiresAt])
+  @@map("verification_badges")
+}
+
+/// 모든 서류 열람·처리 기록 (privacy-design §2-4, 1년 보관)
+model AccessLog {
+  id           String       @id @default(cuid())
+  operatorId   String       @map("operator_id")
+  operator     Operator     @relation(fields: [operatorId], references: [id])
+  targetUserId String?      @map("target_user_id")
+  documentId   String?      @map("document_id")
+  applicationId String?     @map("application_id")
+  action       AccessAction
+  ip           String?
+  at           DateTime     @default(now())
+
+  @@index([at])
+  @@index([operatorId])
+  @@map("access_logs")
+}
+
+// ============================================================
+// 매칭 / 경제 (스키마만 — 로직은 Phase 5)
+// ============================================================
+
+model Match {
+  id        String      @id @default(cuid())
+  fromId    String      @map("from_id")
+  toId      String      @map("to_id")
+  from      User        @relation("matchFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User        @relation("matchTo", fields: [toId], references: [id], onDelete: Cascade)
+  status    MatchStatus @default(pending)
+  /// 만남 신청서 본문
+  letter    String?     @db.Text
+  isSuper   Boolean     @default(false) @map("is_super")
+  createdAt DateTime    @default(now()) @map("created_at")
+  endedAt   DateTime?   @map("ended_at")
+
+  conversation Conversation?
+
+  @@index([toId, status])
+  @@map("matches")
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  matchId   String    @unique @map("match_id")
+  match     Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+  /// 매칭·대화 보관: 종료 후 6개월 (privacy-design §2-3)
+  purgeAt   DateTime? @map("purge_at")
+  messages  Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id")
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String       @db.Text
+  /// 외부 연락처 마스킹 적용 여부 (trust-safety §3-3)
+  masked         Boolean      @default(false)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Credit {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("credits")
+}
+
+model CreditTransaction {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta     Int // +충전 / -사용
+  reason    CreditReason
+  refId     String?      @map("ref_id") // 결제·매칭 참조
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
+}
+
+// ============================================================
+// 신고 / 차단 (trust-safety)
+// ============================================================
+
+model ReportLog {
+  id         String         @id @default(cuid())
+  reporterId String         @map("reporter_id")
+  reportedId String         @map("reported_id")
+  reporter   User           @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported   User           @relation("reported", fields: [reportedId], references: [id], onDelete: Cascade)
+  category   ReportCategory
+  detail     String?        @db.Text
+  handledAt  DateTime?      @map("handled_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([reportedId])
+  @@map("report_logs")
+}
+
+model BlockList {
+  id        String   @id @default(cuid())
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  blocker   User     @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([blockerId, blockedId])
+  @@map("block_lists")
 }

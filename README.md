@@ -41,7 +41,15 @@ pnpm --filter @theone/web dev    # 웹만
 pnpm --filter @theone/admin dev  # 어드민만
 
 pnpm typecheck && pnpm lint
+
+# DB 연결 후 (Phase 3)
+pnpm --filter @theone/db exec prisma migrate deploy   # 마이그레이션 적용
+pnpm --filter @theone/db exec prisma db seed           # 시드(운영자3·유저50·신청20)
 ```
+
+### 운영자 심사 콘솔 (apps/admin)
+- `/verifications` 대기열(SLA 임박순) → `/verifications/[id]` 심사(워터마크 뷰어·승인/반려·AccessLog).
+- 권한: Basic Auth username을 `Operator.role`(viewer/reviewer/admin)로 해석. 시드 계정 `viewer1`·`reviewer1`·`admin1`.
 
 ## 로드맵
 

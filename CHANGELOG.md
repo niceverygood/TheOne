@@ -2,6 +2,38 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 3 — DB 스키마 + 인증 백엔드 + 심사 콘솔 ✅
+
+Phase 2 SOP를 코드로 옮긴 단계. 무게중심은 스키마 + 운영자 심사 콘솔 + 시드.
+
+**DB (`packages/db`)**
+- 전체 도메인 스키마: `User`·`Profile`·`Operator`·`VerificationApplication`·`VerificationDocument`·`VerificationBadge`·`AccessLog`·`Match`·`Conversation`·`Message`·`Credit`·`CreditTransaction`·`ReportLog`·`BlockList` + enums(권한 3단계·인증상태·신고카테고리 등). Match/Message/Credit 등 매칭·경제 모델은 스키마만(로직 Phase 5).
+- 마이그레이션 `20260521000000_phase3_domain`(diff 생성, 317줄). `prisma generate` OK.
+- 데이터 액세스: 심사 대기열(SLA 임박순)·통계·승인(뱃지 upsert)·반려·사용자 현황·신청 생성. 승인/반려는 **트랜잭션 + AccessLog** 동반.
+- 시드: 운영자 3명(viewer/reviewer/admin), 더미 사용자 50명+프로필, 인증 신청 20건(승인10/반려5/대기5). `prisma db seed`(tsx).
+
+**shared**: `verification.ts` — SLA(24h)·유효기간(1년)·파기(30일) 상수, 권한 위계 헬퍼, 인증 4종 라벨·가액 구간·필수서류, **반려 사유 표준 10종**.
+
+**apps/admin 심사 콘솔**
+- 운영자 권한 resolve(Basic Auth username → Operator role, env admin 폴백), `canReview` 게이트.
+- `/verifications` 대기열: 통계 카드(대기·SLA임박/초과·오늘 승인/반려), SLA 임박순 테이블(초과 빨강).
+- `/verifications/[id]` 심사 상세: 메타 + **보안 문서 뷰어**(워터마크=운영자ID+시각, 다운로드·우클릭·드래그 차단), 승인/반려 패널(반려 10종 템플릿), viewer는 메타만.
+- 모든 열람·승인·반려 시 **AccessLog 자동 기록**(reviewer=view_document/viewer=view_meta).
+
+**apps/web**
+- `lib/s3.ts`: 인증 서류 presigned PUT 발급(SSE-KMS) — 자격증명 없으면 graceful mock, 실제 코드는 TODO 블록.
+- `/verify` 인증 허브: 시드 사용자 기준 4종 상태 뱃지(데모). 실제 제출은 회원 본인인증(Phase 4) 연결 후.
+
+**검증**: shared/db typecheck OK · web/admin `next build` OK(/verifications, /verifications/[id], /verify 포함).
+
+**미해결 / 의도적 deferral**
+- **회원 로그인/세션 부재**(Phase 1은 웨이팅리스트만, 본인인증 PASS는 Phase 4) → web 인증 제출은 시드 기준 데모. 실 사용자 업로드 플로우는 Phase 4 본인인증 연결 후 활성화.
+- 운영자 인증은 단일 Basic Auth 게이트 + username→role 해석. 정식 운영자 로그인/세션·MFA·IP 화이트리스트는 후속.
+- S3/KMS presign은 자격증명 설정 + `@aws-sdk/*` 설치 후 TODO 활성화 필요. 자동 파기 cron(서류 30일)·OCR 자동검증은 백로그.
+- 실제 DB 연결 후 `prisma migrate deploy` + `prisma db seed` 1회 실행 필요.
+
+---
+
 ## Phase 2 — 운영 SOP + 개인정보 설계 (v0.1 초안) ✅
 
 코드 변경 없음. `docs/` 결정 문서 4종(+처리방침 초안) 작성. 변호사 검토 전 초안 — 외부 노출 금지.
