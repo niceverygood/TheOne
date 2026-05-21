@@ -5,7 +5,8 @@
     "scheme": "theone",
     "version": "0.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF7F2",
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "kr.theone.app",
@@ -14,9 +15,13 @@
     "android": {
       "package": "kr.theone.app"
     },
-    "plugins": ["expo-router", "expo-font"],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": false
     }
   }
 }

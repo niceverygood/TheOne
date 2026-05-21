@@ -2,6 +2,29 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 4 — 모바일 앱 (Expo) 착수 ✅ (진행 중)
+
+`apps/mobile`을 Expo SDK 51 + React Native + Expo Router로 본격 구현 시작. 목업 24개 중 1순위(가입 플로우) + 톤세터를 이식하고 **Expo Web으로 브라우저 미리보기**까지 동작.
+
+**산출물**
+- 디자인 시스템: `src/theme.ts`(tokens 미러), `src/ui.tsx` 프리미티브(Txt·Btn·Screen·Hairline·VerifiedDots·Portrait(SVG)·StepDots·Field·ChoiceRow), `src/app-shell.tsx`(AppShell·FormFooter).
+- 상태/인증: `src/store.ts`(zustand 가입 스토어), `src/auth-mock.ts`(Mock 본인인증 — 만19세 차단, PASS/KCB 교체 예정), `src/jobs.ts`(남11/여13 미러).
+- 화면(Expo Router file-based) **11종**: 진입 스플래시(통과율 23%) · 가입 Intro→Step01(본인인증)~Step06(추천인)→신청완료 · 큐레이션(03) · 프로필(04) · 인증 허브(19).
+- 웹 미리보기: `app/+html.tsx`(폰트 CDN), `metro.config.js`(모노레포), 로컬 엔트리 `index.js`.
+
+**환경 변경 (중요)**
+- pnpm `node-linker`를 **isolated → hoisted**로 전환(`.npmrc`). Expo/Metro가 pnpm isolated에서 전이 의존성(react-refresh, expo-splash-screen 등)을 해석하지 못하는 문제 해결. **web/admin `next build`·shared/db typecheck 모두 hoisted에서 정상** 확인.
+- mobile deps 추가: react-native-web·react-dom·@expo/metro-runtime·safe-area-context·screens·svg·zustand·expo-splash-screen·@react-navigation/native.
+
+**검증**: mobile `tsc --noEmit` OK · Expo Web 번들 컴파일 OK(3.9MB) · 스플래시·가입 Step02(직업 그리드) 브라우저 렌더 확인 · web/admin 재빌드 OK.
+
+**미해결 / 후속**
+- 잔여 화면(만남 신청서12·매칭함13·채팅15·크레딧16·케미리포트17·프라이버시18·인증 4종 폼·심사중24) 이식 — 2~6순위.
+- 네이티브 폰트(expo-font ttf)·실기기/시뮬레이터 실행·tRPC/TanStack Query API 연동·정식 PASS/KCB 본인인증.
+- 디자인 1px 대조: PR마다 목업 HTML ↔ RN 스크린샷 병행 첨부 규칙(운영).
+
+---
+
 ## Phase 3 — DB 스키마 + 인증 백엔드 + 심사 콘솔 ✅
 
 Phase 2 SOP를 코드로 옮긴 단계. 무게중심은 스키마 + 운영자 심사 콘솔 + 시드.
