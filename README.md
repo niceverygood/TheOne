@@ -24,6 +24,7 @@ docs/
   privacy-policy-v0.1.md   개인정보처리방침 초안 (변호사 검토 전)
   trust-safety.md          신뢰·안전 (사진검증·신고/강퇴·마스킹·미성년차단)
   legal-checklist.md       출시 전 법무 체크리스트 (인허가·약관·법령·D-7)
+  launch/                  출시 준비: 스토어·CS FAQ30·콜드스타트·운영runbook·통합체크리스트
 ```
 
 > ⚠️ `docs/` 정책 문서(reference 제외)는 **변호사 검토(v1.0) 전 초안**입니다. 외부 노출·실제 처리방침 사용 금지.

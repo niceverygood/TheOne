@@ -23,3 +23,4 @@ export * from './matching';
 export * from './economy';
 export * from './messaging';
 export * from './safety';
+export * from './kpi';

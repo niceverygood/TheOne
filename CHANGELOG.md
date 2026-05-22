@@ -2,6 +2,30 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 6 — 출시 준비 ✅
+
+스토어·법무·CS·콜드스타트·운영 인프라 산출물 + 검증 가능한 운영 코드.
+
+**docs/launch 5종**
+- `store-listing.md` — 앱스토어/플레이 등록 자료(설명·키워드·스크린샷 5·영상·**데이팅 카테고리 심사 체크리스트**, IAP vs 외부PG 결정필요).
+- `cs-manual.md` — CS 운영 원칙 + **헬프센터 FAQ 30** + 응대 템플릿.
+- `cold-start.md` — **상위 100명 동시 온보딩** 전략, 첫 큐레이션 풀 확보 체크, 부족 시 대응.
+- `ops-runbook.md` — Sentry/PostHog/Slack/Status page, **출시 4주 KPI 정의**(D1/D7·인증완주율·첫매칭시간·ARPU), 장애 대응, 내부 정비(정관/감사).
+- `launch-checklist.md` — D-14~D+28 통합 체크리스트(legal D-7 통합).
+
+**코드**
+- `packages/db/kpi.ts` `getLaunchKpis()` — 활동회원·인증완주율·첫매칭 중앙값·ARPU·매출·신청서·미처리신고.
+- `apps/admin/kpi` 출시 KPI 대시보드.
+- `apps/web/api/health` 헬스체크(DB 핑) + `lib/slack.ts` 운영 알림(키 없으면 no-op).
+
+**검증**: db typecheck OK · web/admin `next build` OK(`/api/health`·`/kpi` 포함).
+
+**미해결 / 출시 게이트**
+- 약관·개인정보 **변호사 검토(v1.0)**, 본인인증(PASS/KCB)·PortOne 실계약, 결제 방식(IAP vs 외부PG) 확정, 첫 큐레이션 풀 충족 — 미충족 시 출시 연기.
+- 모바일 잔여 화면(Phase 4 백로그) 완료 + EAS 빌드·스토어 제출.
+
+---
+
 ## Phase 5 — 결제 + 매칭 v1 + 채팅 v1 + Trust & Safety ✅ (백엔드)
 
 매칭 엔진·결제·채팅·신뢰안전을 백엔드 + 어드민 중심으로 구현. 도메인 로직은 단위테스트로 검증.
