@@ -1,13 +1,13 @@
-import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { C } from '../src/theme';
 import { Hairline, Screen, Txt, VerifiedDots } from '../src/ui';
 
-const ROWS: [string, string, 'verified' | 'pending' | 'none' | 'rejected', string][] = [
-  ['Education', '학력', 'verified', '3'],
-  ['Wealth', '재산', 'pending', '5'],
-  ['Vehicle', '보유 차량', 'none', '2'],
-  ['Real Estate', '부동산', 'rejected', '4'],
+const ROWS: [string, string, 'verified' | 'pending' | 'none' | 'rejected', string, Href][] = [
+  ['Education', '학력', 'verified', '3', '/verify/education'],
+  ['Wealth', '재산', 'pending', '5', '/verify/wealth'],
+  ['Vehicle', '보유 차량', 'none', '2', '/verify/vehicle'],
+  ['Real Estate', '부동산', 'rejected', '4', '/verify/realestate'],
 ];
 
 type Pill = { fg: string; bg: string; txt: string };
@@ -60,11 +60,12 @@ export default function VerifyHub() {
         </View>
 
         <View style={{ marginTop: 16 }}>
-          {ROWS.map(([en, kr, st, days]) => {
+          {ROWS.map(([en, kr, st, days, href]) => {
             const b = badge(st);
             return (
               <View key={kr}>
-                <View
+                <Pressable
+                  onPress={() => router.push(href)}
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
@@ -100,7 +101,7 @@ export default function VerifyHub() {
                       {b.txt}
                     </Txt>
                   </View>
-                </View>
+                </Pressable>
                 <Hairline />
               </View>
             );

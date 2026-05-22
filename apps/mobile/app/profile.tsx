@@ -100,7 +100,7 @@ export default function Profile() {
           label="만남 신청서 쓰기 · 20C"
           variant="solid"
           style={{ marginTop: 24 }}
-          onPress={() => router.back()}
+          onPress={() => router.push('/letter')}
         />
       </View>
     </Screen>

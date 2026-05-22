@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt } from '../src/ui';
@@ -67,6 +67,14 @@ export default function Splash() {
           style={{ borderColor: C.inkSoft }}
           labelColor={C.graySoft}
         />
+        <Pressable
+          onPress={() => router.push('/menu')}
+          style={{ alignItems: 'center', paddingVertical: 6 }}
+        >
+          <Txt variant="mono" size={11} color={C.gray}>
+            전체 화면 둘러보기 →
+          </Txt>
+        </Pressable>
       </View>
     </Screen>
   );
