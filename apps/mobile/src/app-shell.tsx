@@ -7,7 +7,7 @@ import { Btn, Hairline, Screen, StepDots, Txt } from './ui';
 /** 가입 심사 공통 셸 — Step 점 + 영문 에디토리얼 + 본문 + 푸터 */
 export function AppShell({
   step,
-  total = 6,
+  total = 5,
   eyebrow,
   title,
   subtitle,

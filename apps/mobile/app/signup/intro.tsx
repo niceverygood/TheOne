@@ -7,11 +7,11 @@ import { Hairline, Txt } from '../../src/ui';
 const STEPS = [
   ['01', '본인 인증', '휴대폰 · 약 2분'],
   ['02', '직업', '서류 업로드 · 약 5분'],
-  ['03', '학력', '졸업증명서 · 약 3분'],
-  ['04', '사진', '5장 · 약 3분'],
-  ['05', '60문항 설문', '가치관 진단 · 약 10분'],
-  ['06', '추천인 코드', '선택 · 약 1분'],
+  ['03', '사진', '5장 · 약 3분'],
+  ['04', '60문항 설문', '가치관 진단 · 약 10분'],
+  ['05', '추천인 코드', '선택 · 약 1분'],
 ];
+// 학력은 가입 후 '추가 인증' 단계로 이동 (docs/verification-sop.md §1 · CLAUDE.md §1).
 
 export default function Intro() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function Intro() {
       }
     >
       <View>
-        {STEPS.map(([n, t, h]) => (
+        {STEPS.map(([n, t, h], i) => (
           <View key={n}>
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16 }}
@@ -48,7 +48,7 @@ export default function Intro() {
                 </Txt>
               </View>
             </View>
-            <Hairline />
+            {i < STEPS.length - 1 ? <Hairline /> : null}
           </View>
         ))}
       </View>

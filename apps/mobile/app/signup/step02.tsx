@@ -23,7 +23,7 @@ export default function Step02() {
       subtitle="가입 심사 위원회가 서류를 검토해 직업 뱃지를 부여합니다. 카테고리마다 필요한 서류가 다릅니다."
       footer={
         <FormFooter
-          next="다음 — 학력"
+          next="다음 — 사진"
           disabled={!picked}
           onNext={() => {
             set({ jobCategory: picked! });
