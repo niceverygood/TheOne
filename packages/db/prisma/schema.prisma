@@ -410,9 +410,10 @@ model Order {
   credits       Int // 보너스 포함 지급 크레딧
   baseCredits   Int           @map("base_credits") // 환불 단가 계산용(보너스 제외)
   status        PaymentStatus @default(pending)
-  /// PortOne 결제 식별자
+  /// 결제 식별자 — IAP transactionId(Apple/Google) 또는 PortOne paymentId
   paymentId     String?       @map("payment_id")
-  provider      String        @default("portone")
+  /// 결제 제공자 — 'iap_apple' | 'iap_google' (v1.0) | 'portone' (v1.1)
+  provider      String        @default("iap_apple")
   refundedWon   Int           @default(0) @map("refunded_won")
   createdAt     DateTime      @default(now()) @map("created_at")
   paidAt        DateTime?     @map("paid_at")

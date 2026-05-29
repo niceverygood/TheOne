@@ -69,7 +69,8 @@ describe('matching rules', () => {
 
 describe('credits & refund', () => {
   it('패키지 조회 + 신청서 비용', () => {
-    expect(getPackage('c50')?.credits).toBe(260);
+    expect(getPackage('c180')?.credits).toBe(180);
+    expect(getPackage('c180')?.appleProductId).toBe('kr.theone.app.c180');
     expect(LETTER_COST.super).toBe(50);
   });
   it('7일 초과는 환불 0', () => {

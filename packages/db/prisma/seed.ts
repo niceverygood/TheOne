@@ -159,17 +159,18 @@ async function main() {
   const order = await prisma.order.create({
     data: {
       userId: buyer.id,
-      packageId: 'c50',
-      amountWon: 50000,
-      credits: 280,
-      baseCredits: 260,
+      packageId: 'c180',
+      amountWon: 26000,
+      credits: 180,
+      baseCredits: 167,
+      provider: 'iap_apple',
       status: 'paid',
-      paymentId: 'seed-pay-001',
+      paymentId: 'seed-iap-001',
       paidAt: new Date(),
     },
   });
   await prisma.creditTransaction.create({
-    data: { userId: buyer.id, delta: 280, reason: 'charge', refId: order.id },
+    data: { userId: buyer.id, delta: 180, reason: 'charge', refId: order.id },
   });
 
   console.log('seed done: 3 operators, 50 users, 20 applications, 5 reports, 1 paid order');

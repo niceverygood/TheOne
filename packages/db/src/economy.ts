@@ -13,7 +13,7 @@ export class InsufficientCreditError extends Error {
 }
 
 /** 충전 주문 생성 (pending) */
-export async function createOrder(userId: string, packageId: string) {
+export async function createOrder(userId: string, packageId: string, provider = 'portone') {
   const pkg = getPackage(packageId);
   if (!pkg) throw new Error('UNKNOWN_PACKAGE');
   return prisma.order.create({
@@ -21,8 +21,9 @@ export async function createOrder(userId: string, packageId: string) {
       userId,
       packageId,
       amountWon: pkg.won,
-      credits: pkg.credits + pkg.bonus,
-      baseCredits: pkg.credits,
+      credits: pkg.credits,
+      baseCredits: pkg.baseCredits,
+      provider,
       status: 'pending',
     },
   });
