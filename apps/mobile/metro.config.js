@@ -12,7 +12,6 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
-// pnpm: 심볼릭 링크 해석을 위해 계층적 탐색 비활성
-config.resolver.disableHierarchicalLookup = true;
+// .npmrc node-linker=hoisted 이므로 hierarchicalLookup은 기본값(true) 유지가 Expo 권장.
 
 module.exports = config;

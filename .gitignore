@@ -22,6 +22,13 @@ out/
 # Expo / React Native
 apps/mobile/.expo/
 apps/mobile/web-build/
+apps/mobile/pc-api-key.json
+apps/mobile/AuthKey_*.p8
+# Xcode 빌드 산출물 (ios/ 자체는 prebuild 산출물이라 커밋)
+apps/mobile/ios/build/
+apps/mobile/ios/Pods/
+apps/mobile/ios/**/xcuserdata/
+apps/mobile/ios/**/*.xcuserstate
 *.orig.*
 
 # Env / secrets

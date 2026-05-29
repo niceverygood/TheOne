@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Android 적응형 foreground는 중앙 안전영역 약 66% 안에만 그려야 함 -->
+  <!-- 배경은 app.json adaptiveIcon.backgroundColor 가 잉크블랙 처리 -->
+  <rect width="1024" height="1024" fill="transparent"/>
+
+  <!-- T 모노그램 중앙 (safe area 안 ~600px 내외) -->
+  <text x="512" y="680"
+        font-family="'Noto Serif KR', 'Times New Roman', serif"
+        font-size="560" font-weight="700"
+        fill="#B8956A" text-anchor="middle">T</text>
+</svg>

@@ -6,13 +6,14 @@
 ## 1. 기본 정보
 | 항목 | 값 |
 |---|---|
-| 앱 이름 | THE ONE (더원) |
-| 부제(서브타이틀) | 인증 매칭 · Application Only |
+| 앱 이름 (App Store) | **더원 THE ONE** (영문 단독 "THE ONE"은 이미 사용 중 — 2026-05-28 등록 충돌로 한영 병기 확정) |
+| 부제(서브타이틀, 30자) | **인증 매칭 · Application Only** |
 | 카테고리 | 소셜 네트워킹 / 데이팅 (App Store: Social Networking / Play: 데이팅) |
-| 연령 등급 | **만 19세 이상** (성인 인증 필수) |
-| 번들 ID | kr.theone.app |
+| 연령 등급 | **17+** (만 19세 이상 — 본인인증으로 가입 단계 차단) |
+| 번들 ID | `kr.theone.app` |
+| SKU | `theone-ios-v1` |
 | 가격 | 무료(인앱 결제 — 크레딧 충전) |
-| 지원 언어 | 한국어 |
+| 지원 언어 | 한국어 (Korea) |
 
 ## 2. 앱 설명 (App Description)
 
@@ -50,10 +51,10 @@
 - [ ] **UGC 신고 기능**: 앱 내 신고 버튼 + 차단
 - [ ] **개인정보처리방침 URL** + **이용약관 URL** (앱 내·스토어 모두)
 - [ ] **계정 삭제 경로**(앱 내) — Apple/Google 필수
-- [ ] 결제: 인앱 크레딧은 IAP 정책 검토(외부 PG 사용 시 리젝 위험 — App Store 가이드라인 3.1.1 확인 필요)
+- [ ] 결제: **IAP 단독(v1.0 확정)** — App Store 가이드라인 3.1.1 준수. 외부 PG·웹 결제 유도 없음.
 - [ ] 허위·가짜 프로필 금지 정책 명시(아만다 사례 반면교사)
 
-> **결정 필요**: 크레딧 결제를 **앱 내 PortOne(외부 PG)** vs **Apple/Google IAP**로 할지 — App Store는 디지털 재화에 IAP 강제(수수료 30%). 웹 결제 유도는 리젝 위험. 법무·재무 검토 필요.
+> **결정 완료 (2026-05-28)**: v1.0은 **Apple/Google IAP 단독**. 외부 PG(PortOne)는 리젝 리스크 회피를 위해 v1.1로 이연. PortOne 코드는 `Order.provider` 분기로 보존(추후 정기결제 시 재활성). 환불은 v1.0에서 **Apple/Google 정책에 위임**(App Store Server Notifications 수신은 v1.1).
 
 ## 다음 단계
 - 스크린샷·영상 제작(디자인팀), 스토어 콘솔 계정(Apple Developer/Google Play) 준비, 약관 URL 확정(변호사 검토 후).

@@ -1,0 +1,180 @@
+================================================================
+App Store Connect — Version 1.0 입력값 (복붙용)
+================================================================
+앱: 더원 THE ONE  ·  Bundle ID: kr.theone.app
+작성일: 2026-05-28
+================================================================
+
+
+--- 프로모션 텍스트 (170자) ----------------------------------------
+검증된 사람만 만나는 인증 기반 매칭. 매일 한 분을 정성껏 큐레이션합니다. 가입 통과율 23%.
+
+
+--- 설명 (4000자) -------------------------------------------------
+더원은 결혼을 진지하게 생각하는 분들을 위한 인증 기반 매칭 서비스입니다.
+
+▶ 가입 심사제
+무한 스와이프 대신, 통과율 23%의 심사를 거친 분들만 입회합니다. 신중한 만남을 원하는 분들이 모이는 이유입니다.
+
+▶ 4종 인증
+학력·재산·차량·부동산을 운영자가 직접 검토해 뱃지를 부여합니다. 인증 서류는 암호화 보관되며 검토 완료 후 자동 파기됩니다. 매칭 상대에게는 뱃지만 표시됩니다.
+
+▶ 매일 한 분의 큐레이션
+60문항 가치관 진단을 기반으로 매일 한 분을 정성껏 추천드립니다. 카드 덱·좋아요 카운터·끝없는 스와이프는 없습니다.
+
+▶ 진심을 담은 만남 신청
+가벼운 호감 표시 대신, 신청서를 직접 써서 마음을 전합니다. 신청서는 크레딧으로 발송되며, 무분별한 발송을 방지합니다.
+
+▶ 케미 리포트
+가치관 일치도, 라이프스타일 정렬, 미래 비전 등 3개 섹션으로 분석된 리포트를 매칭 후 받아보실 수 있습니다.
+
+본 서비스는 만 19세 이상만 이용할 수 있으며, 본인인증을 통해 연령을 확인합니다.
+
+운영: 주식회사 바틀
+
+
+--- 키워드 (100자, 쉼표 구분, 공백 없음) ----------------------------
+소개팅,결혼,매칭,인증,전문직,데이팅,진지한만남,결혼정보,큐레이션,더원
+
+
+--- 지원 URL -----------------------------------------------------
+https://the-one.kr/support
+
+
+--- 마케팅 URL (선택) ---------------------------------------------
+https://the-one.kr
+
+
+--- 버전 ---------------------------------------------------------
+1.0
+
+
+--- 저작권 (200자) ------------------------------------------------
+© 2026 주식회사 바틀
+
+
+--- 라우팅 앱 적용 범위 파일 ---------------------------------------
+(비워둠)
+
+
+--- 앱 클립 / iMessage Apps / Game Center ------------------------
+(모두 비워둠)
+
+
+================================================================
+앱 심사 정보 (Critical — 데이팅 앱은 여기서 자주 리젝)
+================================================================
+
+
+--- 로그인 정보 ---------------------------------------------------
+☑ 로그인 필요  (체크)
+
+사용자 이름: apple-review@the-one.kr
+암호:       Theone!2026Review
+
+⚠️ 이 계정은 DB에 미리 만들어둬야 함 (인증 4종 통과 + 크레딧 500 잔액)
+
+
+--- 연락처 정보 (검토자가 문의할 본인 연락처) -------------------------
+이름:       (담당자 본명 입력)
+성:         (성 입력)
+전화번호:   +82-10-XXXX-XXXX
+이메일:     dev@bottlecorp.kr
+
+
+--- 메모 (4000자) — 영어로, 데이팅 앱 통과 좌우 ---------------------
+Hello reviewer,
+
+THE ONE is an application-only matching service for verified Korean professionals (ages 19+). Below is the information needed to review the app.
+
+1) DEMO ACCOUNT
+   ID: apple-review@the-one.kr
+   PW: Theone!2026Review
+   This account has completed all four verifications (education, assets, vehicle, real estate) and holds 500 credits for testing match request flows.
+
+2) IN-APP PURCHASE
+   - All 8 credit packages (kr.theone.app.c80 ~ c2400) are Consumable IAPs.
+   - Receipt verification is server-side at /api/payment/iap/verify with productId validation and transactionId idempotency.
+   - Tested in sandbox; no external payment links are used.
+
+3) AGE GATE
+   The app requires Korean phone-based identity verification (PASS) on signup which enforces the 19+ age limit. The demo account above already has this completed.
+
+4) CONTENT MODERATION
+   - Reporting (Settings → Report) supports 8 categories; 3 cumulative reports auto-suspend the account.
+   - External contact info (phone, KakaoTalk, Instagram) in chat is automatically masked server-side.
+   - In-app account deletion is available under Settings → Privacy → Delete Account.
+
+5) PRIVACY
+   All verification documents are encrypted at rest (S3 + KMS) and auto-deleted 30 days after review completion. Only verification badges (not the documents) are visible to other users.
+
+6) SUPPORT
+   support@the-one.kr / +82-10-XXXX-XXXX
+
+Thank you for the review.
+
+
+--- 첨부 파일 ----------------------------------------------------
+(선택. 매칭/인증 흐름도 PDF 첨부하면 통과율 ↑. 일단 비워도 됨.)
+
+
+================================================================
+App Information 페이지 (별도)
+================================================================
+
+
+--- Subtitle (30자) ----------------------------------------------
+인증 매칭 · Application Only
+
+
+--- Privacy Policy URL -------------------------------------------
+https://the-one.kr/legal/privacy
+
+
+--- Category — Primary -------------------------------------------
+Social Networking
+
+
+--- Category — Secondary (선택) -----------------------------------
+Lifestyle
+
+
+--- Content Rights -----------------------------------------------
+No
+
+
+--- Age Rating 설문 답안 ------------------------------------------
+모두 None / No, 단 아래만 Yes:
+  · Dating: Yes  (이거 켜면 17+ 자동)
+  · User Generated Content: Yes (항목 있을 시)
+  · Made for Kids: No
+  · Unrestricted Web Access: No
+  · Gambling: No
+
+
+================================================================
+IAP 8개 등록 (App Store Connect → In-App Purchases)
+================================================================
+타입: 모두 Consumable
+한국 가격은 Custom Price 입력 (Apple 표준 티어 없는 가액)
+
+| Product ID            | Reference Name | 가격(원)  | Display Name  | Description                |
+|-----------------------|----------------|----------|----------------|----------------------------|
+| kr.theone.app.c80     | Credits 80     | 12,000   | 크레딧 80개    | 더원 크레딧 80개입니다.    |
+| kr.theone.app.c180    | Credits 180    | 26,000   | 크레딧 180개   | 더원 크레딧 180개입니다.   |
+| kr.theone.app.c320    | Credits 320    | 44,000   | 크레딧 320개   | 더원 크레딧 320개입니다.   |
+| kr.theone.app.c480    | Credits 480    | 62,000   | 크레딧 480개   | 더원 크레딧 480개입니다.   |
+| kr.theone.app.c720    | Credits 720    | 89,000   | 크레딧 720개   | 더원 크레딧 720개입니다.   |
+| kr.theone.app.c1000   | Credits 1000   | 119,000  | 크레딧 1,000개 | 더원 크레딧 1,000개입니다. |
+| kr.theone.app.c1600   | Credits 1600   | 179,000  | 크레딧 1,600개 | 더원 크레딧 1,600개입니다. |
+| kr.theone.app.c2400   | Credits 2400   | 249,000  | 크레딧 2,400개 | 더원 크레딧 2,400개입니다. |
+
+각 IAP Review Notes (영어):
+Consumable credits. Used to send match requests in the app. Verified server-side via /api/payment/iap/verify.
+
+각 IAP Review Screenshot (1024×640+):
+임시로 apps/mobile/assets/icon.png 업로드 → 심사 직전 결제 화면 캡처로 교체
+
+
+================================================================
+끝.

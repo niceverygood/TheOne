@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 2400" width="2400" height="2400">
+  <!-- Expo splash: resizeMode=cover, backgroundColor=#0F1014. 정사각 2400px로 만들어 어떤 비율에서도 중앙 보존 -->
+  <rect width="2400" height="2400" fill="#0F1014"/>
+
+  <!-- 상단 eyebrow -->
+  <text x="1200" y="900"
+        font-family="'Playfair Display', 'Times New Roman', serif"
+        font-style="italic"
+        font-size="60" font-weight="400"
+        letter-spacing="8"
+        fill="#B8956A" text-anchor="middle">Application Only</text>
+
+  <!-- 메인 워드마크 THE ONE -->
+  <text x="1200" y="1180"
+        font-family="'Noto Serif KR', 'Times New Roman', serif"
+        font-size="180" font-weight="500"
+        letter-spacing="48"
+        fill="#FAF7F2" text-anchor="middle">THE ONE</text>
+
+  <!-- hairline divider -->
+  <line x1="1100" y1="1280" x2="1300" y2="1280" stroke="#B8956A" stroke-width="2"/>
+
+  <!-- 통과율 23% 캡션 -->
+  <text x="1200" y="1380"
+        font-family="'JetBrains Mono', 'Courier New', monospace"
+        font-size="40" font-weight="400"
+        letter-spacing="4"
+        fill="#FAF7F2" fill-opacity="0.55" text-anchor="middle">PASS RATE  23%</text>
+</svg>

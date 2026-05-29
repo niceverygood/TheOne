@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- 잉크블랙 배경 -->
+  <rect width="1024" height="1024" fill="#0F1014"/>
+
+  <!-- hairline 액자 (다크 hairline 톤) -->
+  <rect x="64" y="64" width="896" height="896" fill="none" stroke="#1F222B" stroke-width="2"/>
+
+  <!-- 상단 라벨 THE ONE -->
+  <text x="512" y="200"
+        font-family="'Noto Serif KR', 'Times New Roman', serif"
+        font-size="60" font-weight="500"
+        letter-spacing="24"
+        fill="#B8956A" text-anchor="middle">THE ONE</text>
+
+  <!-- 중앙 모노그램 T (Noto Serif, 샴페인) -->
+  <text x="512" y="710"
+        font-family="'Noto Serif KR', 'Times New Roman', serif"
+        font-size="640" font-weight="700"
+        fill="#B8956A" text-anchor="middle">T</text>
+
+  <!-- 하단 캡션 Application Only -->
+  <text x="512" y="880"
+        font-family="'Playfair Display', 'Times New Roman', serif"
+        font-style="italic"
+        font-size="40" font-weight="400"
+        letter-spacing="6"
+        fill="#FAF7F2" fill-opacity="0.55" text-anchor="middle">Application Only</text>
+</svg>

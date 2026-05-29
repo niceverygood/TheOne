@@ -3,23 +3,51 @@
     "name": "THE ONE",
     "slug": "theone",
     "scheme": "theone",
-    "version": "0.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAF7F2",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0F1014"
+    },
     "ios": {
       "bundleIdentifier": "kr.theone.app",
-      "supportsTablet": false
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "프로필 사진 등록과 인증 서류(자동차등록증·등기부등본 등) 촬영에 사용됩니다.",
+        "NSPhotoLibraryUsageDescription": "프로필 사진과 인증 서류(학위증명서·잔고증명서 등) 업로드에 사용됩니다.",
+        "NSPhotoLibraryAddUsageDescription": "매칭 상대와 공유한 이미지를 저장할 때 사용됩니다.",
+        "NSFaceIDUsageDescription": "본인인증 시 Face ID로 신원을 확인합니다.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["kakaotalk", "tel", "mailto"]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "kr.theone.app"
+      "package": "kr.theone.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F1014"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.INTERNET",
+        "com.android.vending.BILLING"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router"],
+    "plugins": ["expo-router", "expo-font"],
     "experiments": {
       "typedRoutes": false
     }

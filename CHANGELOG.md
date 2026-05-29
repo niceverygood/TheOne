@@ -2,6 +2,48 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 6-b — App Store v1.0 출시 준비 ◐
+
+App Store 최단경로 제출을 위해 결제를 **IAP 단독**으로 확정하고, 모바일 빌드 메타·결제 통합·외부작업 가이드를 정비.
+
+**결정**
+- 크레딧 결제 = Apple/Google IAP 단독(v1.0). PortOne 외부 PG는 `Order.provider` 분기로 코드 보존, v1.1 이연.
+- 환불은 Apple/Google 정책 위임. `refundableAmount`는 외부 PG 주문 전용으로 명시.
+
+**shared**
+- `CREDIT_PACKAGES` 3종 → **8종 확장** (목업 화면 16 기준 80/180/320/480/720/1000/1600/2400C).
+- `CreditPackage` 스키마: `bonus` 제거 → `baseCredits`·`appleProductId`·`googleProductId` 추가. productId 규칙 `kr.theone.app.{id}`.
+- `getPackageByProductId()` 추가 — 영수증 검증 시 productId → 패키지 매핑.
+
+**packages/db**
+- `Order.provider` 기본값 `portone` → **`iap_apple`**.
+- `createOrder(userId, packageId, provider?)` — provider 인자 추가.
+- 시드: 데모 주문을 `c180`/`iap_apple`로 갱신.
+- 도메인 테스트 13/13 통과 (vitest).
+
+**apps/web**
+- 신규 `POST /api/payment/iap/verify` — productId 매핑·Apple 영수증 검증(`lib/apple-iap.ts`, 키 없으면 mock)·transactionId 멱등·`markOrderPaid` 적립.
+- Apple verifyReceipt(StoreKit 1) production→sandbox 자동 폴백. App Store Server API v2는 v1.1 마이그레이션 예정.
+
+**apps/mobile**
+- `app.json` 출시용 메타데이터 보강: version 1.0.0, iOS buildNumber/Android versionCode, 아이콘·스플래시 자리, iOS infoPlist 권한 4종(카메라/사진/사진추가/FaceID) + `ITSAppUsesNonExemptEncryption=false`, Android permissions 4종(BILLING 포함), `expo-font` 플러그인.
+- `eas.json` 신규(development/preview/production 3 프로파일 + iOS submit 자리).
+- `src/iap.ts` 래퍼 — 네이티브는 `react-native-iap` 동적 로드, 웹/시뮬레이터는 mock(UI 흐름 확인용).
+- `app/credits.tsx`: 하드코딩 PACKS → `CREDIT_PACKAGES` 사용, IAP 결제 흐름(init→buy→verify→finish) 연결, 보너스 % 자동 계산.
+- `package.json`: `@theone/shared` workspace, `react-native-iap` 추가.
+- `assets/README.md`: 아이콘·스플래시 디자인 가이드(크기·금기 — CLAUDE.md §3 준수).
+
+**docs/launch**
+- `store-listing.md` §5: 결제 방식 결정 **완료** 표기(IAP 단독).
+- `launch-actions.md` 신규 — 사용자 직접 작업 한 페이지: Apple Developer 가입·App Store Connect 앱 생성·IAP 상품 8종(한국 커스텀 가격 표시)·EAS 빌드/제출·스토어 콘텐츠·법무/계약·운영 인프라·콜드스타트·게이트.
+
+**검증**: 5개 패키지 typecheck OK · shared vitest 13/13 · web `next build` OK(`/api/payment/iap/verify` 포함) · prisma generate OK.
+
+**미해결 / 출시 게이트**
+- 약관/개인정보 변호사 검토(v1.0), PASS/KCB 본인인증 계약(현재 mock), Apple Developer 가입 및 IAP 상품 등록, 디자인 아이콘/스플래시 실파일, EAS 첫 빌드·TestFlight 샌드박스 결제 검증, 콜드스타트 100명 명단.
+
+---
+
 ## Phase 4-b — 모바일 잔여 화면 13종 완성 ✅
 
 목업만 있던 화면을 모두 실제 RN 화면으로 이식 → **모바일 24개 화면 전부 동작**.
