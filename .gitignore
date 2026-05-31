@@ -19,6 +19,9 @@ out/
 .turbo/
 *.tsbuildinfo
 
+# Font download cache (build-promo.mjs auto-fetches Noto Serif KR)
+.cache/
+
 # Expo / React Native
 apps/mobile/.expo/
 apps/mobile/web-build/

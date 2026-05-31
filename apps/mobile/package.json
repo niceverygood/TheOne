@@ -11,7 +11,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "build:icons": "node scripts/build-icons.mjs",
-    "build:screenshots": "node scripts/build-screenshots.mjs"
+    "build:screenshots": "node scripts/build-screenshots.mjs",
+    "build:promo": "node scripts/build-promo.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -39,6 +40,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "~18.2.79",
     "playwright": "^1.49.0",
     "sharp": "^0.33.5",

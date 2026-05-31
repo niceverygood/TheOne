@@ -42,6 +42,12 @@
 
 > 디자인 원천: `docs/reference/theone-standalone.html`. 캡션은 잉크블랙 배경 + Noto Serif KR. 골드/하트 금지.
 
+**제작 산출물** (Apple App Store · Google Play 공용, 1290×2796):
+- 순수 디바이스 목업 5장: `apps/mobile/assets/store-screenshots/` (`pnpm --filter @theone/mobile build:screenshots`)
+- 캡션 합성 소개 이미지 5장: `apps/mobile/assets/store-promo/` (`pnpm --filter @theone/mobile build:promo`)
+  - `1-the-one` / `2-verified` / `3-curation` / `4-letter` / `5-chemistry`
+  - 헤드라인 Noto Serif KR · 에디토리얼 캡션 + 디바이스 목업을 잉크블랙 캔버스에 합성.
+
 ## 4. 미리보기 영상 (15~30초 시나리오)
 스플래시(통과율 23%) → 인증 4종 뱃지 → 오늘의 큐레이션 → 신청서 작성 → 매칭 수락 → 케미 리포트. BGM 차분, 자막 최소.
 
