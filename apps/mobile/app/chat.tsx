@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, RADIUS } from '../src/theme';
 import { Txt, VerifiedDots, Portrait } from '../src/ui';
 import { Bubble, maskContact } from '../src/forms';
+import { previewPortraits } from '../src/preview-assets';
 
 interface Msg {
   id: string;
@@ -70,7 +71,7 @@ export default function Chat() {
             </Txt>
           </Pressable>
           <View style={{ width: 38, height: 38 }}>
-            <Portrait fill />
+            <Portrait fill source={previewPortraits.jiyoon} />
           </View>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

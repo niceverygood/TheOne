@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
+import { previewPortraits } from '../src/preview-assets';
 
 const VERIF: [string, 'verified' | 'pending'][] = [
   ['직업', 'verified'],
@@ -19,7 +20,7 @@ export default function Profile() {
   const router = useRouter();
   return (
     <Screen>
-      <Portrait height={400} label="PORTRAIT · 김지윤 · 1/4" radius={0} />
+      <Portrait height={400} radius={0} source={previewPortraits.jiyoon} />
       <View style={{ padding: 24 }}>
         <View
           style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}

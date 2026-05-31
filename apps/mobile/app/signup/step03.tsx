@@ -5,6 +5,7 @@ import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Portrait, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
+import { previewPortraits } from '../../src/preview-assets';
 
 const GUIDE = [
   '최근 6개월 이내 촬영한 본인 사진',
@@ -46,7 +47,10 @@ export default function Step03() {
           >
             {f ? (
               <View style={{ flex: 1 }}>
-                <Portrait fill label={`PORTRAIT · ${i + 1}`} />
+                <Portrait
+                  fill
+                  source={i === 0 ? previewPortraits.jiyoon : previewPortraits.jiyoonGallery}
+                />
                 {i === 0 ? (
                   <Txt
                     variant="mono"

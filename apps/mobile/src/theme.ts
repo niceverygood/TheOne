@@ -20,12 +20,15 @@ export const C = {
   hairDark: '#1F222B',
 } as const;
 
+// 폰트 패밀리 이름은 expo-font(useFonts)와 web +html.tsx CSS의 family 이름과 일치해야 한다.
+// 네이티브: app/_layout.tsx의 useFonts에서 동일 키로 등록 (PretendardVariable.ttf 등).
+// 웹: app/+html.tsx가 Google Fonts·Pretendard CDN으로 동일 family를 로드.
 export const F = {
-  serifKr: 'Noto Serif KR, serif',
-  serifEn: 'Playfair Display, serif',
-  sansKr: 'Pretendard, -apple-system, system-ui, sans-serif',
-  sansEn: 'Inter, system-ui, sans-serif',
-  mono: 'JetBrains Mono, SF Mono, monospace',
+  serifKr: 'Noto Serif KR',
+  serifEn: 'Playfair Display',
+  sansKr: 'Pretendard',
+  sansEn: 'Inter',
+  mono: 'JetBrains Mono',
 } as const;
 
 export const S = { s1: 8, s2: 16, s3: 24, s4: 40, s5: 64, gutter: 24 } as const;

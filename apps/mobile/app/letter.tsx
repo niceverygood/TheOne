@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt } from '../src/ui';
 import { ChoiceRow } from '../src/ui';
+import { previewPortraits } from '../src/preview-assets';
 
 /** Screen 12 · 만남 신청서 (Interest Letter) — 골드스푼식 진지한 글쓰기 + 크레딧 차감 */
 export default function Letter() {
@@ -60,7 +61,7 @@ export default function Letter() {
             }}
           >
             <View style={{ width: 44, height: 44 }}>
-              <Portrait fill />
+              <Portrait fill source={previewPortraits.jiyoon} />
             </View>
             <View>
               <Txt size={14} weight="500" color={C.ink2}>

@@ -44,6 +44,27 @@ App Store 최단경로 제출을 위해 결제를 **IAP 단독**으로 확정하
 
 ---
 
+## iOS 거절 대응 (Guideline 2.1(a) — App Completeness)
+
+App Store Connect에서 iPad Air 11"(M3) + iPhone 17 Pro Max · iPadOS/iOS 26.5 환경 **런치 시 크래시**로 v1.0 거절. 즉시 대응:
+
+- **A · New Architecture 비활성화**: `apps/mobile/app.json` `newArchEnabled` true→false. SDK 51 신아키텍처는 baseline이라 SDK 호환 이슈에 가장 빈번한 원인.
+- **C · 네이티브 폰트 번들**: `expo-font` `useFonts`로 Pretendard Variable(`assets/fonts/PretendardVariable.ttf` 6.7MB) + `@expo-google-fonts/noto-serif-kr`·`inter`. Splash 유지 → 폰트 로드 후 해제. iOS 26 첫 렌더 시 폰트 누락 크래시 예방.
+- **D · Sentry 통합**: `@sentry/react-native` 5.24, `src/sentry.ts` DSN 가드 + `Sentry.wrap(RootLayout)`. 다음 거절을 사전에 잡기 위한 안전망. DSN 미설정 시 no-op.
+- **E · `apps/mobile/eas.json`**: development/preview/production 프로필 + `autoIncrement` + dSYM 자동 업로드(EAS Build 기본). `submit` 프로필 ascAppId/teamId 자리.
+- `app/_layout.tsx`: SplashScreen guard + 폰트 로드 + Sentry wrap. theme.ts F 필드를 expo-font 등록 family와 동일하게 정렬.
+- `.env.example`에 `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_ENV` 추가.
+
+**검증**: mobile `tsc` OK · Expo Web 번들 컴파일 OK(6.0MB, 폰트+Sentry 포함).
+
+**재제출 시 메시지(권장)**: "iOS 26 호환을 위해 New Architecture 비활성화, 네이티브 폰트 번들, dSYM 첨부, Sentry로 사전 크래시 모니터링 적용했습니다. v1.0 build 2로 재제출합니다."
+
+**미적용 (다음 단계)**
+- B · Expo SDK 51 → 54+ 업그레이드 (RN 0.81+, expo-router 6.x). 큰 변경이라 별도 세션 권장. 이번 A/C/D/E로 통과 안 되면 즉시 진행.
+- 실기기 iOS 26.5에서 첫 진입~Step02 라이브 스모크 테스트 필수.
+
+---
+
 ## Phase 4-b — 모바일 잔여 화면 13종 완성 ✅
 
 목업만 있던 화면을 모두 실제 RN 화면으로 이식 → **모바일 24개 화면 전부 동작**.

@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { ImageSourcePropType, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
+import { previewPortraits } from '../src/preview-assets';
 
 interface Letter {
   id: string;
   name: string;
   meta: string;
   marks: number;
+  image: ImageSourcePropType;
   sup?: boolean;
   preview: string;
   time: string;
@@ -19,6 +21,7 @@ const SEED: Letter[] = [
     name: '김민준',
     meta: '32 · 변호사 · 서초',
     marks: 4,
+    image: previewPortraits.minjun,
     sup: true,
     time: '2시간 전',
     preview:
@@ -29,6 +32,7 @@ const SEED: Letter[] = [
     name: '이도현',
     meta: '35 · 정형외과 전문의 · 압구정',
     marks: 4,
+    image: previewPortraits.dohyun,
     time: '어제',
     preview:
       '서핑을 하신다는 게 인상적이었어요. 저도 양양을 자주 가는데, 다음 시즌엔 같이 파도를 기다릴 수 있으면 좋겠다는 생각을 했습니다…',
@@ -38,6 +42,7 @@ const SEED: Letter[] = [
     name: '정우성',
     meta: '38 · 자산운용사 대표 · 한남',
     marks: 3,
+    image: previewPortraits.minjun,
     time: '2일 전',
     preview:
       '짧지만 진심을 담아 적습니다. 서로의 일을 존중할 수 있는 분을 오래 찾았어요. 한 번 차분히 대화 나눠보고 싶습니다…',
@@ -102,7 +107,7 @@ export default function Inbox() {
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <View style={{ width: 46, height: 46 }}>
-                      <Portrait fill />
+                      <Portrait fill source={l.image} />
                     </View>
                     <View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

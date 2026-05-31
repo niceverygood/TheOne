@@ -1,8 +1,8 @@
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt, VerifiedDots } from '../src/ui';
+import { previewPortraits } from '../src/preview-assets';
 
 const CHEMI: [string, number][] = [
   ['결혼관', 92],
@@ -16,11 +16,22 @@ export default function Curation() {
     <Screen dark>
       {/* 풀블리드 인물 */}
       <View style={{ height: 520, position: 'relative' }}>
-        <Svg width="100%" height="100%" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid slice">
-          <Rect width="100" height="130" fill="#D8D1C2" />
-          <Circle cx="50" cy="50" r="22" fill="#A89F8E" opacity={0.6} />
-          <Path d="M14 130 Q14 86 50 86 Q86 86 86 130 Z" fill="#A89F8E" opacity={0.6} />
-        </Svg>
+        <Image
+          source={previewPortraits.jiyoon}
+          resizeMode="cover"
+          style={{ width: '100%', height: '100%' }}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 150,
+            backgroundColor: 'rgba(250,247,242,0.22)',
+          }}
+        />
 
         <View
           style={{

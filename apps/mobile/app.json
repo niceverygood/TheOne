@@ -13,6 +13,7 @@
       "resizeMode": "cover",
       "backgroundColor": "#0F1014"
     },
+    "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "kr.theone.app",
       "buildNumber": "1",

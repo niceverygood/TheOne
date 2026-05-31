@@ -1,5 +1,16 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextProps, View, ViewStyle } from 'react-native';
+import {
+  Image,
+  ImageSourcePropType,
+  ImageStyle,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextProps,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { C, F, RADIUS, S } from './theme';
@@ -157,11 +168,15 @@ export function Portrait({
   label,
   radius = RADIUS,
   fill,
+  source,
+  imageStyle,
 }: {
   height?: number;
   label?: string;
   radius?: number;
   fill?: boolean;
+  source?: ImageSourcePropType;
+  imageStyle?: ImageStyle;
 }) {
   return (
     <View
@@ -171,17 +186,25 @@ export function Portrait({
           : { width: '100%', height, borderRadius: radius, overflow: 'hidden' }
       }
     >
-      <Svg width="100%" height="100%" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid slice">
-        <Defs>
-          <LinearGradient id="pg" x1="0" y1="0" x2="0.4" y2="1">
-            <Stop offset="0" stopColor="#E8E2D5" />
-            <Stop offset="1" stopColor="#C8C1B1" />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100" height="130" fill="url(#pg)" />
-        <Circle cx="50" cy="52" r="20" fill="#A89F8E" opacity={0.6} />
-        <Path d="M16 130 Q16 90 50 90 Q84 90 84 130 Z" fill="#A89F8E" opacity={0.6} />
-      </Svg>
+      {source ? (
+        <Image
+          source={source}
+          resizeMode="cover"
+          style={[{ width: '100%', height: '100%' }, imageStyle]}
+        />
+      ) : (
+        <Svg width="100%" height="100%" viewBox="0 0 100 130" preserveAspectRatio="xMidYMid slice">
+          <Defs>
+            <LinearGradient id="pg" x1="0" y1="0" x2="0.4" y2="1">
+              <Stop offset="0" stopColor="#E8E2D5" />
+              <Stop offset="1" stopColor="#C8C1B1" />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100" height="130" fill="url(#pg)" />
+          <Circle cx="50" cy="52" r="20" fill="#A89F8E" opacity={0.6} />
+          <Path d="M16 130 Q16 90 50 90 Q84 90 84 130 Z" fill="#A89F8E" opacity={0.6} />
+        </Svg>
+      )}
       {label ? (
         <Txt
           variant="mono"
