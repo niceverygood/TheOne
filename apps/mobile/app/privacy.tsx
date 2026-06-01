@@ -99,9 +99,15 @@ export default function Privacy() {
             onPress={() => router.push('/chemistry')}
           />
         </View>
-        <Txt size={11.5} color={C.gray} style={{ textAlign: 'center', marginTop: 20 }}>
-          계정 영구 삭제
-        </Txt>
+        <Pressable onPress={() => router.push('/delete-account')} style={{ marginTop: 20 }}>
+          <Txt
+            size={11.5}
+            color={C.terra}
+            style={{ textAlign: 'center', textDecorationLine: 'underline' }}
+          >
+            계정 영구 삭제
+          </Txt>
+        </Pressable>
       </View>
     </Screen>
   );

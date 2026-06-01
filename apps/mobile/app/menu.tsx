@@ -39,7 +39,13 @@ const GROUPS: { title: string; items: [string, Href][] }[] = [
       ['인증 심사중', '/verify/reviewing'],
     ],
   },
-  { title: '안전 / 졸업', items: [['프라이버시 + 졸업', '/privacy']] },
+  {
+    title: '안전 / 졸업',
+    items: [
+      ['프라이버시 + 졸업', '/privacy'],
+      ['계정 영구 삭제', '/delete-account'],
+    ],
+  },
 ];
 
 /** 데모 내비게이션 — 전체 화면 둘러보기 (실서비스에선 탭바/딥링크로 대체) */

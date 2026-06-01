@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>THE ONE · 매일 큐레이션 드롭 (프로토타입 v1.1)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <style>
+    :root{
+      --ink:#0F1014; --ink-2:#1A1F2E; --ink-soft:#1F222B;
+      --ivory:#FAF7F2; --ivory-2:#F5F1EA; --ivory-3:#EDE8DE;
+      --champagne:#B8956A; --champagne-soft:rgba(184,149,106,.16);
+      --gray:#8B8378; --gray-soft:#B5AFA4;
+      --sage:#6B8E7F; --terra:#A85547;
+      --hair-light:#EDE8DE; --hair-dark:#1F222B;
+      --serif-kr:'Noto Serif KR',serif;
+      --serif-en:'Playfair Display',serif;
+      --sans-kr:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+      --sans-en:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+      --mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+    body{
+      font-family:var(--sans-kr); background:#0A0B0E; color:var(--ivory);
+      min-height:100vh; display:flex; flex-direction:column; align-items:center;
+      padding:40px 20px 80px; letter-spacing:-.02em;
+      background-image:radial-gradient(circle at 50% 0%, #16171d 0%, #0A0B0E 60%);
+    }
+    .page-title{font-family:var(--serif-kr);font-weight:700;font-size:20px;color:var(--ivory);margin-bottom:4px;}
+    .page-sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray);margin-bottom:28px;}
+    .mono{font-family:var(--mono);}
+    .serif-kr{font-family:var(--serif-kr);}
+    .serif-en{font-family:var(--serif-en);}
+
+    /* ── phone frame ───────────────────────────── */
+    .phone{
+      position:relative; width:375px; height:812px;
+      background:var(--ivory); border-radius:44px;
+      border:1px solid #000; overflow:hidden; flex:none;
+      box-shadow:0 0 0 11px #1c1d22, 0 0 0 12px #2c2d33, 0 30px 80px rgba(0,0,0,.6);
+    }
+    .notch{
+      position:absolute; top:0; left:50%; transform:translateX(-50%);
+      width:148px; height:30px; background:#000; border-radius:0 0 18px 18px; z-index:60;
+    }
+    .statusbar{
+      position:absolute; top:0; left:0; right:0; height:47px; z-index:55;
+      display:flex; justify-content:space-between; align-items:flex-end;
+      padding:0 26px 9px; font-family:var(--mono); font-size:12px; font-weight:500;
+      pointer-events:none; transition:color .6s ease;
+    }
+    .statusbar .dots{display:flex;gap:5px;align-items:center;}
+    .statusbar .bars{display:flex;gap:2px;align-items:flex-end;height:11px;}
+    .statusbar .bars i{width:3px;background:currentColor;display:block;border-radius:1px;}
+    .statusbar .bars i:nth-child(1){height:4px;} .statusbar .bars i:nth-child(2){height:6px;}
+    .statusbar .bars i:nth-child(3){height:8px;} .statusbar .bars i:nth-child(4){height:11px;}
+    .statusbar .batt{width:22px;height:11px;border:1px solid currentColor;border-radius:2px;position:relative;padding:1.5px;}
+    .statusbar .batt::after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:currentColor;border-radius:0 1px 1px 0;}
+    .statusbar .batt i{display:block;height:100%;width:78%;background:currentColor;border-radius:1px;}
+
+    /* ── screen stack ──────────────────────────── */
+    .screen{position:absolute;inset:0;}
+
+    /* base dossier (light) sits at bottom of stack */
+    .dossier{
+      background:var(--ivory); overflow-y:auto; z-index:1;
+      opacity:0; transition:opacity .1s;
+    }
+    .phone[data-state="revealed"] .dossier{opacity:1;}
+
+    /* dark cover (arrived) */
+    .cover{
+      background:var(--ink); z-index:10;
+      display:flex; flex-direction:column;
+      transition:opacity .9s cubic-bezier(.4,0,.2,1), transform .9s cubic-bezier(.4,0,.2,1);
+    }
+    .phone[data-state="revealed"] .cover{
+      opacity:0; transform:translateY(-32px) scale(1.04); pointer-events:none;
+    }
+    .phone[data-state="waiting"] .cover{opacity:0;pointer-events:none;}
+
+    /* waiting screen (dark) */
+    .waiting{
+      background:var(--ink); z-index:20;
+      display:flex; flex-direction:column; align-items:center;
+      transition:opacity .8s ease;
+    }
+    .phone[data-state="arrived"] .waiting,
+    .phone[data-state="revealed"] .waiting{opacity:0;pointer-events:none;}
+
+    /* film grain on dark screens */
+    .grain::after{
+      content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; z-index:2;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+    }
+
+    .eyebrow{
+      font-family:var(--mono); font-size:10px; letter-spacing:.28em;
+      text-transform:uppercase; color:var(--champagne);
+    }
+
+    /* ── WAITING content ───────────────────────── */
+    .waiting-inner{
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:0 36px; position:relative; z-index:3;
+    }
+    .seal-ring{
+      width:128px; height:128px; border-radius:50%;
+      border:1px solid rgba(184,149,106,.42); position:relative;
+      display:flex; align-items:center; justify-content:center; margin-bottom:38px;
+    }
+    .seal-ring::before{
+      content:""; position:absolute; inset:11px; border-radius:50%;
+      border:1px solid rgba(184,149,106,.22);
+    }
+    .seal-ring .pulse{
+      position:absolute; inset:-1px; border-radius:50%;
+      border:1px solid var(--champagne); opacity:0;
+      animation:pulse 3.6s ease-out infinite;
+    }
+    @keyframes pulse{
+      0%{transform:scale(1);opacity:.5;}
+      70%{transform:scale(1.5);opacity:0;}
+      100%{opacity:0;}
+    }
+    .monogram{
+      font-family:var(--serif-en); font-style:italic; font-weight:500;
+      font-size:34px; color:var(--champagne); line-height:1;
+    }
+    .waiting h1{
+      font-family:var(--serif-kr); font-weight:700; font-size:30px;
+      color:var(--ivory); letter-spacing:-.03em; line-height:1.25; margin-bottom:14px;
+    }
+    .waiting .lede{
+      font-size:13.5px; line-height:1.75; color:var(--gray-soft);
+      max-width:248px; margin-bottom:42px;
+    }
+    .countdown{
+      font-family:var(--mono); font-weight:500; font-size:40px;
+      color:var(--ivory); letter-spacing:.04em; display:flex; align-items:baseline; gap:6px;
+    }
+    .countdown .sep{color:rgba(184,149,106,.55);}
+    .count-label{
+      font-family:var(--mono); font-size:9.5px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--gray); margin-top:14px;
+    }
+    .waiting-foot{
+      position:absolute; bottom:42px; left:0; right:0; text-align:center; z-index:3;
+      font-family:var(--mono); font-size:9px; letter-spacing:.3em;
+      text-transform:uppercase; color:rgba(139,131,120,.7);
+    }
+
+    /* ── ARRIVED / SEALED content ──────────────── */
+    .cover-inner{
+      flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:64px 32px 0; position:relative; z-index:3;
+    }
+    .arrived-eyebrow{margin-bottom:10px;}
+    .cover h1{
+      font-family:var(--serif-kr); font-weight:700; font-size:27px;
+      color:var(--ivory); letter-spacing:-.03em; line-height:1.3; margin-bottom:6px;
+    }
+    .cover .sub{
+      font-family:var(--serif-en); font-style:italic; font-size:13px;
+      color:var(--gray-soft); letter-spacing:.04em; margin-bottom:40px;
+    }
+    /* the sealed teaser card */
+    .teaser{
+      width:236px; height:300px; position:relative;
+      border:1px solid rgba(184,149,106,.34); background:var(--ink-2);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .teaser .blurport{
+      position:absolute; inset:0; filter:blur(13px) brightness(.62) saturate(.7);
+      transform:scale(1.18);
+    }
+    .teaser .shade{position:absolute;inset:0;background:rgba(15,16,20,.55);}
+    .teaser .no{
+      position:absolute; top:14px; left:16px; z-index:4;
+      font-family:var(--serif-en); font-style:italic; font-size:13px;
+      color:rgba(245,241,234,.8); letter-spacing:.06em;
+    }
+    .teaser .hint{
+      position:absolute; bottom:16px; left:0; right:0; z-index:4; text-align:center;
+      font-family:var(--mono); font-size:9px; letter-spacing:.2em;
+      text-transform:uppercase; color:rgba(184,149,106,.85);
+    }
+    /* wax seal */
+    .wax{
+      position:relative; z-index:5; width:96px; height:96px; border-radius:50%;
+      background:radial-gradient(circle at 38% 34%, #c9a77c 0%, #b8956a 42%, #9c7a52 100%);
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+      transition:transform .6s cubic-bezier(.34,1.56,.64,1), opacity .55s ease;
+      border:none;
+    }
+    .wax::before{
+      content:""; position:absolute; inset:7px; border-radius:50%;
+      border:1px solid rgba(15,16,20,.28);
+    }
+    .wax .wax-i{
+      font-family:var(--serif-en); font-style:italic; font-weight:600; font-size:30px;
+      color:#3a2c1c; line-height:1;
+    }
+    .wax .ring-text{position:absolute;inset:0;animation:spin 22s linear infinite;}
+    .wax:hover{transform:scale(1.05);}
+    .wax:active{transform:scale(.96);}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .phone[data-state="revealed"] .wax{
+      transform:scale(2.4) rotate(14deg); opacity:0;
+    }
+    .tap-hint{
+      margin-top:26px; font-family:var(--mono); font-size:10px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--gray-soft);
+      display:flex; align-items:center; gap:8px;
+    }
+    .tap-hint .ln{width:18px;height:1px;background:var(--champagne);}
+    .phone[data-state="revealed"] .cover-inner{opacity:0;transition:opacity .4s;}
+
+    /* ── DOSSIER (revealed) content ────────────── */
+    .dossier-pad{padding:47px 0 130px;}
+    .d-top{padding:16px 24px 0;display:flex;justify-content:space-between;align-items:baseline;}
+    .d-top .today{font-family:var(--serif-en);font-style:italic;font-size:12px;color:var(--ink-2);letter-spacing:.04em;}
+    .d-top .box{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gray);}
+    .d-head{padding:14px 24px 18px;}
+    .d-head .eyebrow{color:var(--champagne);}
+    .d-head h1{font-family:var(--serif-kr);font-weight:700;font-size:27px;color:var(--ink-2);letter-spacing:-.03em;line-height:1.1;margin-top:7px;}
+    .d-head h1 .num{font-family:var(--serif-en);font-style:italic;font-weight:500;}
+
+    .portrait-wrap{padding:0 24px;}
+    .portrait{position:relative;aspect-ratio:4/5;border:1px solid var(--hair-light);overflow:hidden;background:var(--ivory-3);}
+    .portrait svg{display:block;width:100%;height:100%;}
+    .port-label{position:absolute;left:13px;bottom:12px;z-index:4;font-family:var(--mono);font-size:8.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(15,16,20,.42);}
+    .vbadge{
+      position:absolute;top:14px;right:14px;background:rgba(15,16,20,.82);
+      padding:6px 10px;display:flex;align-items:center;gap:8px;z-index:4;
+    }
+    .vbadge .vt{font-family:var(--serif-en);font-style:italic;font-size:9px;color:var(--ivory-2);letter-spacing:.16em;text-transform:uppercase;}
+    .vdots{display:flex;gap:4px;}
+    .vdots i{width:5px;height:5px;border-radius:50%;background:var(--sage);display:block;}
+
+    .d-name{padding:22px 24px 0;}
+    .d-name .row{display:flex;align-items:baseline;gap:12px;}
+    .d-name h2{font-family:var(--serif-kr);font-weight:700;font-size:29px;color:var(--ink-2);letter-spacing:-.03em;line-height:1.1;}
+    .d-name .en{font-family:var(--serif-en);font-style:italic;font-size:14px;color:var(--gray);letter-spacing:.04em;}
+    .d-name .meta{margin-top:8px;font-size:13px;color:var(--gray);display:flex;gap:10px;align-items:center;}
+    .d-name .meta .dot{width:2px;height:2px;border-radius:1px;background:var(--gray);}
+
+    .spec{padding:22px 24px 0;}
+    .spec-grid{border-top:1px solid var(--ink-2);border-bottom:1px solid var(--ink-2);}
+    .spec-row{display:grid;grid-template-columns:1fr 1px 1fr;}
+    .spec-row+.spec-row{border-top:1px solid var(--hair-light);}
+    .spec-row .vline{background:var(--hair-light);}
+    .cell{padding:14px 0;}
+    .cell.r{padding-left:14px;}
+    .cell.l{padding-right:14px;}
+    .cell .k{font-family:var(--serif-en);font-size:9px;color:var(--gray);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
+    .cell .v{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--ink-2);}
+    .cell .v .vm{width:5px;height:5px;border-radius:50%;background:var(--sage);display:block;}
+
+    .why{margin:26px 24px 0;padding-top:18px;border-top:1px solid var(--champagne);}
+    .why .eyebrow{color:var(--champagne);}
+    .why .lead{font-family:var(--serif-kr);font-size:16px;line-height:1.6;color:var(--ink-2);letter-spacing:-.02em;margin:12px 0 16px;font-weight:500;}
+    .why ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+    .why li{display:grid;grid-template-columns:14px 1fr;gap:10px;font-size:12.5px;color:var(--ink-2);line-height:1.5;}
+    .why li .b{width:8px;height:1px;background:var(--champagne);margin-top:9px;}
+
+    .chem{padding:24px 24px 0;}
+    .chem .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+    .chem .hd .eyebrow{color:var(--gray);}
+    .chem .pct{font-family:var(--serif-en);font-size:24px;color:var(--ink-2);font-weight:500;letter-spacing:-.02em;}
+    .chem .pct small{font-size:12px;color:var(--gray);}
+    .bar-track{height:2px;background:var(--hair-light);position:relative;overflow:hidden;}
+    .bar-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--champagne);transition:width 1.1s cubic-bezier(.4,0,.2,1) .25s;}
+    .phone[data-state="revealed"] .bar-fill{width:87%;}
+    .chem .sub{font-family:var(--mono);font-size:9px;color:var(--gray);letter-spacing:.08em;text-transform:uppercase;margin-top:8px;}
+
+    .quote{padding:24px 24px 0;}
+    .quote .qm{font-family:var(--serif-en);font-style:italic;font-size:22px;color:var(--champagne);line-height:1;margin-bottom:4px;}
+    .quote p{font-family:var(--serif-kr);font-size:15px;line-height:1.7;color:var(--ink-2);letter-spacing:-.02em;}
+    .quote .src{font-family:var(--mono);font-size:9px;color:var(--gray);letter-spacing:.14em;text-transform:uppercase;margin-top:14px;}
+
+    .next{padding:26px 24px 0;}
+    .next .ln{padding-top:16px;border-top:1px solid var(--hair-light);display:flex;justify-content:space-between;align-items:center;}
+    .next .eyebrow{color:var(--gray);}
+    .next .t{font-family:var(--mono);font-size:12px;color:var(--ink-2);font-weight:500;letter-spacing:.06em;}
+
+    /* sticky CTA */
+    .cta-bar{
+      position:absolute;left:0;right:0;bottom:0;z-index:30;
+      background:rgba(250,247,242,.97);backdrop-filter:blur(14px);
+      border-top:1px solid var(--hair-light);padding:14px 24px 30px;
+      opacity:0;transform:translateY(12px);transition:opacity .5s ease .4s,transform .5s ease .4s;
+    }
+    .phone[data-state="revealed"] .cta-bar{opacity:1;transform:none;}
+    .cta{
+      width:100%;background:var(--ink-2);border:none;color:var(--ivory-2);border-radius:2px;
+      padding:17px 22px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+    }
+    .cta .lbl{display:flex;flex-direction:column;align-items:flex-start;gap:2px;}
+    .cta .lbl .ko{font-size:14px;font-weight:500;}
+    .cta .lbl .en{font-family:var(--serif-en);font-style:italic;font-size:9px;color:rgba(245,241,234,.6);letter-spacing:.12em;text-transform:uppercase;}
+    .cta .price{font-family:var(--mono);font-size:11px;color:rgba(245,241,234,.85);letter-spacing:.06em;}
+    .cta-sec{display:flex;justify-content:center;align-items:center;gap:18px;margin-top:12px;}
+    .cta-sec button{background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray);border-bottom:1px solid var(--gray-soft);padding:0 0 2px;}
+    .cta-sec .v{width:1px;height:10px;background:var(--hair-light);}
+
+    /* staggered entrance for dossier sections */
+    .phone[data-state="revealed"] .anim{animation:rise .65s cubic-bezier(.2,.7,.2,1) both;}
+    @keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+    .d-head{animation-delay:.05s;} .portrait-wrap{animation-delay:.12s;}
+    .d-name{animation-delay:.22s;} .spec{animation-delay:.3s;}
+    .why{animation-delay:.38s;} .chem{animation-delay:.46s;}
+    .quote{animation-delay:.54s;} .next{animation-delay:.62s;}
+
+    /* ── demo controls ─────────────────────────── */
+    .controls{
+      margin-top:30px;display:flex;flex-direction:column;align-items:center;gap:14px;
+    }
+    .seg{display:flex;border:1px solid #2a2b31;border-radius:2px;overflow:hidden;}
+    .seg button{
+      background:transparent;border:none;color:var(--gray-soft);cursor:pointer;
+      font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+      padding:11px 18px;border-right:1px solid #2a2b31;transition:all .2s;
+    }
+    .seg button:last-child{border-right:none;}
+    .seg button.on{background:var(--champagne);color:var(--ink);}
+    .demo-btn{
+      background:none;border:1px solid var(--champagne);color:var(--champagne);
+      font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+      padding:11px 26px;border-radius:2px;cursor:pointer;transition:all .2s;
+    }
+    .demo-btn:hover{background:var(--champagne);color:var(--ink);}
+    .hint-line{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray);text-align:center;max-width:360px;line-height:1.7;}
+  </style>
+</head>
+<body>
+  <div class="page-title serif-kr">매일 큐레이션 · 드롭 의식</div>
+  <div class="page-sub">THE ONE · 욕망 고도화 v1.1 프로토타입</div>
+
+  <div class="phone" id="phone" data-state="waiting">
+    <div class="notch"></div>
+    <div class="statusbar" id="statusbar" style="color:var(--ivory)">
+      <span>9:41</span>
+      <span class="dots"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><i></i></span></span>
+    </div>
+
+    <!-- ░░ BASE: revealed dossier (light) ░░ -->
+    <div class="screen dossier" id="dossier">
+      <div class="dossier-pad">
+        <div class="d-top anim">
+          <span class="today serif-en">Today · 05.17</span>
+          <span class="box mono">매칭함 (2)</span>
+        </div>
+        <div class="d-head anim">
+          <div class="eyebrow">오늘의 한 분</div>
+          <h1>No. <span class="num">047</span></h1>
+        </div>
+
+        <div class="portrait-wrap anim">
+          <div class="portrait">
+            <!-- self-drawn SVG portrait placeholder (no external image) -->
+            <svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" id="portraitSVG">
+              <defs>
+                <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#F1ECE2"/>
+                  <stop offset="1" stop-color="#E2DACB"/>
+                </linearGradient>
+                <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#0F1014" stop-opacity="0"/>
+                  <stop offset=".72" stop-color="#0F1014" stop-opacity="0"/>
+                  <stop offset="1" stop-color="#0F1014" stop-opacity=".22"/>
+                </linearGradient>
+              </defs>
+              <rect width="400" height="500" fill="url(#bg)"/>
+              <circle cx="200" cy="220" r="152" fill="#EAE3D6" opacity=".65"/>
+              <!-- shoulders -->
+              <path d="M64 500 V442 q0 -98 136 -98 q136 0 136 98 V500 Z" fill="#C3B8A1"/>
+              <!-- neck -->
+              <path d="M171 366 h58 v46 q-29 16 -58 0 Z" fill="#CABFA8"/>
+              <!-- hair (frames head, no facial features) -->
+              <ellipse cx="200" cy="224" rx="94" ry="110" fill="#8E8068"/>
+              <path d="M200 116 q72 8 80 112 q6 -52 -20 -90 q-22 -30 -60 -30 Z" fill="#7C6F57" opacity=".55"/>
+              <!-- face -->
+              <ellipse cx="200" cy="252" rx="74" ry="88" fill="#CDC2AB"/>
+              <!-- soft cheek shadow for dimension -->
+              <path d="M252 214 q22 30 16 78 q-6 40 -36 60 q40 -36 40 -86 q0 -32 -20 -52 Z" fill="#B7AB91" opacity=".55"/>
+              <rect width="400" height="500" fill="url(#vg)"/>
+            </svg>
+            <div class="port-label">PORTRAIT · 김지윤</div>
+            <div class="vbadge">
+              <span class="vt">Verified</span>
+              <span class="vdots"><i></i><i></i><i></i><i></i></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-name anim">
+          <div class="row">
+            <h2>김지윤</h2>
+            <span class="en">Ji-yoon Kim</span>
+          </div>
+          <div class="meta"><span>변호사</span><span class="dot"></span><span>서초</span><span class="dot"></span><span>만 32세</span></div>
+        </div>
+
+        <div class="spec anim">
+          <div class="spec-grid">
+            <div class="spec-row">
+              <div class="cell l"><div class="k">Age</div><div class="v">만 32세</div></div>
+              <div class="vline"></div>
+              <div class="cell r"><div class="k">Resides</div><div class="v">서초</div></div>
+            </div>
+            <div class="spec-row">
+              <div class="cell l"><div class="k">Profession</div><div class="v">변호사 <span class="vm"></span></div></div>
+              <div class="vline"></div>
+              <div class="cell r"><div class="k">Education</div><div class="v">서울대 법학 <span class="vm"></span></div></div>
+            </div>
+            <div class="spec-row">
+              <div class="cell l"><div class="k">Height</div><div class="v">167 cm</div></div>
+              <div class="vline"></div>
+              <div class="cell r"><div class="k">Faith</div><div class="v">무교</div></div>
+            </div>
+            <div class="spec-row">
+              <div class="cell l"><div class="k">Family</div><div class="v">부 · 회계사</div></div>
+              <div class="vline"></div>
+              <div class="cell r"><div class="k">View</div><div class="v">2년 내 결혼</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- the curiosity-gap "왜 오늘, 이 사람인가" -->
+        <div class="why anim">
+          <div class="eyebrow">왜 오늘, 이 사람인가</div>
+          <p class="lead">두 분 모두 "대화로 깊어지는 관계"를 가장 중요하게 꼽았습니다.</p>
+          <ul>
+            <li><span class="b"></span>같은 도시 · 인근 거주지</li>
+            <li><span class="b"></span>"2년 내 결혼" — 결혼 시기 일치</li>
+            <li><span class="b"></span>주말 활동 (전시 · 공연) 일치</li>
+            <li><span class="b"></span>60문항 중 47문항 답변 일치</li>
+          </ul>
+        </div>
+
+        <div class="chem anim">
+          <div class="hd"><div class="eyebrow">케미 일치도</div><div class="pct">87<small>%</small></div></div>
+          <div class="bar-track"><div class="bar-fill"></div></div>
+          <div class="sub">결혼관 92 · 라이프 87 · 갈등 79</div>
+        </div>
+
+        <div class="quote anim">
+          <div class="qm">"</div>
+          <p>깊이 알아가는 시간을 좋아해서, 만남도 그렇게 하고 싶어요. 결혼은 좋은 친구와 평생 대화하는 일이라 생각합니다.</p>
+          <div class="src">— 자기소개 · 168자</div>
+        </div>
+
+        <div class="next anim">
+          <div class="ln"><div class="eyebrow">다음 큐레이션</div><div class="t">내일 오후 8:00</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ░░ ARRIVED cover (dark, sealed) ░░ -->
+    <div class="screen cover grain">
+      <div class="cover-inner">
+        <div class="eyebrow arrived-eyebrow">Today · 05.17 · 20:00</div>
+        <h1>오늘의 인연이<br>도착했습니다</h1>
+        <div class="sub">A single introduction, sealed for you.</div>
+
+        <div class="teaser">
+          <div class="blurport">
+            <svg viewBox="0 0 400 500" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+              <rect width="400" height="500" fill="#3a3f4d"/>
+              <ellipse cx="200" cy="470" rx="150" ry="150" fill="#2c303b"/>
+              <ellipse cx="200" cy="250" rx="80" ry="96" fill="#454b59"/>
+            </svg>
+          </div>
+          <div class="shade"></div>
+          <div class="no serif-en">No. 047</div>
+          <button class="wax" id="wax" aria-label="봉인 해제">
+            <svg class="ring-text" viewBox="0 0 96 96">
+              <defs><path id="cp" d="M48,48 m-34,0 a34,34 0 1,1 68,0 a34,34 0 1,1 -68,0"/></defs>
+              <text fill="#3a2c1c" font-family="JetBrains Mono, monospace" font-size="7.5" letter-spacing="3.4" opacity=".75">
+                <textPath href="#cp" startOffset="0">· THE ONE · VERIFIED MATCH · APPLICATION ONLY </textPath>
+              </text>
+            </svg>
+            <span class="wax-i">I</span>
+          </button>
+          <div class="hint">변호사 · 서초 · 인증 4종</div>
+        </div>
+
+        <div class="tap-hint"><span class="ln"></span>봉인을 눌러 여세요<span class="ln"></span></div>
+      </div>
+    </div>
+
+    <!-- ░░ WAITING (dark, countdown) ░░ -->
+    <div class="screen waiting grain">
+      <div class="waiting-inner">
+        <div class="seal-ring">
+          <span class="pulse"></span>
+          <span class="monogram">I</span>
+        </div>
+        <h1>오늘의 한 사람을<br>준비하고 있습니다</h1>
+        <p class="lede">매일 저녁 8시, 단 한 사람만 보냅니다.<br>무한히 넘기지 않습니다.</p>
+        <div class="countdown" id="countdown">
+          <span>02</span><span class="sep">:</span><span>14</span><span class="sep">:</span><span>38</span>
+        </div>
+        <div class="count-label">오후 8:00 공개까지</div>
+      </div>
+      <div class="waiting-foot">THE ONE · 인증 매칭 · Application Only</div>
+    </div>
+
+    <!-- sticky CTA — pinned to phone bottom, shown only when revealed -->
+    <div class="cta-bar">
+      <button class="cta">
+        <span class="lbl"><span class="ko">만남 신청 보내기</span><span class="en">Send a letter of interest</span></span>
+        <span class="price">20 C</span>
+      </button>
+      <div class="cta-sec">
+        <button>오늘은 패스</button><span class="v"></span><button>나중에 다시 보기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- demo controls (outside phone) -->
+  <div class="controls">
+    <div class="seg" id="seg">
+      <button data-go="waiting" class="on">① 대기</button>
+      <button data-go="arrived">② 도착</button>
+      <button data-go="revealed">③ 공개</button>
+    </div>
+    <button class="demo-btn" id="demoBtn">▶ 전체 의식 자동 시연</button>
+    <div class="hint-line">대기 화면의 카운트다운이 실제로 흐릅니다 · ②에서 인장을 누르면 봉인이 갈라지며 도시에가 드러납니다</div>
+  </div>
+
+  <script>
+    const phone = document.getElementById('phone');
+    const seg = document.getElementById('seg');
+    const statusbar = document.getElementById('statusbar');
+    const wax = document.getElementById('wax');
+    const demoBtn = document.getElementById('demoBtn');
+    const cd = document.getElementById('countdown');
+
+    function setState(s){
+      phone.dataset.state = s;
+      [...seg.children].forEach(b => b.classList.toggle('on', b.dataset.go === s));
+      // status bar text color: dark screens => ivory, light dossier => ink
+      statusbar.style.color = (s === 'revealed') ? 'var(--ink-2)' : 'var(--ivory)';
+    }
+
+    seg.addEventListener('click', e => {
+      const b = e.target.closest('button'); if(!b) return;
+      setState(b.dataset.go);
+    });
+    wax.addEventListener('click', () => setState('revealed'));
+
+    // live countdown on the waiting screen
+    let t = {h:2, m:14, s:38};
+    setInterval(() => {
+      if(phone.dataset.state !== 'waiting') return;
+      t.s--; if(t.s<0){t.s=59;t.m--;} if(t.m<0){t.m=59;t.h--;} if(t.h<0){t={h:2,m:14,s:38};}
+      const p = n => String(n).padStart(2,'0');
+      cd.children[0].textContent = p(t.h);
+      cd.children[2].textContent = p(t.m);
+      cd.children[4].textContent = p(t.s);
+    }, 1000);
+
+    // auto-demo: waiting -> (fast count) -> arrived -> (auto break) -> revealed
+    let demoTimers = [];
+    demoBtn.addEventListener('click', () => {
+      demoTimers.forEach(clearTimeout); demoTimers = [];
+      setState('waiting');
+      // fast-forward countdown for a few ticks for drama
+      t = {h:0, m:0, s:4};
+      demoTimers.push(setTimeout(()=> setState('arrived'), 4200));
+      demoTimers.push(setTimeout(()=> setState('revealed'), 7200));
+    });
+  </script>
+</body>
+</html>
