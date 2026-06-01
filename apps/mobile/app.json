@@ -28,7 +28,8 @@
       },
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "package": "kr.theone.app",
@@ -42,15 +43,30 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.INTERNET",
         "com.android.vending.BILLING"
-      ]
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": ["expo-router", "expo-font", "./plugins/withIapStoreFlavor"],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "2d562161-f4d8-45ca-8d4d-b8618016e033"
+      }
+    },
+    "owner": "malshue",
+    "updates": {
+      "url": "https://u.expo.dev/2d562161-f4d8-45ca-8d4d-b8618016e033"
     }
   }
 }

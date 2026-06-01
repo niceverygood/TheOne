@@ -30,6 +30,12 @@ apps/mobile/ios/Pods/
 apps/mobile/ios/**/xcuserdata/
 apps/mobile/ios/**/*.xcuserstate
 *.orig.*
+# EAS 빌드 산출물 (다운로드 아카이브 — 커밋/업로드 금지)
+*.aab
+*.ipa
+*.apk
+# eas 가 루트에 잘못 생성하는 projectId stub (진짜 설정은 apps/mobile/app.json)
+/app.json
 
 # Env / secrets
 .env

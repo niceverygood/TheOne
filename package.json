@@ -5,8 +5,8 @@
   "description": "THE ONE (더원) — 인증 기반 매칭 서비스 · 주식회사 바틀",
   "packageManager": "pnpm@10.15.0",
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=10"
+    "node": ">=18",
+    "pnpm": ">=9"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -19,7 +19,7 @@
     "db:generate": "pnpm --filter @theone/db generate",
     "db:migrate": "pnpm --filter @theone/db migrate",
     "db:studio": "pnpm --filter @theone/db studio",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
