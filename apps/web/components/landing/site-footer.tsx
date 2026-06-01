@@ -9,10 +9,10 @@ export function SiteFooter() {
           통신판매업 신고번호 출시 시점 등록 예정
         </p>
         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 font-sans-kr text-[12px] text-gray">
-          <a href="/privacy" className="underline-offset-4 hover:underline">
+          <a href="/legal/privacy" className="underline-offset-4 hover:underline">
             개인정보처리방침
           </a>
-          <a href="/terms" className="underline-offset-4 hover:underline">
+          <a href="/legal/terms" className="underline-offset-4 hover:underline">
             이용약관
           </a>
           <a href="mailto:hello@the-one.kr" className="underline-offset-4 hover:underline">

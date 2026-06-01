@@ -189,7 +189,7 @@ export function WaitlistForm() {
         />
         <span className="font-sans-kr text-[12px] leading-relaxed text-gray">
           개인정보 수집·이용 및 출시 안내 수신에 동의합니다.{' '}
-          <a href="/privacy" className="underline">
+          <a href="/legal/privacy" className="underline">
             개인정보처리방침
           </a>
         </span>
