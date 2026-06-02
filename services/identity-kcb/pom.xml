@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    THE ONE 본인인증 마이크로서비스 (KCB OkCert3 휴대폰 본인확인)
+    ─────────────────────────────────────────────────────────────
+    KCB OkCert3 모듈(OkCert3-java1.5-2.3.5.jar)은 상주 JVM/WAS에서만 동작한다.
+    (Vercel 서버리스·Next.js Node 런타임·Expo RN 어디에서도 실행 불가)
+    이 Spring Boot 서비스가 KCB Gateway(safe.ok-name.co.kr)와 직접 통신하는
+    유일한 컴포넌트이며, 검증 결과를 apps/web(Next.js)·apps/mobile 로 중계한다.
+  -->
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.5</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>kr.theone</groupId>
+  <artifactId>identity-kcb</artifactId>
+  <version>1.0.0</version>
+  <name>theone-identity-kcb</name>
+  <description>KCB OkCert3 휴대폰 본인확인 중계 서비스</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- libs/ 에 KCB가 발급한 모듈 JAR을 배치한다(커밋 금지). -->
+    <okcert.jar>${project.basedir}/libs/OkCert3-java1.5-2.3.5.jar</okcert.jar>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!--
+      KCB OkCert3 모듈 — Maven Central 에 없는 독점 JAR.
+      system 스코프로 libs/ 의 파일을 직접 참조한다.
+      repackage 시 fat jar 에 포함되도록 includeSystemScope=true 설정(아래 plugin).
+    -->
+    <dependency>
+      <groupId>kcb.module</groupId>
+      <artifactId>okcert3</artifactId>
+      <version>2.3.5</version>
+      <scope>system</scope>
+      <systemPath>${okcert.jar}</systemPath>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>identity-kcb</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <!-- system 스코프 JAR(OkCert3)을 실행 가능한 fat jar 에 포함 -->
+          <includeSystemScope>true</includeSystemScope>
+          <mainClass>kr.theone.identity.IdentityKcbApplication</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

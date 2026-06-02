@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8081}
+  forward-headers-strategy: framework   # 리버스 프록시(HTTPS 종단) 뒤 배포 대응
+
+spring:
+  application:
+    name: identity-kcb
+  thymeleaf:
+    cache: true
+
+# KCB OkCert3 설정 — 운영값은 환경변수(KCB_*)로만 주입(공통가이드 §2.2.3)
+kcb:
+  cp-cd: ${KCB_CP_CD:}                      # 회원사코드 12자리 (예: V44210000000)
+  target: ${KCB_TARGET:PROD}                # PROD | TEST (휴대폰 테스트계 미운영)
+  license-path: ${KCB_LICENSE_PATH:}        # 라이선스 .dat 절대경로
+  popup-url: ${KCB_POPUP_URL:https://safe.ok-name.co.kr/CommonSvl}
+  site-name: ${KCB_SITE_NAME:THE ONE}       # 최대 24 bytes (LGU 제한)
+  site-url: ${KCB_SITE_URL:https://theone.kr}
+  rqst-caus-cd: ${KCB_RQST_CAUS_CD:00}      # 00:회원가입
+  self-base-url: ${SELF_BASE_URL:http://localhost:8081}
+  shared-secret: ${SHARED_SECRET:}          # apps/web ↔ 이 서비스 Bearer 공유키
+  session-ttl-seconds: ${KCB_SESSION_TTL:600}
+
+logging:
+  level:
+    kr.theone.identity: INFO

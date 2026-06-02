@@ -2,6 +2,34 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 6-c — 본인인증 KCB OkCert3 연동 (휴대폰 본인확인) ◐
+
+KCB OkCert3 휴대폰 본인확인을 실제 연동. 모듈은 상주 JVM 필수(Vercel/Next/Expo 불가)라 **별도 Java 마이크로서비스**로 분리하고, Next.js·모바일은 서버-투-서버(Bearer)로 중계.
+
+**결정**
+- 본인확인 = **KCB OkCert3 직접 연동**(회원사코드 `V44210000000`, 서비스 IDS, 운영계 PROD). PortOne 통합인증 경로는 코드 보존(대안).
+- KCB 모듈/라이선스(`*.dat`)는 **커밋 금지** — `services/identity-kcb/.gitignore`(`secret/`, `libs/*.jar`, `*.dat`)로 차단, 라이선스는 런타임 마운트.
+
+**services/identity-kcb (신규 — Spring Boot 3.3.5 / Java 17)**
+- `OkCertClient` — `OkCert.callOkCert()` 래핑. START(`IDS_HS_POPUP_START`)·RESULT(`IDS_HS_POPUP_RESULT`), 라이선스 InputStream 폴백(샘플 권장 패턴).
+- `KcbController` — `POST /kcb/start`(Bearer)·`GET /kcb/popup/{token}`(인증창 자동 submit)·`GET·POST /kcb/return`(결과 수신·저장)·`GET /kcb/done`(WebView 감지 지점)·`POST /kcb/result/{txSeqNo}`(Bearer, 1회 consume)·`/healthz`.
+- `SessionStore` — 인메모리 TTL(600초) 2종(popup token→MDL_TKN, txSeqNo→VerifiedIdentity). CI/DI 잔존 최소화(조회 즉시 폐기).
+- Thymeleaf 템플릿 3종(popup/return/done). 보호 엔드포인트 시크릿 미설정 시 **503(fail-closed)**.
+- 모듈 JAR은 `system` 스코프 + `includeSystemScope`로 fat jar(21MB)에 번들. `Dockerfile`(멀티스테이지)·`.dockerignore`(secret/·*.dat 제외)·Maven 래퍼·README·`.env.example`.
+
+**apps/web**
+- `lib/kcb-identity.ts` — `startKcbVerification()`·`fetchKcbResult()`. 통신사코드→표시명, YYYYMMDD→ISO, sexCd→gender, ntvFrnrCd→isForeigner 매핑. CI→`IDENTITY_CI_PEPPER` 해시(재사용), 미설정 시 mock.
+- `POST /api/identity/kcb/start`·`POST /api/identity/kcb/result`(zod·성인 403·CI/DI 비노출). 기존 `/api/identity/verify`(PortOne) 보존.
+
+**apps/mobile**
+- `src/identity.ts` — `startKcbIdentity()`·`fetchKcbIdentityResult()` + WebView(`/kcb/done` 감지) 가이드. `BackendIdentity.isForeigner` 추가.
+
+**.env.example**: `KCB_SERVICE_URL`·`KCB_SHARED_SECRET`(apps/web) + 서비스 자체 env 안내.
+
+**검증**: web `tsc --noEmit` OK · mobile `tsc --noEmit` OK · `mvn package` OK(fat jar, OkCert3 번들) · 부팅 스모크(`/healthz` 200, 보호 엔드포인트 503 fail-closed) OK.
+
+**잔여(사용자 직접)**: ① identity-kcb 를 상주 호스트(Railway/Render/Fly/EC2/보비)에 배포 + 라이선스 마운트 + KCB Gateway 아웃바운드/NTP 확인 ② apps/web(Vercel)에 `KCB_SERVICE_URL`/`KCB_SHARED_SECRET`/`IDENTITY_CI_PEPPER` 설정 ③ step01 을 KCB WebView 흐름으로 교체.
+
 ## Phase 6-b — App Store v1.0 출시 준비 ◐
 
 App Store 최단경로 제출을 위해 결제를 **IAP 단독**으로 확정하고, 모바일 빌드 메타·결제 통합·외부작업 가이드를 정비.

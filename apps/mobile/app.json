@@ -52,7 +52,20 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router", "expo-font", "./plugins/withIapStoreFlavor"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "./plugins/withIapStoreFlavor",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": false
     },

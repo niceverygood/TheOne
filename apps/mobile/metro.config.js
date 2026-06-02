@@ -7,7 +7,8 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [workspaceRoot];
+// Expo 기본 watchFolders 를 보존하면서 모노레포 루트를 추가 (SDK 52 권장)
+config.watchFolders = Array.from(new Set([...(config.watchFolders ?? []), workspaceRoot]));
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),

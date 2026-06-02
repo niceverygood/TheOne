@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>본인확인 처리중</title>
+</head>
+<body>
+  <!--
+    KCB 인증창의 리턴 페이지(phone_popup3 역할).
+    서버에서 이미 RESULT 를 수신·저장했다. 여기서는:
+      (a) 브라우저 팝업으로 열린 경우: opener 에 postMessage 후 닫기
+      (b) WebView(앱)로 열린 경우: /kcb/done URL 로 이동 → 앱이 URL 변화를 감지
+  -->
+  <script th:inline="javascript">
+    var txSeqNo = /*[[${txSeqNo}]]*/ "";
+    var status  = /*[[${status}]]*/ "fail";
+    var doneUrl = /*[[${doneUrl}]]*/ "";
+    try {
+      if (window.opener) {
+        window.opener.postMessage({ source: "kcb-identity", txSeqNo: txSeqNo, status: status }, "*");
+      }
+    } catch (e) {}
+    window.location.replace(doneUrl);
+  </script>
+  <noscript><a th:href="${doneUrl}">계속</a></noscript>
+</body>
+</html>

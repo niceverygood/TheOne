@@ -1,0 +1,9 @@
+# 라이선스 비밀은 이미지에 절대 포함하지 않는다(런타임 마운트)
+secret/
+*.dat
+
+target/
+*.log
+.env
+.env.*
+!.env.example

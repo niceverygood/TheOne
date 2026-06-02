@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>본인확인</title>
+  <style>
+    html,body{margin:0;height:100%;background:#FAF7F2;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;color:#1A1F2E}
+    .wrap{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px}
+    .dot{width:8px;height:8px;border-radius:1px;background:#B8956A;animation:b 1s infinite alternate}
+    @keyframes b{from{opacity:.3}to{opacity:1}}
+    p{font-size:14px;color:#6B7280}
+  </style>
+</head>
+<body>
+  <!-- KCB 인증창 호출: safe.ok-name.co.kr/CommonSvl 로 자동 submit (phone_popup2 역할) -->
+  <form name="kcbCertForm" method="post" th:action="${popupUrl}">
+    <input type="hidden" name="tc" th:value="${tc}"/>
+    <input type="hidden" name="cp_cd" th:value="${cpCd}"/>
+    <input type="hidden" name="mdl_tkn" th:value="${mdlTkn}"/>
+    <input type="hidden" name="target_id" value=""/>
+  </form>
+  <div class="wrap">
+    <div class="dot"></div>
+    <p>본인확인 창을 여는 중입니다…</p>
+  </div>
+  <script>document.kcbCertForm.submit();</script>
+</body>
+</html>

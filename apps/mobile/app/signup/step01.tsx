@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Field, Txt } from '../../src/ui';
-import { CARRIERS, requestCode, verifyCode } from '../../src/auth-mock';
+import { CARRIERS, requestCode, verifyCode } from '../../src/identity';
 import { useSignup } from '../../src/store';
 
 export default function Step01() {
@@ -119,7 +119,7 @@ export default function Step01() {
         </View>
       )}
       <Txt size={11} color={C.gray} style={{ marginTop: 12 }}>
-        만 19세 미만은 가입할 수 없습니다. (mock 본인인증 — 정식 PASS/KCB 연동 예정)
+        만 19세 미만은 가입할 수 없습니다. (mock 본인인증 — 정식 PortOne 본인인증 연동 예정)
       </Txt>
     </AppShell>
   );
