@@ -1,0 +1,35 @@
+# THE ONE — KCB OkCert3 본인확인 중계 서비스 (Fly.io)
+# 배포: services/identity-kcb 에서  fly deploy
+# 라이선스는 KCB_LICENSE_B64 시크릿(.dat base64)로 주입 → 시작 시 KCB_LICENSE_PATH 로 복원.
+app = "theone-identity-kcb"
+primary_region = "nrt"           # 도쿄 — 한국 근접, KCB Gateway 아웃바운드 양호
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  KCB_CP_CD = "V44210000000"
+  KCB_TARGET = "PROD"
+  KCB_POPUP_URL = "https://safe.ok-name.co.kr/CommonSvl"
+  KCB_SITE_NAME = "THE ONE"
+  KCB_RQST_CAUS_CD = "00"
+  SELF_BASE_URL = "https://theone-identity-kcb.fly.dev"
+  # 비밀값(SHARED_SECRET, KCB_LICENSE_B64)은 fly secrets 로 설정 — 여기 두지 않음.
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = "off"     # KCB 서버 시간동기·상시 가용 위해 항상 켜둠
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  method = "get"
+  path = "/healthz"
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"                  # Spring Boot + KCB 모듈 여유
