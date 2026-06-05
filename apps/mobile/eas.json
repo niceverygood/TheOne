@@ -9,7 +9,8 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "COREPACK_INTEGRITY_KEYS": "0"
+        "COREPACK_INTEGRITY_KEYS": "0",
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
       },
       "ios": {
         "simulator": true,
@@ -23,7 +24,8 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "COREPACK_INTEGRITY_KEYS": "0"
+        "COREPACK_INTEGRITY_KEYS": "0",
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
       },
       "ios": {
         "simulator": false,
@@ -37,7 +39,8 @@
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "COREPACK_INTEGRITY_KEYS": "0"
+        "COREPACK_INTEGRITY_KEYS": "0",
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
       },
       "ios": {
         "resourceClass": "m-medium"
