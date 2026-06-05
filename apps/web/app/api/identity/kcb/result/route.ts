@@ -5,21 +5,59 @@ import { fetchKcbResult } from '@/lib/kcb-identity';
 export const runtime = 'nodejs'; // node:crypto(CI 해시) 사용
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({ txSeqNo: z.string().min(1).max(40) });
+const schema = z.object({
+  txSeqNo: z.string().min(1).max(40).optional(),
+  // Apple App Review 전용 우회 코드(서버 env 로만 검증). 일반 사용자 흐름엔 없음.
+  reviewCode: z.string().min(1).max(128).optional(),
+});
+
+/**
+ * Apple App Review 우회(연령/본인인증).
+ * - 해외 리뷰어는 한국 KCB 휴대폰 본인확인을 완료할 수 없다.
+ * - 비밀 코드는 앱 바이너리에 넣지 않고 서버 env(IOS_REVIEW_BYPASS_CODE)로만 검증한다.
+ *   → 앱을 디컴파일해도 코드가 없고, 승인 후 env 1개만 삭제하면 우회가 즉시 비활성화된다.
+ * - 일치 시 고정된 "심사 데모" 성인 신원만 반환(실제 KCB 미호출).
+ */
+function reviewBypassIdentity(reviewCode: string | undefined) {
+  const expected = process.env.IOS_REVIEW_BYPASS_CODE;
+  if (!expected || !reviewCode || reviewCode !== expected) return null;
+  return {
+    name: '심사 데모',
+    birth: '1990-01-01',
+    gender: 'male' as const,
+    phone: '01000000000',
+    carrier: 'SKT',
+    isForeigner: false,
+    isAdult: true,
+    mock: true,
+    review: true,
+  };
+}
 
 /**
  * POST /api/identity/kcb/result
- * body: { txSeqNo }
+ * body: { txSeqNo } | { reviewCode }
  *
  * KCB 인증 완료 후 클라이언트가 받은 txSeqNo 로 서버가 결과를 재조회·확정한다.
  * - 미인증/조회불가 → 422
  * - 만 19세 미만 → 403 (trust-safety §3-4)
  * - 원본 CI/DI·ciHash 는 응답에 절대 포함하지 않는다(서버 내부 저장용).
+ * - reviewCode 가 서버 env 와 일치하면 KCB 미호출, 고정 데모 성인 신원 반환(Apple 심사용).
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
+    return NextResponse.json({ ok: false, reason: 'invalid' }, { status: 400 });
+  }
+
+  // Apple App Review 우회: 서버 env 와 코드가 일치할 때만(설정 안 됐으면 항상 무시).
+  const bypass = reviewBypassIdentity(parsed.data.reviewCode);
+  if (bypass) {
+    return NextResponse.json({ ok: true, ...bypass });
+  }
+
+  if (!parsed.data.txSeqNo) {
     return NextResponse.json({ ok: false, reason: 'invalid' }, { status: 400 });
   }
 

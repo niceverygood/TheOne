@@ -103,6 +103,25 @@ export async function fetchKcbIdentityResult(txSeqNo: string): Promise<BackendId
   }
 }
 
+/**
+ * Apple App Review 전용 우회 — 해외 리뷰어가 한국 KCB 본인인증을 완료할 수 없어,
+ * 심사 노트에 적힌 비밀 코드를 입력하면 서버가 코드를 검증(서버 env)하고 데모 성인 신원을 반환한다.
+ * 비밀 코드는 앱에 내장돼 있지 않으며(서버에서만 검증), 승인 후 서버 env 삭제로 비활성화된다.
+ */
+export async function reviewBypassIdentity(reviewCode: string): Promise<BackendIdentity> {
+  if (!API_BASE) return { ok: false, reason: 'no_api_base' };
+  try {
+    const res = await fetch(`${API_BASE}/api/identity/kcb/result`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reviewCode }),
+    });
+    return (await res.json()) as BackendIdentity;
+  } catch {
+    return { ok: false, reason: 'network' };
+  }
+}
+
 /* ============================================================================
  * PORTONE 전환 가이드 (대안 — 채널키 발급 + SDK 설치 후 활성화)
  * ----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { AppShell, FormFooter } from '../../src/app-shell';
@@ -12,6 +12,7 @@ import {
   IDENTITY_PROVIDER,
   startKcbIdentity,
   fetchKcbIdentityResult,
+  reviewBypassIdentity,
 } from '../../src/identity';
 import { useSignup } from '../../src/store';
 
@@ -31,6 +32,9 @@ export default function Step01() {
   const [popupUrl, setPopupUrl] = useState<string | null>(null);
   const txRef = useRef<string | null>(null);
   const doneRef = useRef(false); // onNavigationStateChange 다중 호출 가드
+  // Apple App Review 우회(숨김): 하단 안내문 롱프레스로 노출 → 심사 노트의 코드 입력
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewCode, setReviewCode] = useState('');
 
   // ── mock 경로(키 미설정 시) ───────────────────────────────
   async function onRequest() {
@@ -84,6 +88,19 @@ export default function Step01() {
       setErr('만 19세 미만은 가입할 수 없습니다.');
     } else {
       setErr('본인인증에 실패했습니다. 다시 시도해 주세요.');
+    }
+  }
+
+  // ── Apple App Review 우회 — 심사 노트의 코드 입력 → 서버 검증 후 데모 성인 신원 ──
+  async function onReviewBypass() {
+    setErr(null);
+    const v = await reviewBypassIdentity(reviewCode.trim());
+    if (v.ok && v.isAdult) {
+      setVerified(true);
+      setVerifiedName(v.name);
+      set({ verified: true, name: v.name, birth: v.birth, gender: v.gender, phone: v.phone });
+    } else {
+      setErr('코드가 올바르지 않습니다.');
     }
   }
 
@@ -160,9 +177,57 @@ export default function Step01() {
               {err}
             </Txt>
           ) : null}
-          <Txt size={11} color={C.gray} style={{ marginTop: 12 }}>
-            만 19세 미만은 가입할 수 없습니다. KCB 휴대폰 본인확인으로 실명·연령이 검증됩니다.
-          </Txt>
+          <Pressable onLongPress={() => setReviewMode(true)} delayLongPress={1200}>
+            <Txt size={11} color={C.gray} style={{ marginTop: 12 }}>
+              만 19세 미만은 가입할 수 없습니다. KCB 휴대폰 본인확인으로 실명·연령이 검증됩니다.
+            </Txt>
+          </Pressable>
+          {reviewMode && !verified ? (
+            <View
+              style={{
+                marginTop: 16,
+                borderTopWidth: 1,
+                borderTopColor: C.hairLight,
+                paddingTop: 12,
+              }}
+            >
+              <Txt variant="mono" size={10} color={C.gray} style={{ marginBottom: 6 }}>
+                App Review
+              </Txt>
+              <TextInput
+                value={reviewCode}
+                onChangeText={setReviewCode}
+                placeholder="review code"
+                placeholderTextColor={C.gray}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  borderWidth: 1,
+                  borderColor: C.hairLight,
+                  borderRadius: RADIUS,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: C.ink2,
+                  fontSize: 13,
+                }}
+              />
+              <Pressable
+                onPress={onReviewBypass}
+                style={{
+                  marginTop: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: C.ink2,
+                  borderRadius: RADIUS,
+                }}
+              >
+                <Txt size={12} color={C.ink2}>
+                  확인
+                </Txt>
+              </Pressable>
+            </View>
+          ) : null}
         </>
       ) : (
         // ── mock 경로(개발/테스트 — 키 미설정 시) ──
