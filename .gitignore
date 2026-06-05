@@ -24,11 +24,11 @@ apps/mobile/.expo/
 apps/mobile/web-build/
 apps/mobile/pc-api-key.json
 apps/mobile/AuthKey_*.p8
-# Xcode 빌드 산출물 (ios/ 자체는 prebuild 산출물이라 커밋)
-apps/mobile/ios/build/
-apps/mobile/ios/Pods/
-apps/mobile/ios/**/xcuserdata/
-apps/mobile/ios/**/*.xcuserstate
+# 네이티브 디렉터리는 prebuild 산출물 — 커밋하지 않는다(android 과 동일).
+# (옛 SDK51 시절 커밋된 ios/Podfile.lock 이 SDK52 podspec 과 충돌 → EAS iOS 빌드 실패.
+#  EAS 가 매 빌드 fresh prebuild 하도록 ios/ 도 무시. 로컬 ios/ 는 expo prebuild 로 재생성)
+apps/mobile/ios/
+apps/mobile/android/
 *.orig.*
 # EAS 빌드 산출물 (다운로드 아카이브 — 커밋/업로드 금지)
 *.aab
