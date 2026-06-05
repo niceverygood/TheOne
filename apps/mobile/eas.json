@@ -14,7 +14,8 @@
       },
       "ios": {
         "simulator": true,
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
         "buildType": "apk"
@@ -29,7 +30,8 @@
       },
       "ios": {
         "simulator": false,
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
         "buildType": "apk"
@@ -43,7 +45,8 @@
         "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
         "buildType": "app-bundle"
