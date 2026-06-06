@@ -10,7 +10,9 @@ import { useSignup } from '../../src/store';
 export default function Step02() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
-  const [gender, setGender] = useState<'male' | 'female'>('male');
+  // 성별은 step01 본인인증(KCB)에서 확정된 값을 사용한다 — 사용자가 임의로 바꿀 수 없다
+  // (남11/여13 직업 카테고리는 검증된 성별에 따라 결정). 미인증 진입 시 store 기본값(male).
+  const gender = useSignup((s) => s.gender);
   const [picked, setPicked] = useState<string | null>(null);
   const jobs = gender === 'male' ? MALE_JOBS : FEMALE_JOBS;
   const selected = jobs.find((j) => j.id === picked);
@@ -32,35 +34,26 @@ export default function Step02() {
         />
       }
     >
-      {/* 성별 토글 */}
+      {/* 성별 — 본인인증으로 확정(읽기 전용). 임의 변경 불가 */}
       <View
         style={{
           flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           borderWidth: 1,
           borderColor: C.hairLight,
           borderRadius: RADIUS,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
           marginBottom: 20,
         }}
       >
-        {(['male', 'female'] as const).map((g) => (
-          <Pressable
-            key={g}
-            onPress={() => {
-              setGender(g);
-              setPicked(null);
-            }}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              alignItems: 'center',
-              backgroundColor: gender === g ? C.ink2 : 'transparent',
-            }}
-          >
-            <Txt size={12.5} color={gender === g ? C.ivory : C.gray}>
-              {g === 'male' ? '남성 회원' : '여성 회원'}
-            </Txt>
-          </Pressable>
-        ))}
+        <Txt size={12.5} color={C.gray}>
+          회원 구분
+        </Txt>
+        <Txt size={13} weight="600" color={C.ink2}>
+          {gender === 'male' ? '남성 회원' : '여성 회원'} · 본인인증 확정
+        </Txt>
       </View>
 
       {/* 2열 그리드 */}

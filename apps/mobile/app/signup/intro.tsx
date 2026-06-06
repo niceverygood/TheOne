@@ -20,7 +20,7 @@ export default function Intro() {
       hideBack
       eyebrow="Application"
       title={<>가입 심사를{'\n'}시작합니다</>}
-      subtitle="심사는 평균 5일이 소요됩니다. 6단계를 차분히 채워주세요. 진정성 있는 작성이 통과율을 높입니다."
+      subtitle="심사는 평균 5일이 소요됩니다. 5단계를 차분히 채워주세요. 진정성 있는 작성이 통과율을 높입니다."
       footer={
         <FormFooter
           onlyNext
