@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import {
   waitlistInputSchema,
   referralCodeFromSeq,
@@ -8,8 +9,19 @@ import {
 import { createWaitlistEntry, DuplicateEmailError } from '@theone/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { verifyTurnstile } from '@/lib/turnstile';
-import { getClientIp, getUserAgent, getUtmFromCookie, hashIp } from '@/lib/request-meta';
+import {
+  getClientIp,
+  getUserAgent,
+  getAttribution,
+  getVisitorId,
+  getFbCookies,
+  hashIp,
+} from '@/lib/request-meta';
+import { recordEvent, deriveFbc } from '@/lib/track';
+import { sendLeadEvent } from '@/lib/fb-capi';
 import { sendWaitlistConfirm } from '@/lib/mailer';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one.kr';
 
 export async function submitWaitlist(formData: FormData): Promise<WaitlistSubmitResult> {
   const raw = {
@@ -64,7 +76,9 @@ export async function submitWaitlist(formData: FormData): Promise<WaitlistSubmit
     };
   }
 
-  const utm = getUtmFromCookie();
+  // 퍼널: 봇/검증 통과 후 실제 제출 시도(위변조 방지 위해 서버에서만 기록)
+  const attr = getAttribution();
+  await recordEvent('waitlist_submit', { meta: { gender: input.gender } });
 
   try {
     const entry = await createWaitlistEntry({
@@ -72,29 +86,48 @@ export async function submitWaitlist(formData: FormData): Promise<WaitlistSubmit
       gender: input.gender,
       jobCategory: input.jobCategory,
       referralCode: input.referralCode ?? null,
-      utmSource: utm.utmSource ?? null,
-      utmMedium: utm.utmMedium ?? null,
-      utmCampaign: utm.utmCampaign ?? null,
-      utmTerm: utm.utmTerm ?? null,
-      utmContent: utm.utmContent ?? null,
+      utmSource: attr.utmSource ?? null,
+      utmMedium: attr.utmMedium ?? null,
+      utmCampaign: attr.utmCampaign ?? null,
+      utmTerm: attr.utmTerm ?? null,
+      utmContent: attr.utmContent ?? null,
+      fbclid: attr.fbclid ?? null,
+      visitorId: getVisitorId() ?? null,
       userAgent: getUserAgent(),
       ipHash,
     });
 
     const referralCode = referralCodeFromSeq(entry.seq);
 
+    // 퍼널: 가입 성공 + Facebook Lead 전환(Pixel과 동일 eventId로 dedup)
+    const eventId = randomUUID();
+    await recordEvent('waitlist_success', { meta: { seq: entry.seq } });
+
+    const fb = getFbCookies();
+    void sendLeadEvent({
+      eventId,
+      email: entry.email,
+      fbc: fb.fbc ?? deriveFbc(attr.fbclid),
+      fbp: fb.fbp,
+      ip,
+      userAgent: getUserAgent(),
+      sourceUrl: attr.landing ? `${SITE_URL}${attr.landing}` : SITE_URL,
+    });
+
     // 확인 메일 (키 없으면 no-op). 메일 실패가 등록 자체를 막지 않도록 격리.
     void sendWaitlistConfirm({ email: entry.email, seq: entry.seq, referralCode }).catch(() => {});
 
-    return { ok: true, seq: entry.seq, referralCode };
+    return { ok: true, seq: entry.seq, referralCode, eventId };
   } catch (e) {
     if (e instanceof DuplicateEmailError) {
+      await recordEvent('waitlist_duplicate');
       return {
         ok: false,
         reason: 'duplicate',
         message: '이미 등록된 이메일이에요. 출시 알림을 받으실 수 있습니다.',
       };
     }
+    await recordEvent('waitlist_error');
     console.error('[waitlist] insert failed', e);
     return {
       ok: false,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { fetchKcbResult } from '@/lib/kcb-identity';
+import { sealIdentity } from '@/lib/identity-token';
 
 export const runtime = 'nodejs'; // node:crypto(CI 해시) 사용
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,9 @@ export async function POST(req: NextRequest) {
   // Apple App Review 우회: 서버 env 와 코드가 일치할 때만(설정 안 됐으면 항상 무시).
   const bypass = reviewBypassIdentity(parsed.data.reviewCode);
   if (bypass) {
-    return NextResponse.json({ ok: true, ...bypass });
+    // 데모 신원도 봉인 토큰을 동봉해 가입 연동(ciHash 저장)을 동일 경로로 검증 가능하게 한다.
+    const idToken = sealIdentity({ ciHash: 'review-demo-ci', phone: bypass.phone });
+    return NextResponse.json({ ok: true, ...bypass, idToken });
   }
 
   if (!parsed.data.txSeqNo) {
@@ -77,7 +80,8 @@ export async function POST(req: NextRequest) {
   //   if (dup) return 409 already_registered;
   //   가입 확정 시 User.create({ phone, gender, birth, ciHash }) 에 저장.
 
-  // 클라이언트에는 안전한 정보만 반환 (CI/DI·해시 제외)
+  // 클라이언트에는 안전한 정보만 반환 (CI/DI·해시 제외).
+  // ciHash 는 평문 대신 봉인 토큰(idToken)으로만 전달 — 가입 제출 시 서버가 열어 저장한다.
   return NextResponse.json({
     ok: true,
     name: result.name,
@@ -88,5 +92,8 @@ export async function POST(req: NextRequest) {
     isForeigner: result.isForeigner,
     isAdult: result.isAdult,
     mock: result.mock,
+    idToken: result.ciHash
+      ? sealIdentity({ ciHash: result.ciHash, phone: result.phone })
+      : undefined,
   });
 }

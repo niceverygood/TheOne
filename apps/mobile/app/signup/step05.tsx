@@ -1,8 +1,11 @@
-import { View } from 'react-native';
+import { useState } from 'react';
+import { Alert, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Hairline, Txt } from '../../src/ui';
+import { useSignup } from '../../src/store';
+import { submitSignup } from '../../src/signup-api';
 
 const BENEFITS = [
   ['심사 우선 검토', '평균 5일 → 3일 단축'],
@@ -13,6 +16,38 @@ const BENEFITS = [
 export default function Step05() {
   const router = useRouter();
   const code = ['T', 'H', 'E', '•', '9', '2'];
+  const signup = useSignup();
+  const [submitting, setSubmitting] = useState(false);
+
+  // 신청서 제출 → 서버에 회원 생성(가입 심사 대기) → 완료 화면
+  const onSubmit = async () => {
+    if (submitting) return;
+    if (!signup.jobCategory) {
+      Alert.alert('직업을 선택해 주세요', '이전 단계에서 직업 카테고리를 먼저 선택해 주세요.');
+      return;
+    }
+    setSubmitting(true);
+    const res = await submitSignup({
+      gender: signup.gender,
+      jobCategory: signup.jobCategory,
+      birth: signup.birth,
+      phone: signup.phone,
+      referralCode: signup.referralCode,
+      photoCount: signup.photoCount,
+      idToken: signup.idToken,
+    });
+    setSubmitting(false);
+    if (res.ok) {
+      signup.set({ userId: res.userId });
+      router.replace('/signup/complete');
+      return;
+    }
+    Alert.alert(
+      res.reason === 'duplicate' ? '이미 가입된 정보예요' : '제출에 실패했어요',
+      res.message,
+    );
+  };
+
   return (
     <AppShell
       step={5}
@@ -20,7 +55,13 @@ export default function Step05() {
       eyebrow="Referral"
       title="추천인 코드"
       subtitle="회원의 추천을 받으셨다면 코드를 입력해 주세요. 선택 사항이며, 입력 시 심사 우선순위가 올라갑니다."
-      footer={<FormFooter next="신청서 제출" onNext={() => router.replace('/signup/complete')} />}
+      footer={
+        <FormFooter
+          next={submitting ? '제출 중…' : '신청서 제출'}
+          disabled={submitting}
+          onNext={onSubmit}
+        />
+      }
     >
       <Txt variant="eyebrow" style={{ marginBottom: 10 }}>
         코드 입력

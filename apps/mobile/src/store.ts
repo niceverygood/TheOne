@@ -14,6 +14,10 @@ export interface SignupState {
   photoCount: number;
   // Step 05 추천인
   referralCode?: string;
+  // 본인인증 봉인 토큰 (가입 제출 시 서버로 전달 → ciHash 저장)
+  idToken?: string;
+  // 가입 제출 후 서버가 발급한 회원 ID (4종 인증 신청 시 사용)
+  userId?: string;
 
   set: (patch: Partial<SignupState>) => void;
   reset: () => void;
@@ -33,5 +37,6 @@ export const useSignup = create<SignupState>((set) => ({
       photoCount: 0,
       name: undefined,
       jobCategory: undefined,
+      userId: undefined,
     }),
 }));

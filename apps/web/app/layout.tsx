@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { notoSerifKr, inter, pretendard } from './fonts';
 import { AnalyticsProvider } from '@/components/analytics-provider';
+import { PageTracker } from '@/components/analytics/page-tracker';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one.kr';
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko" className={`${notoSerifKr.variable} ${inter.variable} ${pretendard.variable}`}>
       <body className="font-sans-kr tracking-kr antialiased">
         <AnalyticsProvider />
+        <PageTracker />
         {children}
       </body>
     </html>
