@@ -1,21 +1,24 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { moderateAction } from './actions';
 
 export function ReportActions({ userId, status }: { userId: string; status: string }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  function run(action: 'suspend' | 'ban' | 'reinstate') {
+  async function run(action: 'suspend' | 'ban' | 'reinstate') {
     setErr(null);
-    startTransition(async () => {
+    setPending(true);
+    try {
       const res = await moderateAction(userId, action);
       if (res.ok) router.refresh();
       else setErr(res.message);
-    });
+    } finally {
+      setPending(false);
+    }
   }
 
   const btn = (bg: string): React.CSSProperties => ({
