@@ -18,9 +18,11 @@ if (process.env.NODE_ENV !== 'production') {
 
 export * from '@prisma/client';
 export * from './waitlist';
+export * from './signup';
 export * from './verification';
 export * from './matching';
 export * from './economy';
 export * from './messaging';
 export * from './safety';
 export * from './kpi';
+export * from './analytics';

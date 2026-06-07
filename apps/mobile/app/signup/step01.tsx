@@ -82,7 +82,14 @@ export default function Step01() {
     if (v.ok && v.isAdult) {
       setVerified(true);
       setVerifiedName(v.name);
-      set({ verified: true, name: v.name, birth: v.birth, gender: v.gender, phone: v.phone });
+      set({
+        verified: true,
+        name: v.name,
+        birth: v.birth,
+        gender: v.gender,
+        phone: v.phone,
+        idToken: v.idToken,
+      });
       setErr(null);
     } else if (v.reason === 'underage') {
       setErr('만 19세 미만은 가입할 수 없습니다.');
@@ -98,7 +105,14 @@ export default function Step01() {
     if (v.ok && v.isAdult) {
       setVerified(true);
       setVerifiedName(v.name);
-      set({ verified: true, name: v.name, birth: v.birth, gender: v.gender, phone: v.phone });
+      set({
+        verified: true,
+        name: v.name,
+        birth: v.birth,
+        gender: v.gender,
+        phone: v.phone,
+        idToken: v.idToken,
+      });
     } else {
       setErr('코드가 올바르지 않습니다.');
     }

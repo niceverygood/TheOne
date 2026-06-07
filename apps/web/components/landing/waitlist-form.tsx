@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   MALE_JOB_CATEGORIES,
   FEMALE_JOB_CATEGORIES,
@@ -9,42 +9,57 @@ import {
   type WaitlistSubmitResult,
 } from '@theone/shared';
 import { submitWaitlist } from '@/app/actions/waitlist';
-import { capture } from '@/lib/analytics';
+import { capture, trackFbLead } from '@/lib/analytics';
+import { trackServer } from '@/lib/track-client';
 import { Turnstile } from '@/components/turnstile';
 
 export function WaitlistForm() {
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [gender, setGender] = useState<Gender>('male');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ seq: number; referralCode: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
     capture(ANALYTICS_EVENTS.formView);
+    trackServer('waitlist_view'); // 퍼널: 폼 노출(서버 집계)
   }, []);
+
+  // 퍼널: 폼 첫 상호작용(입력/포커스) 1회만 — 가입 의도 신호
+  function onFirstInteraction() {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    trackServer('waitlist_start');
+  }
 
   const categories = gender === 'male' ? MALE_JOB_CATEGORIES : FEMALE_JOB_CATEGORIES;
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrors({});
     setFormError(null);
     const formData = new FormData(e.currentTarget);
     capture(ANALYTICS_EVENTS.submitAttempt, { gender });
 
-    startTransition(async () => {
+    setPending(true);
+    try {
       const res: WaitlistSubmitResult = await submitWaitlist(formData);
       if (res.ok) {
         capture(ANALYTICS_EVENTS.submitSuccess, { seq: res.seq });
+        // Facebook Lead 전환 — 서버 CAPI와 동일 eventId로 dedup
+        if (res.eventId) trackFbLead(res.eventId, { content_name: 'waitlist' });
         setSuccess({ seq: res.seq, referralCode: res.referralCode });
       } else {
         capture(ANALYTICS_EVENTS.submitFail, { reason: res.reason });
         if (res.fieldErrors) setErrors(res.fieldErrors);
         setFormError(res.message);
       }
-    });
+    } finally {
+      setPending(false);
+    }
   }
 
   if (success) {
@@ -84,6 +99,8 @@ export function WaitlistForm() {
     <form
       ref={formRef}
       onSubmit={onSubmit}
+      onFocusCapture={onFirstInteraction}
+      onChangeCapture={onFirstInteraction}
       className="border border-hair-light bg-ivory p-7"
       noValidate
     >

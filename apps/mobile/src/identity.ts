@@ -23,6 +23,8 @@ export interface BackendIdentity {
   carrier?: string;
   isForeigner?: boolean;
   isAdult?: boolean;
+  /** 본인인증 봉인 토큰 — 가입 제출 시 그대로 전달(서버가 ciHash 복원). 클라는 내용 모름. */
+  idToken?: string;
   reason?: string; // not_verified | underage | network | no_api_base | start_failed
 }
 

@@ -85,6 +85,17 @@ enum ReportCategory {
   other
 }
 
+/// 퍼널 이벤트 단계 (Phase 1: 광고→LP→폼→가입). Postgres enum은 추후 앱 단계 추가 가능.
+enum FunnelEventType {
+  page_view // 페이지/LP 조회
+  waitlist_view // 사전등록 폼 노출(뷰포트 진입)
+  waitlist_start // 폼 상호작용 시작(첫 입력/포커스)
+  waitlist_submit // 제출 시도(검증·봇 통과 후)
+  waitlist_success // 가입 완료(전환)
+  waitlist_duplicate // 중복 이메일
+  waitlist_error // 검증/서버 실패
+}
+
 // ============================================================
 // Waitlist (Phase 1)
 // ============================================================
@@ -102,6 +113,8 @@ model Waitlist {
   utmCampaign  String?   @map("utm_campaign")
   utmTerm      String?   @map("utm_term")
   utmContent   String?   @map("utm_content")
+  fbclid       String?
+  visitorId    String?   @map("visitor_id") // 퍼널 이벤트와 연결되는 익명 방문자 id
   userAgent    String?   @map("user_agent")
   ipHash       String?   @map("ip_hash")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -109,7 +122,43 @@ model Waitlist {
 
   @@index([createdAt])
   @@index([jobCategory])
+  @@index([visitorId])
   @@map("waitlist")
+}
+
+// ============================================================
+// Analytics / Funnel (Phase 1) — 광고 유입→가입 전환 분석
+// ============================================================
+
+/// 퍼널 이벤트 스트림(append-only). 익명 방문자 단위로 광고 어트리뷰션(utm/fbclid)과 함께 단계를 기록.
+/// 원본 IP는 저장하지 않고 솔트 해시(ipHash)만 보관. 개인 식별정보 없음(이메일 등은 Waitlist에만).
+model AnalyticsEvent {
+  id          String          @id @default(cuid())
+  type        FunnelEventType
+  visitorId   String          @map("visitor_id") // 익명 방문자 쿠키 id (theone_vid)
+  path        String? // 이벤트 발생 경로
+  referrer    String? // 최초 유입 referrer
+  landing     String? // 최초 랜딩 경로
+  utmSource   String?         @map("utm_source")
+  utmMedium   String?         @map("utm_medium")
+  utmCampaign String?         @map("utm_campaign")
+  utmTerm     String?         @map("utm_term")
+  utmContent  String?         @map("utm_content")
+  fbclid      String? // Facebook 광고 클릭 id
+  fbc         String? // _fbc 쿠키(또는 fbclid 파생) — CAPI 매칭용
+  fbp         String? // _fbp 쿠키 — CAPI 매칭용
+  userAgent   String?         @map("user_agent")
+  ipHash      String?         @map("ip_hash")
+  country     String?
+  meta        Json?
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([visitorId])
+  @@index([utmCampaign])
+  @@index([utmSource])
+  @@map("analytics_event")
 }
 
 // ============================================================

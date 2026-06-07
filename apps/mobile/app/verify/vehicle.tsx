@@ -3,15 +3,18 @@ import Svg, { Circle, Rect } from 'react-native-svg';
 import { C, RADIUS } from '../../src/theme';
 import { Field, Txt } from '../../src/ui';
 import { DocUpload, SecurityNote, VerifyShell } from '../../src/forms';
+import { useVerifySubmit } from '../../src/use-verify-submit';
 
 /** Screen 22 · 차량 인증 — 자동차등록증 + 차량 사진 */
 export default function VerifyVehicle() {
+  const { submitting, onSubmit } = useVerifySubmit({ type: 'vehicle', label: '자동차등록증' });
   return (
     <VerifyShell
       en="Vehicle Verification"
       title="보유 차량 인증"
       days="2"
-      cta="차량 인증 신청"
+      cta={submitting ? '신청 중…' : '차량 인증 신청'}
+      onSubmit={onSubmit}
       subtitle="본인 명의 자동차등록증과 번호판이 일치하는 차량 사진 2장을 제출합니다."
     >
       <Field eyebrow="차량" label="모델 · 연식" placeholder="예: G80 · 2024" />

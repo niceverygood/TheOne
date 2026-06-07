@@ -3,15 +3,22 @@ import Svg, { Rect } from 'react-native-svg';
 import { C, RADIUS } from '../../src/theme';
 import { Txt } from '../../src/ui';
 import { DocUpload, SecurityNote, ValueTier, VerifyShell } from '../../src/forms';
+import { useVerifySubmit } from '../../src/use-verify-submit';
 
 /** Screen 23 · 부동산 인증 + 가액 구간 */
 export default function VerifyRealEstate() {
+  const { submitting, onSubmit } = useVerifySubmit({
+    type: 'realestate',
+    label: '등기부등본',
+    valueTier: '30억~50억',
+  });
   return (
     <VerifyShell
       en="Real Estate Verification"
       title="부동산 인증"
       days="4"
-      cta="부동산 인증 신청"
+      cta={submitting ? '신청 중…' : '부동산 인증 신청'}
+      onSubmit={onSubmit}
       subtitle="등기부등본과 외관 사진, 공시지가 증빙을 제출합니다. 가액 구간 뱃지만 노출됩니다."
     >
       <ValueTier tiers={['10억 미만', '10억~30억', '30억~50억', '50억 이상']} initial={2} />
