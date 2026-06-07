@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { REJECT_REASONS, type RejectReasonCode } from '@theone/shared';
 import { approveAction, rejectAction } from '../actions';
@@ -13,7 +13,7 @@ export function ReviewPanel({
   canReview: boolean;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [mode, setMode] = useState<'idle' | 'rejecting'>('idle');
   const [reasonCode, setReasonCode] = useState<RejectReasonCode>(REJECT_REASONS[0].code);
   const [customReason, setCustomReason] = useState('');
@@ -29,24 +29,30 @@ export function ReviewPanel({
 
   const selected = REJECT_REASONS.find((r) => r.code === reasonCode)!;
 
-  function approve() {
+  async function approve() {
     setError(null);
-    startTransition(async () => {
+    setPending(true);
+    try {
       const res = await approveAction(applicationId);
       if (res.ok) router.push('/verifications');
       else setError(res.message);
-    });
+    } finally {
+      setPending(false);
+    }
   }
 
-  function submitReject() {
+  async function submitReject() {
     setError(null);
     const reason =
       reasonCode === 'other' ? customReason : `${selected.label} — ${selected.message}`;
-    startTransition(async () => {
+    setPending(true);
+    try {
       const res = await rejectAction(applicationId, reason);
       if (res.ok) router.push('/verifications');
       else setError(res.message);
-    });
+    } finally {
+      setPending(false);
+    }
   }
 
   const btn: React.CSSProperties = {
