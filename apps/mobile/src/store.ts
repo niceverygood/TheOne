@@ -17,7 +17,8 @@ export interface SignupState {
   birth?: string;
   gender: 'male' | 'female';
   phone?: string;
-  // Step 02 사진
+  // Step 02 사진 — 선택한 이미지 로컬 URI 목록(첫 장이 대표). 실제 S3 업로드는 별도 단계.
+  photos: string[];
   photoCount: number;
   // Step 03 키
   height?: number;
@@ -53,6 +54,7 @@ export interface SignupState {
 export const useSignup = create<SignupState>((set) => ({
   verified: false,
   gender: 'male',
+  photos: [],
   photoCount: 0,
   hobbies: [],
   set: (patch) => set(patch),
@@ -60,6 +62,7 @@ export const useSignup = create<SignupState>((set) => ({
     set({
       verified: false,
       gender: 'male',
+      photos: [],
       photoCount: 0,
       hobbies: [],
       name: undefined,
