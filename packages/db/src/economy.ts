@@ -19,6 +19,12 @@ export class InsufficientCreditError extends Error {
   }
 }
 
+/** 현재 크레딧 잔액 조회 (없으면 0). */
+export async function getCreditBalance(userId: string): Promise<number> {
+  const credit = await prisma.credit.findUnique({ where: { userId }, select: { balance: true } });
+  return credit?.balance ?? 0;
+}
+
 /** 충전 주문 생성 (pending) */
 export async function createOrder(userId: string, packageId: string, provider = 'portone') {
   const pkg = getPackage(packageId);

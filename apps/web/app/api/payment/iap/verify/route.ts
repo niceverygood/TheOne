@@ -3,8 +3,12 @@ import { z } from 'zod';
 import { prisma, markOrderPaid } from '@theone/db';
 import { getPackageByProductId } from '@theone/shared';
 import { verifyAppleReceipt } from '@/lib/apple-iap';
+import { verifyGooglePurchase } from '@/lib/google-iap';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const GOOGLE_PACKAGE = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'kr.theone.app';
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -36,21 +40,42 @@ export async function POST(req: NextRequest) {
   const pkg = getPackageByProductId(productId);
   if (!pkg) return NextResponse.json({ error: 'unknown_product' }, { status: 400 });
 
+  // 플랫폼별 영수증 검증 → transactionId(멱등 키) 추출
+  const provider = platform === 'android' ? 'iap_google' : 'iap_apple';
+  let transactionId: string | undefined;
+  let mock = false;
+  let environment: string | undefined;
+
   if (platform === 'android') {
-    return NextResponse.json({ error: 'android_not_supported_v1' }, { status: 501 });
+    const v = await verifyGooglePurchase({
+      packageName: GOOGLE_PACKAGE,
+      productId,
+      purchaseToken: receipt,
+    });
+    if (!v.ok || !v.transactionId) {
+      return NextResponse.json(
+        { ok: false, status: v.status, reason: v.reason ?? 'verify_failed' },
+        { status: 402 },
+      );
+    }
+    transactionId = v.transactionId;
+    mock = v.mock;
+  } else {
+    const v = await verifyAppleReceipt({ receiptData: receipt, expectedProductId: productId });
+    if (!v.ok || !v.transactionId) {
+      return NextResponse.json(
+        { ok: false, status: v.status, reason: v.reason ?? 'verify_failed' },
+        { status: 402 },
+      );
+    }
+    transactionId = v.transactionId;
+    mock = v.mock;
+    environment = v.environment;
   }
 
-  const v = await verifyAppleReceipt({ receiptData: receipt, expectedProductId: productId });
-  if (!v.ok || !v.transactionId) {
-    return NextResponse.json(
-      { ok: false, status: v.status, reason: v.reason ?? 'verify_failed' },
-      { status: 402 },
-    );
-  }
-
-  // 멱등: 동일 transactionId의 paid 주문이 이미 있으면 그대로 반환
+  // 멱등: 동일 transactionId의 주문이 이미 있으면 그대로 반환
   const existing = await prisma.order.findFirst({
-    where: { paymentId: v.transactionId, provider: 'iap_apple' },
+    where: { paymentId: transactionId, provider },
   });
   if (existing) {
     return NextResponse.json({
@@ -58,7 +83,7 @@ export async function POST(req: NextRequest) {
       orderId: existing.id,
       credited: existing.credits,
       duplicate: true,
-      mock: v.mock,
+      mock,
     });
   }
 
@@ -70,17 +95,17 @@ export async function POST(req: NextRequest) {
       amountWon: pkg.won,
       credits: pkg.credits,
       baseCredits: pkg.baseCredits,
-      provider: 'iap_apple',
+      provider,
       status: 'pending',
     },
   });
-  await markOrderPaid(order.id, v.transactionId);
+  await markOrderPaid(order.id, transactionId);
 
   return NextResponse.json({
     ok: true,
     orderId: order.id,
     credited: pkg.credits,
-    environment: v.environment,
-    mock: v.mock,
+    environment,
+    mock,
   });
 }

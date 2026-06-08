@@ -63,9 +63,14 @@ export function getIap(): IapApi {
         const purchase = await RNIap.requestPurchase({ sku: productId });
         const p = Array.isArray(purchase) ? purchase[0] : purchase;
         if (!p) throw new Error('purchase_empty');
+        // 서버 검증 입력: iOS=base64 영수증, Android=purchaseToken
+        const receipt =
+          Platform.OS === 'android'
+            ? ((p as { purchaseToken?: string }).purchaseToken ?? p.transactionReceipt ?? '')
+            : (p.transactionReceipt ?? '');
         return {
           productId: p.productId ?? productId,
-          receipt: p.transactionReceipt ?? '',
+          receipt,
           raw: p,
         };
       },

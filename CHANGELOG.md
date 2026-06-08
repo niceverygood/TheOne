@@ -2,6 +2,19 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 5-b — 인앱결제(IAP) 양 플랫폼 완성 ◐
+
+iOS 단독이던 IAP를 **Android(Google Play)까지** 확장하고, 충전 화면을 실제 회원·잔액에 연결.
+
+- **apps/web/lib/google-iap.ts(신규)**: 서비스계정 JWT(RS256, `crypto`)→OAuth2 토큰→`androidpublisher v3 purchases.products.get` 로 purchaseToken 검증(purchaseState=0). `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` 미설정 시 mock 폴백(Apple과 동일 패턴).
+- **/api/payment/iap/verify**: android 501 stub 제거 → 플랫폼별 검증(`iap_apple`/`iap_google`) + transactionId(orderId) 멱등 적립.
+- **/api/credits/balance(신규)** + `economy.getCreditBalance`: 잔액 조회.
+- **apps/mobile**: `iap.ts` Android는 `purchaseToken` 전송. `credits.tsx` — `DEMO_USER_ID` 제거→가입 `userId` 사용, 플랫폼별 productId, 실제 잔액 표시·갱신.
+- **.env.example**: `APPLE_IAP_SHARED_SECRET`·`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`·`GOOGLE_PLAY_PACKAGE_NAME`.
+
+**검증**: db/web/mobile `tsc` OK · web `next lint` OK.
+**잔여(운영)**: ① 두 키 설정(없으면 mock=영수증 무검증) ② Play Console에서 상품(`kr.theone.app.c*`) 등록 ③ Apple '앱 전용 공유 비밀'.
+
 ## Phase 4-b — 가입 플로우 재설계 + AI 자기소개 + 인증 8종/인앱화폐 보상 ◐
 
 가입을 사용자 지정 순서(본인인증→사진→키→지역→직업·학교→취미→라이프스타일→자기소개)로 재구성하고, 수집 데이터로 **AI 자기소개**(Claude, 키 없으면 템플릿 폴백)를 생성·편집한 뒤 제출한다. 가입 후 추가 인증을 **8종**으로 확장하고, **운영자 승인 시 타입별 차등 크레딧**을 멱등 지급한다. 본인 명의가 아닌 경우 **신분증 수동 본인확인** 경로를 추가했다.
