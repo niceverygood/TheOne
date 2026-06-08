@@ -22,7 +22,7 @@ export function roleAtLeast(role: OperatorRole, required: OperatorRole): boolean
   return OPERATOR_ROLES.indexOf(role) >= OPERATOR_ROLES.indexOf(required);
 }
 
-/** 인증 4종 라벨 */
+/** 인증 8종 라벨 */
 export const VERIFICATION_LABELS: Record<
   VerificationType,
   { kr: string; en: string; avgDays: number }
@@ -31,15 +31,36 @@ export const VERIFICATION_LABELS: Record<
   wealth: { kr: '재산', en: 'Wealth', avgDays: 1 },
   vehicle: { kr: '차량', en: 'Vehicle', avgDays: 1 },
   realestate: { kr: '부동산', en: 'Real Estate', avgDays: 1 },
+  income: { kr: '소득', en: 'Income', avgDays: 1 },
+  job: { kr: '직업', en: 'Occupation', avgDays: 1 },
+  family_wealth: { kr: '집안 자산', en: 'Family Wealth', avgDays: 2 },
+  reputation: { kr: '명성', en: 'Reputation', avgDays: 2 },
 };
 
-/** 가액 구간 (재산 / 부동산) */
+/** 가액 구간 (재산 / 부동산 / 소득 / 집안 자산) */
 export const VALUE_TIERS: Partial<Record<VerificationType, string[]>> = {
   wealth: ['5억~10억', '10억~30억', '30억~50억', '50억 이상'],
   realestate: ['10억 미만', '10억~30억', '30억~50억', '50억 이상'],
+  income: ['1억 미만', '1억~2억', '2억~3억', '3억 이상'],
+  family_wealth: ['30억 미만', '30억~100억', '100억~300억', '300억 이상'],
 };
 
-/** 카테고리별 필수/선택 서류 (verification-sop §1~4) */
+/**
+ * 인증 승인 시 지급하는 인앱화폐(크레딧) — 타입별 차등 (난이도/희소성 기반).
+ * 운영자 승인 시점에만 지급되며, applicationId 기준 멱등(재승인 중복지급 없음).
+ */
+export const VERIFY_REWARD_CREDITS: Record<VerificationType, number> = {
+  education: 30,
+  vehicle: 30,
+  job: 30,
+  income: 50,
+  wealth: 50,
+  realestate: 50,
+  family_wealth: 80,
+  reputation: 80,
+};
+
+/** 카테고리별 필수/선택 서류 (verification-sop §1~8) */
 export const REQUIRED_DOCS: Record<VerificationType, { label: string; required: boolean }[]> = {
   education: [
     { label: '졸업증명서', required: true },
@@ -60,6 +81,26 @@ export const REQUIRED_DOCS: Record<VerificationType, { label: string; required: 
     { label: '등기부등본(발급 7일 이내)', required: true },
     { label: '공시지가 증빙', required: true },
     { label: '임대차 계약서', required: false },
+  ],
+  income: [
+    { label: '소득금액증명원(홈택스, 발급 7일 이내)', required: true },
+    { label: '근로소득 원천징수영수증', required: true },
+    { label: '급여명세서(최근 3개월)', required: false },
+  ],
+  job: [
+    { label: '재직증명서 또는 사업자등록증', required: true },
+    { label: '명함 또는 사원증', required: true },
+    { label: '직무 관련 자격·면허', required: false },
+  ],
+  family_wealth: [
+    { label: '가족관계증명서', required: true },
+    { label: '부모 명의 자산 증빙(등기부등본·잔고증명 등)', required: true },
+    { label: '가업·법인 증빙', required: false },
+  ],
+  reputation: [
+    { label: '언론 보도·기사 또는 공식 프로필', required: true },
+    { label: '수상·임명장 또는 공식 직함 증빙', required: true },
+    { label: '저서·특허·전시 등 활동 증빙', required: false },
   ],
 };
 

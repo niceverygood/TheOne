@@ -7,7 +7,16 @@ import { z } from 'zod';
 // Gender 타입의 단일 출처는 job-categories.ts. 여기서는 zod 스키마만 제공.
 export const genderSchema = z.enum(['male', 'female']);
 
-export const verificationTypeSchema = z.enum(['education', 'wealth', 'vehicle', 'realestate']);
+export const verificationTypeSchema = z.enum([
+  'education',
+  'wealth',
+  'vehicle',
+  'realestate',
+  'income',
+  'job',
+  'family_wealth',
+  'reputation',
+]);
 export type VerificationType = z.infer<typeof verificationTypeSchema>;
 
 export const verificationStatusSchema = z.enum(['submitted', 'reviewing', 'approved', 'rejected']);
@@ -109,8 +118,30 @@ export const ANALYTICS_EVENTS = {
 // ============================================================
 
 /**
- * 모바일 가입(step01~05) 제출 페이로드.
- * 본인인증(KCB)으로 확정된 신원(성별·생년월일·휴대폰) + 직업/추천인.
+ * AI 자기소개 섹션 — 키:문자열. 가입 마지막 단계에서 생성·편집한 최종본을 그대로 보관한다.
+ * 키는 profile-template / AI 프롬프트와 동일(about/idealType/lifestyle/datingStyle/weekend).
+ */
+export const introSectionsSchema = z.object({
+  about: z.string().max(600).default(''),
+  idealType: z.string().max(600).default(''),
+  lifestyle: z.string().max(600).default(''),
+  datingStyle: z.string().max(600).default(''),
+  weekend: z.string().max(600).default(''),
+});
+export type IntroSections = z.infer<typeof introSectionsSchema>;
+
+/** 자기소개 섹션 메타(라벨·순서·플레이스홀더) — 모바일 편집 화면이 사용. */
+export const INTRO_SECTIONS = [
+  { key: 'about', label: '나는 이런 사람', en: 'About Me' },
+  { key: 'idealType', label: '내가 찾는 사람', en: 'Ideal Type' },
+  { key: 'lifestyle', label: '나의 라이프스타일', en: 'Lifestyle' },
+  { key: 'datingStyle', label: '연애·관계관', en: 'Dating Style' },
+  { key: 'weekend', label: '주말엔 보통', en: 'Weekends' },
+] as const satisfies readonly { key: keyof IntroSections; label: string; en: string }[];
+
+/**
+ * 모바일 가입 제출 페이로드.
+ * 본인인증(KCB)으로 확정된 신원(성별·생년월일·휴대폰) + 직업/학교/지역/취미/라이프스타일 + 자기소개.
  * 이름 등 직접식별정보는 스키마에 보관하지 않는다(privacy-design §2-4).
  */
 export const signupInputSchema = z.object({
@@ -131,8 +162,20 @@ export const signupInputSchema = z.object({
     .optional()
     .or(z.literal(''))
     .transform((v) => (v ? v : undefined)),
-  /** 제출한 사진 장수 (실제 S3 업로드는 별도 단계) */
-  photoCount: z.coerce.number().int().min(0).max(10).optional(),
+  /** 제출한 사진 장수 — 최소 2장(실제 S3 업로드는 별도 단계) */
+  photoCount: z.coerce.number().int().min(2, '사진을 2장 이상 등록해 주세요.').max(10).optional(),
+  // ── 프로필 상세(가입 설문) ─────────────────────────────
+  height: z.coerce.number().int().min(120).max(220).optional(),
+  residenceRegion: z.string().max(40).optional(),
+  activityRegion: z.string().max(40).optional(),
+  school: z.string().trim().max(80).optional(),
+  hobbies: z.array(z.string().max(40)).max(20).optional(),
+  drinkingFrequency: z.string().max(40).optional(),
+  drinkingAmount: z.string().max(40).optional(),
+  smoking: z.string().max(40).optional(),
+  bodyType: z.string().max(40).optional(),
+  /** AI 생성 + 사용자 편집한 자기소개 섹션 */
+  introSections: introSectionsSchema.partial().optional(),
   /**
    * 본인인증 봉인 토큰 (선택). KCB 결과 응답이 내려준 불투명 토큰을 그대로 전달하면
    * 서버가 열어 ciHash 를 User 에 저장한다(중복/차단 회원 조회용). 클라이언트는 내용을 못 봄.
@@ -140,6 +183,53 @@ export const signupInputSchema = z.object({
   idToken: z.string().max(1024).optional(),
 });
 export type SignupInput = z.infer<typeof signupInputSchema>;
+
+// ============================================================
+// AI 자기소개 생성 (Claude API + 템플릿 폴백)
+// ============================================================
+
+/** 자기소개 생성 입력 — 수집한 프로필 데이터(직접식별정보 제외). */
+export const profileGenerateSchema = z.object({
+  gender: genderSchema,
+  jobCategory: z.string().min(1),
+  /** 만 나이(생년월일 대신 나이만 전달 — PII 최소화) */
+  age: z.coerce.number().int().min(19).max(99).optional(),
+  height: z.coerce.number().int().min(120).max(220).optional(),
+  residenceRegion: z.string().max(40).optional(),
+  activityRegion: z.string().max(40).optional(),
+  school: z.string().trim().max(80).optional(),
+  hobbies: z.array(z.string().max(40)).max(20).optional(),
+  drinkingFrequency: z.string().max(40).optional(),
+  drinkingAmount: z.string().max(40).optional(),
+  smoking: z.string().max(40).optional(),
+  bodyType: z.string().max(40).optional(),
+});
+export type ProfileGenerateInput = z.infer<typeof profileGenerateSchema>;
+
+export type ProfileGenerateResult =
+  | { ok: true; sections: IntroSections; source: 'ai' | 'template' }
+  | { ok: false; reason: 'validation' | 'server'; message: string };
+
+// ============================================================
+// 본인 명의 아님 — 운영자 수동 본인인증 요청
+// ============================================================
+
+/**
+ * 휴대폰이 본인 명의가 아닌 경우의 수동 인증 요청.
+ * 신분증 사진은 S3 키만 보관(KMS 암호화). 주민등록번호 뒷자리는 가린 사본을 권장.
+ */
+export const manualIdentitySchema = z.object({
+  name: z.string().trim().min(1, '이름을 입력해 주세요.').max(40),
+  phone: z.string().trim().min(1, '연락처를 입력해 주세요.').max(20),
+  /** 신분증 사진 S3 키 (평문 URL 금지) */
+  idCardS3Key: z.string().min(1, '신분증 사진을 첨부해 주세요.').max(512),
+  note: z.string().max(500).optional(),
+});
+export type ManualIdentityInput = z.infer<typeof manualIdentitySchema>;
+
+export type ManualIdentitySubmitResult =
+  | { ok: true; requestId: string }
+  | { ok: false; reason: 'validation' | 'server'; message: string };
 
 export type SignupSubmitResult =
   | { ok: true; userId: string; status: UserStatus }

@@ -3,122 +3,110 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
-import { Txt } from '../../src/ui';
-import { FEMALE_JOBS, MALE_JOBS, type Job } from '../../src/jobs';
+import { Portrait, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
+import { previewPortraits } from '../../src/preview-assets';
+
+const GUIDE = [
+  '최근 6개월 이내 촬영한 본인 사진',
+  '얼굴이 정면으로 또렷하게 보일 것',
+  '단체 사진·과도한 보정·선글라스 불가',
+  '검증 위원이 본인 여부를 확인합니다',
+];
 
 export default function Step02() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
-  // 성별은 step01 본인인증(KCB)에서 확정된 값을 사용한다 — 사용자가 임의로 바꿀 수 없다
-  // (남11/여13 직업 카테고리는 검증된 성별에 따라 결정). 미인증 진입 시 store 기본값(male).
-  const gender = useSignup((s) => s.gender);
-  const [picked, setPicked] = useState<string | null>(null);
-  const jobs = gender === 'male' ? MALE_JOBS : FEMALE_JOBS;
-  const selected = jobs.find((j) => j.id === picked);
+  const [filled, setFilled] = useState<boolean[]>([true, true, false, false, false]);
+  const count = filled.filter(Boolean).length;
 
   return (
     <AppShell
       step={2}
-      eyebrow="Occupation"
-      title="직업"
-      subtitle="가입 심사 위원회가 서류를 검토해 직업 뱃지를 부여합니다. 카테고리마다 필요한 서류가 다릅니다."
+      total={8}
+      eyebrow="Photographs"
+      title="사진"
+      subtitle="얼굴이 선명히 보이는 사진을 최소 2장 등록해 주세요. 첫 사진이 대표 이미지가 됩니다."
       footer={
         <FormFooter
-          next="다음 — 사진"
-          disabled={!picked}
+          next="다음 — 키"
+          disabled={count < 2}
+          hint={count < 2 ? '사진을 2장 이상 등록해 주세요.' : undefined}
           onNext={() => {
-            set({ jobCategory: picked! });
+            set({ photoCount: count });
             router.push('/signup/step03');
           }}
         />
       }
     >
-      {/* 성별 — 본인인증으로 확정(읽기 전용). 임의 변경 불가 */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderWidth: 1,
-          borderColor: C.hairLight,
-          borderRadius: RADIUS,
-          paddingVertical: 12,
-          paddingHorizontal: 14,
-          marginBottom: 20,
-        }}
-      >
-        <Txt size={12.5} color={C.gray}>
-          회원 구분
-        </Txt>
-        <Txt size={13} weight="600" color={C.ink2}>
-          {gender === 'male' ? '남성 회원' : '여성 회원'} · 본인인증 확정
-        </Txt>
-      </View>
-
-      {/* 2열 그리드 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {jobs.map((j: Job) => {
-          const on = picked === j.id;
-          return (
-            <Pressable
-              key={`${gender}-${j.id}`}
-              onPress={() => setPicked(j.id)}
-              style={{
-                width: '48%',
-                minHeight: 88,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: on ? C.ink2 : C.hairLight,
-                backgroundColor: on ? C.ink2 : 'transparent',
-                borderRadius: RADIUS,
-              }}
-            >
-              <Txt
-                variant="serifEn"
-                size={11}
-                color={on ? C.champagne : C.gray}
-                style={{ marginBottom: 6 }}
+        {filled.map((f, i) => (
+          <Pressable
+            key={i}
+            onPress={() => setFilled((prev) => prev.map((v, idx) => (idx === i ? !v : v)))}
+            style={{ width: '31.5%', aspectRatio: 3 / 4 }}
+          >
+            {f ? (
+              <View style={{ flex: 1 }}>
+                <Portrait
+                  fill
+                  source={i === 0 ? previewPortraits.jiyoon : previewPortraits.jiyoonGallery}
+                />
+                {i === 0 ? (
+                  <Txt
+                    variant="mono"
+                    size={8}
+                    color={C.ivory}
+                    style={{
+                      position: 'absolute',
+                      bottom: 6,
+                      left: 6,
+                      backgroundColor: C.ink2,
+                      paddingHorizontal: 5,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    대표
+                  </Txt>
+                ) : null}
+              </View>
+            ) : (
+              <View
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: C.graySoft,
+                  borderRadius: RADIUS,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                {j.en}
-              </Txt>
-              <Txt size={14.5} weight="600" color={on ? C.ivory : C.ink2}>
-                {j.kr}
-              </Txt>
-              <Txt
-                size={10.5}
-                color={on ? 'rgba(250,247,242,0.6)' : C.gray}
-                style={{ marginTop: 4 }}
-              >
-                {j.detail}
-              </Txt>
-            </Pressable>
-          );
-        })}
+                <Txt variant="mono" size={20} color={C.graySoft}>
+                  +
+                </Txt>
+              </View>
+            )}
+          </Pressable>
+        ))}
       </View>
 
-      {/* 검증 기준 메타 스트립 */}
-      {selected ? (
-        <View
-          style={{
-            marginTop: 16,
-            borderLeftWidth: 2,
-            borderLeftColor: C.champagne,
-            backgroundColor: C.ivory2,
-            padding: 14,
-          }}
-        >
-          <Txt variant="eyebrow" style={{ marginBottom: 6 }}>
-            검증 기준 · {selected.kr}
-          </Txt>
-          <Txt size={12.5} color={C.ink2}>
-            필수 재직증명서 + 자격/면허 ·{' '}
-            <Txt size={12.5} color={C.gray}>
-              선택 명함
+      <View style={{ marginTop: 24 }}>
+        <Txt variant="eyebrow" style={{ marginBottom: 12 }}>
+          가이드라인
+        </Txt>
+        {GUIDE.map((g) => (
+          <View
+            key={g}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}
+          >
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.champagne }} />
+            <Txt size={12.5} color={C.ink2}>
+              {g}
             </Txt>
-          </Txt>
-        </View>
-      ) : null}
+          </View>
+        ))}
+      </View>
     </AppShell>
   );
 }

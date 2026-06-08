@@ -8,9 +8,11 @@ import { approveAction, rejectAction } from '../actions';
 export function ReviewPanel({
   applicationId,
   canReview,
+  rewardCredits,
 }: {
   applicationId: string;
   canReview: boolean;
+  rewardCredits?: number;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -72,7 +74,9 @@ export function ReviewPanel({
             disabled={pending}
             style={{ ...btn, background: '#6B8E7F', color: '#fff', borderColor: '#6B8E7F' }}
           >
-            {pending ? '처리 중…' : '승인 · 뱃지 부여'}
+            {pending
+              ? '처리 중…'
+              : `승인 · 뱃지 부여${rewardCredits ? ` (+${rewardCredits}C 지급)` : ''}`}
           </button>
           <button
             onClick={() => setMode('rejecting')}

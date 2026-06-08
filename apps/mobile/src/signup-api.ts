@@ -3,6 +3,9 @@
  * 베이스는 EXPO_PUBLIC_API_BASE_URL (미설정 시 server reason 으로 실패 반환).
  */
 import type {
+  IntroSections,
+  ManualIdentitySubmitResult,
+  ProfileGenerateResult,
   SignupSubmitResult,
   VerificationSubmitResult,
   VerificationType,
@@ -18,8 +21,75 @@ export interface SubmitSignupArgs {
   email?: string;
   referralCode?: string;
   photoCount?: number;
+  // 가입 설문(Phase 4)
+  height?: number;
+  residenceRegion?: string;
+  activityRegion?: string;
+  school?: string;
+  hobbies?: string[];
+  drinkingFrequency?: string;
+  drinkingAmount?: string;
+  smoking?: string;
+  bodyType?: string;
+  introSections?: Partial<IntroSections>;
   /** 본인인증 봉인 토큰 (KCB 결과에서 받은 값 그대로) */
   idToken?: string;
+}
+
+export interface GenerateIntroArgs {
+  gender: 'male' | 'female';
+  jobCategory: string;
+  age?: number;
+  height?: number;
+  residenceRegion?: string;
+  activityRegion?: string;
+  school?: string;
+  hobbies?: string[];
+  drinkingFrequency?: string;
+  drinkingAmount?: string;
+  smoking?: string;
+  bodyType?: string;
+}
+
+/** AI 자기소개 생성 → 섹션 수신(키 없으면 서버가 템플릿 폴백). */
+export async function generateProfileIntro(
+  args: GenerateIntroArgs,
+): Promise<ProfileGenerateResult> {
+  if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
+  try {
+    const res = await fetch(`${API_BASE}/api/profile/generate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    return (await res.json()) as ProfileGenerateResult;
+  } catch {
+    return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+export interface SubmitManualIdentityArgs {
+  name: string;
+  phone: string;
+  idCardS3Key: string;
+  note?: string;
+}
+
+/** 본인 명의 아님 — 수동 본인인증 요청 제출 → 운영자 큐로 유입. */
+export async function submitManualIdentity(
+  args: SubmitManualIdentityArgs,
+): Promise<ManualIdentitySubmitResult> {
+  if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
+  try {
+    const res = await fetch(`${API_BASE}/api/identity/manual`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    return (await res.json()) as ManualIdentitySubmitResult;
+  } catch {
+    return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
 }
 
 /** 가입(step01~05) 제출 → userId 수신. */

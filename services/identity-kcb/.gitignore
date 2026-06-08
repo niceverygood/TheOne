@@ -4,7 +4,11 @@ secret/
 *.dat
 
 # KCB 독점 모듈 JAR (배포는 빌드 호스트에 직접 배치)
+# ⚠️ Railway `railway up` 은 .gitignore 도 적용해 업로드를 거른다 → 빌드에 필요한
+#    이 JAR 한 개만 추적 제외에서 예외(업로드 허용). 단 절대 커밋 금지:
+#    `git add -A` / `git add .` 금지, 필요한 파일만 명시적으로 add 할 것.
 libs/*.jar
+!libs/OkCert3-java1.5-2.3.5.jar
 
 # 빌드 산출물
 target/

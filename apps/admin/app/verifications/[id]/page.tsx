@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getApplication, recordAccess } from '@theone/db';
-import { VERIFICATION_LABELS } from '@theone/shared';
+import { VERIFICATION_LABELS, VERIFY_REWARD_CREDITS } from '@theone/shared';
 import { getCurrentOperator, getClientIp, canReview, operatorRole } from '@/lib/operator';
 import { DocViewer } from '@/components/doc-viewer';
 import { ReviewPanel } from './review-panel';
@@ -138,7 +138,11 @@ export default async function ReviewDetail({ params }: { params: { id: string } 
       )}
 
       {(app.status === 'submitted' || app.status === 'reviewing') && (
-        <ReviewPanel applicationId={app.id} canReview={reviewer} />
+        <ReviewPanel
+          applicationId={app.id}
+          canReview={reviewer}
+          rewardCredits={VERIFY_REWARD_CREDITS[app.type]}
+        />
       )}
     </main>
   );

@@ -48,6 +48,17 @@ export async function POST(req: NextRequest) {
       phone: input.phone,
       email: input.email,
       ciHash,
+      // 가입 설문(Phase 4)
+      height: input.height,
+      residenceRegion: input.residenceRegion,
+      activityRegion: input.activityRegion,
+      school: input.school,
+      hobbies: input.hobbies,
+      drinkingFrequency: input.drinkingFrequency,
+      drinkingAmount: input.drinkingAmount,
+      smoking: input.smoking,
+      bodyType: input.bodyType,
+      introSections: input.introSections as Record<string, string> | undefined,
     });
     return NextResponse.json({ ok: true, userId: user.id, status: user.status });
   } catch (e) {

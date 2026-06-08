@@ -3,7 +3,14 @@
  * 환불 가능액 산정은 packages/shared(refundableAmount)를 사용.
  */
 import { prisma } from './index';
-import { getPackage, refundableAmount, LETTER_COST } from '@theone/shared';
+import {
+  getPackage,
+  refundableAmount,
+  LETTER_COST,
+  VERIFY_REWARD_CREDITS,
+  type VerificationType,
+} from '@theone/shared';
+import type { Prisma } from '@prisma/client';
 
 export class InsufficientCreditError extends Error {
   constructor() {
@@ -83,6 +90,38 @@ export async function refundOrder(orderId: string) {
     }),
   ]);
   return { refundedWon: won, order };
+}
+
+/**
+ * 추가 인증 승인 보상 — 타입별 차등 크레딧 적립(reason=verify_reward, refId=applicationId).
+ * applicationId 기준 멱등: 같은 신청에 이미 보상이 나갔으면 0 반환(재승인 중복지급 방지).
+ *
+ * `tx` 를 받으면 호출자의 트랜잭션 안에서 실행한다(approveApplication 과 원자성 보장).
+ */
+export async function awardVerificationReward(
+  userId: string,
+  type: VerificationType,
+  applicationId: string,
+  tx: Prisma.TransactionClient = prisma,
+): Promise<{ awarded: number }> {
+  const amount = VERIFY_REWARD_CREDITS[type] ?? 0;
+  if (amount <= 0) return { awarded: 0 };
+
+  const already = await tx.creditTransaction.findFirst({
+    where: { reason: 'verify_reward', refId: applicationId },
+    select: { id: true },
+  });
+  if (already) return { awarded: 0 };
+
+  await tx.credit.upsert({
+    where: { userId },
+    create: { userId, balance: amount },
+    update: { balance: { increment: amount } },
+  });
+  await tx.creditTransaction.create({
+    data: { userId, delta: amount, reason: 'verify_reward', refId: applicationId },
+  });
+  return { awarded: amount };
 }
 
 /** 신청서 발송 시 크레딧 차감 (일반 20C / 슈퍼 50C) */
