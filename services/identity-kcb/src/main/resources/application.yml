@@ -20,6 +20,7 @@ kcb:
   self-base-url: ${SELF_BASE_URL:http://localhost:8081}
   shared-secret: ${SHARED_SECRET:}          # apps/web ↔ 이 서비스 Bearer 공유키
   session-ttl-seconds: ${KCB_SESSION_TTL:600}
+  test-page-enabled: ${KCB_TEST_PAGE_ENABLED:false}  # GET /kcb/test 임시 공개(KCB 점검용). 평시 false
 
 logging:
   level:
