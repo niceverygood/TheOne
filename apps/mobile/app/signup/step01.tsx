@@ -82,9 +82,40 @@ function shouldLoadInWebView(url: string): boolean {
   return false;
 }
 
+// 본인인증 결과 표시용 포맷터 ─────────────────────────────
+function koreanAge(birth?: string): number | undefined {
+  if (!birth) return undefined;
+  const s = birth.replace(/\D/g, ''); // YYYYMMDD
+  if (s.length < 8) return undefined;
+  const y = +s.slice(0, 4);
+  const m = +s.slice(4, 6);
+  const d = +s.slice(6, 8);
+  const t = new Date();
+  let age = t.getFullYear() - y;
+  // 생일이 안 지났으면 한 살 빼기 → 만 나이
+  if (t.getMonth() + 1 < m || (t.getMonth() + 1 === m && t.getDate() < d)) age -= 1;
+  return age >= 0 && age < 130 ? age : undefined;
+}
+
+function formatPhone(p?: string): string | undefined {
+  if (!p) return undefined;
+  const d = p.replace(/\D/g, '');
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return p;
+}
+
+function genderKr(g?: string): string {
+  return g === 'female' ? '여성' : g === 'male' ? '남성' : '—';
+}
+
 export default function Step01() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
+  // 본인인증으로 확정된 신원(표시용) — finishKcb/onVerify 가 store 에 저장한 값
+  const gender = useSignup((s) => s.gender);
+  const birth = useSignup((s) => s.birth);
+  const phone = useSignup((s) => s.phone);
   const [carrier, setCarrier] = useState(0);
   const [sent, setSent] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -255,6 +286,46 @@ export default function Step01() {
               ✓ 본인인증 완료
             </Txt>
           )}
+
+          {/* 본인인증으로 확정된 신원 — 성별·휴대폰·나이(만) */}
+          {verified ? (
+            <View
+              style={{
+                marginTop: 16,
+                borderWidth: 1,
+                borderColor: C.hairLight,
+                borderRadius: RADIUS,
+              }}
+            >
+              {(
+                [
+                  ['성별', genderKr(gender)],
+                  ['휴대폰', formatPhone(phone) ?? '—'],
+                  ['나이', koreanAge(birth) != null ? `만 ${koreanAge(birth)}세` : '—'],
+                ] as [string, string][]
+              ).map(([label, value], i) => (
+                <View
+                  key={label}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: 13,
+                    paddingHorizontal: 14,
+                    borderTopWidth: i === 0 ? 0 : 1,
+                    borderTopColor: C.hairLight,
+                  }}
+                >
+                  <Txt size={12.5} color={C.gray}>
+                    {label}
+                  </Txt>
+                  <Txt size={13.5} weight="600" color={C.ink2}>
+                    {value}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+          ) : null}
           {err ? (
             <Txt size={11} color={C.terra} style={{ marginTop: 12 }}>
               {err}
