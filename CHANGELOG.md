@@ -2,6 +2,87 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 5-c — 회원 추천 보상 (MVP) ◐
+
+지인 추천 → **품질 이벤트(심사 통과·첫 결제)** 에 크레딧 보상. 1단계·셀프차단·클로백으로 어뷰징/다단계 리스크 최소화. (현금·외부 파트너스·"매칭 성공" 보상은 법적 검토 전제로 후속.)
+
+- **규칙**: 피추천인 심사 통과 시 추천인 +30C / 첫 결제 시 결제 크레딧의 10%. 7일 내 탈퇴·환불 시 회수.
+- **packages/shared/referral.ts**: `referralSeqFromCode`(체크섬 검증) + `REFERRAL_REWARD` 상수.
+- **packages/db**: `User.seq`(코드 파생)·`referredById`(자기참조), `ReferralReward` 원장(`@@unique[referee,type]` 멱등) + enum, `CreditReason.referral_reward`/`referral_clawback`. 마이그레이션 `20260609000000_referral_rewards`.
+  - `referral.ts`(grant/clawback/resolveReferrer/summary), `members.ts`(approveMembership→심사통과 보상), `economy.markOrderPaid`(첫결제 보상)·`refundOrder`(클로백) 훅, `signup` referredById.
+- **apps/web**: `/api/signup` 추천코드→referredById, `/api/referral/summary`.
+- **apps/admin**: `/members`(가입 심사 대기열·활성화→보상 지급, 추천인 표시) + 홈 네비.
+- **apps/mobile**: `/referral`(내 코드·현황·공유·보상안내) + 메뉴 진입. (가입 step08의 추천코드 입력은 기존)
+
+**검증**: shared/db/web/admin/mobile `tsc` OK · web/admin `lint` OK · shared `vitest`(추천코드 라운드트립·체크섬) OK.
+**잔여(사용자)**: ① 마이그레이션 SQL Supabase 실행 ② "매칭 성공 보상"·현금 파트너스는 **변호사 검토(결혼중개업법·다단계·세무)** 후 확장.
+
+## Phase 5-b — 인앱결제(IAP) 양 플랫폼 완성 ◐
+
+iOS 단독이던 IAP를 **Android(Google Play)까지** 확장하고, 충전 화면을 실제 회원·잔액에 연결.
+
+- **apps/web/lib/google-iap.ts(신규)**: 서비스계정 JWT(RS256, `crypto`)→OAuth2 토큰→`androidpublisher v3 purchases.products.get` 로 purchaseToken 검증(purchaseState=0). `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` 미설정 시 mock 폴백(Apple과 동일 패턴).
+- **/api/payment/iap/verify**: android 501 stub 제거 → 플랫폼별 검증(`iap_apple`/`iap_google`) + transactionId(orderId) 멱등 적립.
+- **/api/credits/balance(신규)** + `economy.getCreditBalance`: 잔액 조회.
+- **apps/mobile**: `iap.ts` Android는 `purchaseToken` 전송. `credits.tsx` — `DEMO_USER_ID` 제거→가입 `userId` 사용, 플랫폼별 productId, 실제 잔액 표시·갱신.
+- **.env.example**: `APPLE_IAP_SHARED_SECRET`·`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`·`GOOGLE_PLAY_PACKAGE_NAME`.
+
+**검증**: db/web/mobile `tsc` OK · web `next lint` OK.
+**잔여(운영)**: ① 두 키 설정(없으면 mock=영수증 무검증) ② Play Console에서 상품(`kr.theone.app.c*`) 등록 ③ Apple '앱 전용 공유 비밀'.
+
+## Phase 4-b — 가입 플로우 재설계 + AI 자기소개 + 인증 8종/인앱화폐 보상 ◐
+
+가입을 사용자 지정 순서(본인인증→사진→키→지역→직업·학교→취미→라이프스타일→자기소개)로 재구성하고, 수집 데이터로 **AI 자기소개**(Claude, 키 없으면 템플릿 폴백)를 생성·편집한 뒤 제출한다. 가입 후 추가 인증을 **8종**으로 확장하고, **운영자 승인 시 타입별 차등 크레딧**을 멱등 지급한다. 본인 명의가 아닌 경우 **신분증 수동 본인확인** 경로를 추가했다.
+
+**결정**
+- 음주 설문 = 음주빈도+주량+흡연 3항목 + 체형(성별 분기). · AI = `ANTHROPIC_API_KEY` 있으면 Claude(haiku-4-5)·없으면 규칙 템플릿(KCB mock 폴백 패턴). · 보상 = **승인 시** 차등(학력·차량·직업 30C / 소득·재산·부동산 50C / 집안자산·명성 80C), `applicationId` 멱등. · 인증 = 기존4 + 신규4(소득·직업·집안자산·명성)=8종.
+
+**packages/shared**: `profile-options.ts`(REGIONS/HOBBIES/DRINKING_*/SMOKING/BODY_TYPES/HEIGHT_RANGE) · `schemas.ts`(verificationType 8종, signupInput 프로필필드+photoCount≥2, introSections/INTRO_SECTIONS/profileGenerate/manualIdentity) · `verification.ts`(라벨·서류·가액 4종 추가 + `VERIFY_REWARD_CREDITS`). 테스트 18→ 추가(8종·보상·photoCount).
+
+**packages/db**: `VerificationType`+4, `CreditReason.verify_reward`, `ManualIdReviewStatus`, `Profile` 설문 컬럼 11개, `ManualIdentityRequest` 모델. 마이그레이션 `20260608000000_phase4_signup_profile`. `economy.awardVerificationReward`(멱등) → `verification.approveApplication`(대화형 트랜잭션, `{rewardCredits}` 반환). `identity-review.ts`(큐·승인·반려).
+
+**apps/web**: `lib/profile-intro.ts`(Claude+템플릿, `describeProfile`/`templateIntro`) + `POST /api/profile/generate` · `POST /api/identity/manual` · `/api/signup` 프로필필드 패스스루. `@anthropic-ai/sdk` 추가.
+
+**apps/mobile**: store 확장 · `OptionChips`/`HeightPicker`(ui) · `signup-api`(generateProfileIntro/submitManualIdentity) · 가입 화면 재구성(step01~08 + manual-identity, intro 단계표) · `verify.tsx` 8종+보상표기 · 인증화면 4종(income/job/family-wealth/reputation) · reviewing 보상안내.
+
+**apps/admin**: `/identity-review`(신분증 수동확인 큐·승인/반려, AccessLog) + 홈 네비. verifications 승인 패널에 `+NNC 지급` 표기(`approveAction` 보상 반환).
+
+**docs/env**: `verification-sop.md`(4종 SOP + 보상표) · `privacy-design.md`(신분증=고유식별정보·AI 국외이전(Anthropic) 반영) · `.env.example`(ANTHROPIC_API_KEY/PROFILE_AI_MODEL).
+
+**검증**: shared/db/web/admin/mobile `tsc --noEmit` OK · web/admin `next lint` OK · shared `vitest` OK · `prisma generate` OK.
+
+**잔여(사용자 직접)**: ① 마이그레이션 SQL을 Supabase에 실행(채팅 블록) ② Vercel에 `ANTHROPIC_API_KEY`(선택) ③ 신분증/서류 **실제 S3 업로드**(현재 데모 키) ④ **개인정보처리방침에 신분증·AI 국외이전 반영**(변호사 검토) ⑤ 부모 자산(집안자산) 제3자 동의서 양식.
+
+## Phase 1-b — 광고 퍼널 분석 (Facebook Ads · Pixel + CAPI + 내부 퍼널) ✅
+
+페이스북 광고 유입→가입 전환을 **익명 방문자 단위**로 추적하고, 어드민에서 캠페인/소재별 퍼널을 관찰. 내부 퍼널은 키 없이 동작하고, Facebook Pixel/Conversions API는 키가 있을 때만 활성(no-op gating).
+
+**설계**
+- 퍼널 4단계: `page_view`(방문) → `waitlist_view`(폼 노출) → `waitlist_start`(폼 첫 상호작용) → `waitlist_success`(가입). 부가: `waitlist_submit`/`waitlist_duplicate`/`waitlist_error`.
+- 익명 방문자 id(`theone_vid`, httpOnly 쿠키, 미들웨어 발급)로 방문~가입을 한 사람으로 연결. 고유 방문자(`COUNT(DISTINCT visitor_id)`) 기준 집계.
+- first-touch 어트리뷰션(`theone_attr` 쿠키 30일): utm_* + fbclid + referrer + landing. 미들웨어가 캡처 → 폼 제출/이벤트에 동봉.
+- **위변조 방지**: 상단 단계만 클라이언트 비콘(`/api/track`) 허용, 전환 단계는 서버 액션에서만 기록.
+
+**packages/db**
+- `AnalyticsEvent` 모델(append-only) + `FunnelEventType` enum. `Waitlist`에 `fbclid`·`visitorId` 추가. 마이그레이션 `20260603000000_funnel_analytics`.
+- `src/analytics.ts` — `recordAnalyticsEvent` + 집계 3종(`getFunnelOverview`/`getFunnelByDimension`/`getFunnelDaily`, `$queryRaw` + `FILTER (WHERE type=...)`, 차원은 화이트리스트 컬럼 주입).
+
+**packages/shared**: `attributionSchema`/`Attribution`, `trackEventSchema`/`CLIENT_TRACK_EVENTS`, `WaitlistSubmitResult.eventId`.
+
+**apps/web**
+- `middleware.ts` — `theone_vid`(1년)·`theone_attr`(30일, 신호 있을 때만) 발급. `lib/request-meta.ts` — `getAttribution`/`getVisitorId`/`getFbCookies`.
+- `lib/track.ts`(서버 `recordEvent`, fbc 파생) + `app/api/track/route.ts`(node, 204) + `lib/track-client.ts`(sendBeacon) + `components/analytics/page-tracker.tsx`(경로별 page_view).
+- Facebook **Pixel**(`analytics-provider.tsx`, init+PageView) + **CAPI**(`lib/fb-capi.ts`, 서버 `Lead`, 해시 이메일+fbc/fbp/ip/ua). Pixel↔CAPI 동일 `eventId`로 dedup.
+- `actions/waitlist.ts` — visitorId/fbclid 저장 + 퍼널 이벤트 기록 + 성공 시 CAPI Lead.
+
+**apps/admin**: `/funnel` 대시보드(기간 7/14/30일, 전환 퍼널 막대, 일별 추이 차트, 캠페인/소스/소재/매체 차원 분해 테이블) + 홈 네비.
+
+**.env.example**: `NEXT_PUBLIC_FB_PIXEL_ID`·`FB_PIXEL_ID`·`FB_CAPI_ACCESS_TOKEN`·`FB_GRAPH_VERSION`·`FB_CAPI_TEST_EVENT_CODE`.
+
+**검증**: web/admin/shared/db `tsc --noEmit` OK · web/admin `next lint` OK · `prisma generate` OK.
+
+**잔여(사용자 직접)**: ① 마이그레이션 SQL을 Supabase에 실행(아래 채팅 블록) ② Vercel에 FB 키 설정 ③ **개인정보처리방침에 'Facebook으로 해시 이메일 전송(CAPI)' 제3자 제공 반영**.
+
 ## Phase 6-c — 본인인증 KCB OkCert3 연동 (휴대폰 본인확인) ◐
 
 KCB OkCert3 휴대폰 본인확인을 실제 연동. 모듈은 상주 JVM 필수(Vercel/Next/Expo 불가)라 **별도 Java 마이크로서비스**로 분리하고, Next.js·모바일은 서버-투-서버(Bearer)로 중계.

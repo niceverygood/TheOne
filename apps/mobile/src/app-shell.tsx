@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, S } from './theme';
 import { Btn, Hairline, Screen, StepDots, Txt } from './ui';
@@ -28,7 +28,12 @@ export function AppShell({
   return (
     <Screen scroll={false}>
       <View style={{ flex: 1 }}>
-        <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={{ paddingHorizontal: S.gutter, paddingTop: 12 }}>
             <View
               style={{
@@ -66,8 +71,10 @@ export function AppShell({
               </Txt>
             ) : null}
           </View>
-          <View style={{ flex: 1, paddingHorizontal: S.gutter, paddingTop: 28 }}>{children}</View>
-        </View>
+          <View style={{ paddingHorizontal: S.gutter, paddingTop: 28, paddingBottom: 24 }}>
+            {children}
+          </View>
+        </ScrollView>
         {footer ? (
           <View>
             <Hairline />

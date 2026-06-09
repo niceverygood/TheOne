@@ -1,13 +1,63 @@
 import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import { VERIFY_REWARD_CREDITS, type VerificationType } from '@theone/shared';
 import { C } from '../src/theme';
-import { Hairline, Screen, Txt, VerifiedDots } from '../src/ui';
+import { Hairline, Screen, Txt } from '../src/ui';
 
-const ROWS: [string, string, 'verified' | 'pending' | 'none' | 'rejected', string, Href][] = [
-  ['Education', '학력', 'verified', '3', '/verify/education'],
-  ['Wealth', '재산', 'pending', '5', '/verify/wealth'],
-  ['Vehicle', '보유 차량', 'none', '2', '/verify/vehicle'],
-  ['Real Estate', '부동산', 'rejected', '4', '/verify/realestate'],
+type Row = {
+  en: string;
+  kr: string;
+  type: VerificationType;
+  state: 'verified' | 'pending' | 'none' | 'rejected';
+  days: string;
+  href: Href;
+};
+
+// 추가 인증 8종 (학력·재산·차량·부동산 + 소득·직업·집안자산·명성)
+const ROWS: Row[] = [
+  {
+    en: 'Education',
+    kr: '학력',
+    type: 'education',
+    state: 'verified',
+    days: '1',
+    href: '/verify/education',
+  },
+  { en: 'Income', kr: '소득', type: 'income', state: 'none', days: '1', href: '/verify/income' },
+  { en: 'Occupation', kr: '직업', type: 'job', state: 'none', days: '1', href: '/verify/job' },
+  { en: 'Wealth', kr: '재산', type: 'wealth', state: 'pending', days: '1', href: '/verify/wealth' },
+  {
+    en: 'Vehicle',
+    kr: '보유 차량',
+    type: 'vehicle',
+    state: 'none',
+    days: '1',
+    href: '/verify/vehicle',
+  },
+  {
+    en: 'Real Estate',
+    kr: '부동산',
+    type: 'realestate',
+    state: 'rejected',
+    days: '1',
+    href: '/verify/realestate',
+  },
+  {
+    en: 'Family Wealth',
+    kr: '집안 자산',
+    type: 'family_wealth',
+    state: 'none',
+    days: '2',
+    href: '/verify/family-wealth',
+  },
+  {
+    en: 'Reputation',
+    kr: '명성',
+    type: 'reputation',
+    state: 'none',
+    days: '2',
+    href: '/verify/reputation',
+  },
 ];
 
 type Pill = { fg: string; bg: string; txt: string };
@@ -24,6 +74,7 @@ const badge = (s: string): Pill => {
 
 export default function VerifyHub() {
   const router = useRouter();
+  const verifiedCount = ROWS.filter((r) => r.state === 'verified').length;
   return (
     <Screen>
       <View style={{ padding: 24 }}>
@@ -34,7 +85,8 @@ export default function VerifyHub() {
           추가 인증
         </Txt>
         <Txt size={13} color={C.gray} style={{ marginTop: 8, lineHeight: 21 }}>
-          인증할수록 신뢰도가 올라갑니다. 관리자가 직접 검토하며, 매칭 상대에게는 뱃지만 노출됩니다.
+          인증할수록 신뢰도가 올라가고, 승인될 때마다 크레딧을 드립니다. 관리자가 직접 검토하며 매칭
+          상대에게는 뱃지만 노출됩니다.
         </Txt>
 
         <View
@@ -51,21 +103,19 @@ export default function VerifyHub() {
           <Txt size={12.5} color="rgba(250,247,242,0.7)">
             현재 검증 수준
           </Txt>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <VerifiedDots marks={2} dark />
-            <Txt variant="mono" size={12} color={C.ivory}>
-              2 / 4
-            </Txt>
-          </View>
+          <Txt variant="mono" size={12} color={C.ivory}>
+            {verifiedCount} / {ROWS.length}
+          </Txt>
         </View>
 
         <View style={{ marginTop: 16 }}>
-          {ROWS.map(([en, kr, st, days, href]) => {
-            const b = badge(st);
+          {ROWS.map((r) => {
+            const b = badge(r.state);
+            const reward = VERIFY_REWARD_CREDITS[r.type];
             return (
-              <View key={kr}>
+              <View key={r.type}>
                 <Pressable
-                  onPress={() => router.push(href)}
+                  onPress={() => router.push(r.href)}
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
@@ -75,13 +125,30 @@ export default function VerifyHub() {
                 >
                   <View>
                     <Txt variant="serifEn" size={12} color={C.gray}>
-                      {en}
+                      {r.en}
                     </Txt>
-                    <Txt size={16} weight="500" color={C.ink2} style={{ marginTop: 3 }}>
-                      {kr}
-                    </Txt>
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}
+                    >
+                      <Txt size={16} weight="500" color={C.ink2}>
+                        {r.kr}
+                      </Txt>
+                      <Txt
+                        variant="mono"
+                        size={9.5}
+                        color={C.champagne}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: C.champagne,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        +{reward}C
+                      </Txt>
+                    </View>
                     <Txt size={11} color={C.gray} style={{ marginTop: 3 }}>
-                      평균 {days}일 소요
+                      평균 {r.days}일 · 승인 시 {reward}크레딧 지급
                     </Txt>
                   </View>
                   <View

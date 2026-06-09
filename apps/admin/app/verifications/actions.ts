@@ -4,16 +4,20 @@ import { revalidatePath } from 'next/cache';
 import { approveApplication, rejectApplication } from '@theone/db';
 import { getCurrentOperator, getClientIp, canReview } from '@/lib/operator';
 
-export type ReviewResult = { ok: true } | { ok: false; message: string };
+export type ReviewResult = { ok: true; rewardCredits?: number } | { ok: false; message: string };
 
 export async function approveAction(applicationId: string): Promise<ReviewResult> {
   const op = await getCurrentOperator();
   if (!canReview(op)) return { ok: false, message: 'reviewer 이상 권한이 필요합니다.' };
   try {
-    await approveApplication({ applicationId, operatorId: op!.id, ip: getClientIp() });
+    const { rewardCredits } = await approveApplication({
+      applicationId,
+      operatorId: op!.id,
+      ip: getClientIp(),
+    });
     revalidatePath('/verifications');
     revalidatePath(`/verifications/${applicationId}`);
-    return { ok: true };
+    return { ok: true, rewardCredits };
   } catch (e) {
     console.error('[approve] failed', e);
     return { ok: false, message: '승인 처리에 실패했습니다.' };

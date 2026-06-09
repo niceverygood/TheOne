@@ -10,6 +10,9 @@ import {
   type Candidate,
 } from '../matching';
 import { refundableAmount, getPackage, LETTER_COST } from '../credits';
+import { VERIFY_REWARD_CREDITS, VERIFICATION_LABELS, REQUIRED_DOCS } from '../verification';
+import { verificationTypeSchema, signupInputSchema } from '../schemas';
+import { referralCodeFromSeq, referralSeqFromCode } from '../referral';
 
 describe('maskExternalContact', () => {
   it('마스킹: 휴대폰 번호', () => {
@@ -103,5 +106,68 @@ describe('credits & refund', () => {
         daysSinceCharge: 1,
       }),
     ).toBe(38461);
+  });
+});
+
+describe('verification (8종 + 보상)', () => {
+  const ALL_TYPES = verificationTypeSchema.options;
+
+  it('인증 타입은 8종', () => {
+    expect(ALL_TYPES).toHaveLength(8);
+    expect(ALL_TYPES).toContain('income');
+    expect(ALL_TYPES).toContain('family_wealth');
+  });
+
+  it('모든 타입에 라벨·서류·보상이 정의됨', () => {
+    for (const t of ALL_TYPES) {
+      expect(VERIFICATION_LABELS[t]?.kr).toBeTruthy();
+      expect(REQUIRED_DOCS[t]?.length).toBeGreaterThan(0);
+      expect(VERIFY_REWARD_CREDITS[t]).toBeGreaterThan(0);
+    }
+  });
+
+  it('보상은 타입별 차등 (집안자산/명성이 가장 높음)', () => {
+    expect(VERIFY_REWARD_CREDITS.education).toBe(30);
+    expect(VERIFY_REWARD_CREDITS.income).toBe(50);
+    expect(VERIFY_REWARD_CREDITS.family_wealth).toBe(80);
+    expect(VERIFY_REWARD_CREDITS.reputation).toBe(80);
+  });
+});
+
+describe('referral code', () => {
+  it('seq ↔ code 라운드트립', () => {
+    for (const seq of [1, 42, 142, 9999, 100000]) {
+      expect(referralSeqFromCode(referralCodeFromSeq(seq))).toBe(seq);
+    }
+  });
+  it('소문자·공백 허용', () => {
+    const code = referralCodeFromSeq(142);
+    expect(referralSeqFromCode(`  ${code.toLowerCase()} `)).toBe(142);
+  });
+  it('형식/체크섬 위반은 null', () => {
+    expect(referralSeqFromCode('THE-0142-XX')).toBeNull(); // tail 불일치
+    expect(referralSeqFromCode('NOPE')).toBeNull();
+    expect(referralSeqFromCode('THE-0000-2')).toBeNull(); // seq 0
+  });
+});
+
+describe('signupInputSchema', () => {
+  const base = { gender: 'male' as const, jobCategory: 'finance' };
+
+  it('사진 2장 미만은 거부', () => {
+    expect(signupInputSchema.safeParse({ ...base, photoCount: 1 }).success).toBe(false);
+    expect(signupInputSchema.safeParse({ ...base, photoCount: 2 }).success).toBe(true);
+  });
+
+  it('프로필 상세 필드를 수용', () => {
+    const r = signupInputSchema.safeParse({
+      ...base,
+      photoCount: 2,
+      height: 178,
+      residenceRegion: 'seoul',
+      hobbies: ['travel', 'golf'],
+      introSections: { about: '안녕하세요' },
+    });
+    expect(r.success).toBe(true);
   });
 });

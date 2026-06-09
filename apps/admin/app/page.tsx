@@ -6,7 +6,9 @@
 const queues = [
   { href: '/waitlist', label: '웨이팅리스트', phase: 'Phase 1', ready: true },
   { href: '/funnel', label: '퍼널 분석 (광고 전환)', phase: 'Phase 1', ready: true },
-  { href: '/verifications', label: '인증 심사 대기열', phase: 'Phase 3', ready: false },
+  { href: '/members', label: '가입 심사 (회원 활성화)', phase: 'Phase 4', ready: true },
+  { href: '/verifications', label: '인증 심사 대기열 (8종)', phase: 'Phase 3', ready: true },
+  { href: '/identity-review', label: '수동 본인확인 (신분증)', phase: 'Phase 4', ready: true },
   { href: '/reports', label: '신고 큐 / 강퇴', phase: 'Phase 5', ready: false },
 ];
 

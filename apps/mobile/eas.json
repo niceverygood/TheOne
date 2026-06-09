@@ -10,7 +10,8 @@
       "channel": "development",
       "env": {
         "COREPACK_INTEGRITY_KEYS": "0",
-        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "ios": {
         "simulator": true,
@@ -26,7 +27,8 @@
       "channel": "preview",
       "env": {
         "COREPACK_INTEGRITY_KEYS": "0",
-        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "ios": {
         "simulator": false,
@@ -42,7 +44,8 @@
       "autoIncrement": true,
       "env": {
         "COREPACK_INTEGRITY_KEYS": "0",
-        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1"
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "ios": {
         "resourceClass": "m-medium",
@@ -51,13 +54,32 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "simulator": {
+      "channel": "production",
+      "distribution": "internal",
+      "env": {
+        "COREPACK_INTEGRITY_KEYS": "0",
+        "EXPO_UNSTABLE_CORE_AUTOLINKING": "1",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_IDENTITY_PROVIDER": "kcb",
+        "EXPO_PUBLIC_API_BASE_URL": "https://the-one-web-virid.vercel.app",
+        "EXPO_PUBLIC_API_BASE": "https://the-one-web-virid.vercel.app",
+        "EXPO_PUBLIC_ENV": "production"
+      },
+      "ios": {
+        "simulator": true,
+        "resourceClass": "m-medium",
+        "image": "latest"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
         "appleId": "bottletasteinc@gmail.com",
-        "appleTeamId": "7AXRWTV5YW"
+        "appleTeamId": "7AXRWTV5YW",
+        "ascAppId": "6774067090"
       },
       "android": {
         "serviceAccountKeyPath": "./pc-api-key.json",

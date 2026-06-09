@@ -344,6 +344,108 @@ export function ChoiceRow({
   );
 }
 
+/* ---- 선택 칩(단일/다중) ---- */
+export function OptionChips({
+  options,
+  value,
+  onChange,
+  multi,
+}: {
+  options: { value: string; label: string }[];
+  value: string | string[] | undefined;
+  onChange: (next: string | string[]) => void;
+  multi?: boolean;
+}) {
+  const selected = (v: string) => (multi ? Array.isArray(value) && value.includes(v) : value === v);
+  const toggle = (v: string) => {
+    if (multi) {
+      const arr = Array.isArray(value) ? value : [];
+      onChange(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+    } else {
+      onChange(v);
+    }
+  };
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {options.map((o) => {
+        const on = selected(o.value);
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => toggle(o.value)}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              borderWidth: 1,
+              borderColor: on ? C.ink2 : C.hairLight,
+              backgroundColor: on ? C.ink2 : 'transparent',
+              borderRadius: RADIUS,
+            }}
+          >
+            <Txt size={13} weight={on ? '600' : '400'} color={on ? C.ivory : C.ink2}>
+              {o.label}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/* ---- 키 선택(가로 스크롤 cm) ---- */
+export function HeightPicker({
+  value,
+  onChange,
+  min = 140,
+  max = 200,
+}: {
+  value?: number;
+  onChange: (cm: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  const items = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  return (
+    <View>
+      <View style={{ alignItems: 'center', marginBottom: 16 }}>
+        <Txt variant="serifKr" size={40} weight="700" color={value ? C.ink2 : C.graySoft}>
+          {value ?? '—'}
+          <Txt variant="mono" size={14} color={C.gray}>
+            {' '}
+            cm
+          </Txt>
+        </Txt>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 4 }}>
+          {items.map((cm) => {
+            const on = cm === value;
+            return (
+              <Pressable
+                key={cm}
+                onPress={() => onChange(cm)}
+                style={{
+                  width: 52,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: on ? C.ink2 : C.hairLight,
+                  backgroundColor: on ? C.ink2 : 'transparent',
+                  borderRadius: RADIUS,
+                }}
+              >
+                <Txt variant="mono" size={13} color={on ? C.ivory : C.ink2}>
+                  {cm}
+                </Txt>
+              </Pressable>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 const st = StyleSheet.create({
   btn: {
     borderRadius: RADIUS,

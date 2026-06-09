@@ -1,131 +1,182 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Alert, Image, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Txt } from '../../src/ui';
-import { FEMALE_JOBS, MALE_JOBS, type Job } from '../../src/jobs';
 import { useSignup } from '../../src/store';
+
+const MAX_PHOTOS = 5;
+
+const GUIDE = [
+  '최근 6개월 이내 촬영한 본인 사진',
+  '얼굴이 정면으로 또렷하게 보일 것',
+  '단체 사진·과도한 보정·선글라스 불가',
+  '검증 위원이 본인 여부를 확인합니다',
+];
 
 export default function Step02() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
-  const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [picked, setPicked] = useState<string | null>(null);
-  const jobs = gender === 'male' ? MALE_JOBS : FEMALE_JOBS;
-  const selected = jobs.find((j) => j.id === picked);
+  const [photos, setPhotos] = useState<string[]>(useSignup.getState().photos ?? []);
+
+  const remaining = MAX_PHOTOS - photos.length;
+
+  // 앨범에서 선택 (안드로이드 시스템 포토피커 — 별도 권한 불필요)
+  async function pickFromLibrary() {
+    if (remaining <= 0) return;
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.85,
+    });
+    if (!res.canceled) {
+      setPhotos((prev) => [...prev, ...res.assets.map((a) => a.uri)].slice(0, MAX_PHOTOS));
+    }
+  }
+
+  // 카메라로 촬영 (CAMERA 권한 필요 — 미허용 시 요청)
+  async function takePhoto() {
+    if (remaining <= 0) return;
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해 주세요.');
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+    if (!res.canceled) {
+      setPhotos((prev) => [...prev, res.assets[0]!.uri].slice(0, MAX_PHOTOS));
+    }
+  }
+
+  // "+" 탭 → 앨범/카메라 선택
+  function onAdd() {
+    if (remaining <= 0) return;
+    Alert.alert('사진 추가', '어떻게 추가할까요?', [
+      { text: '앨범에서 선택', onPress: pickFromLibrary },
+      { text: '카메라로 촬영', onPress: takePhoto },
+      { text: '취소', style: 'cancel' },
+    ]);
+  }
+
+  function removeAt(i: number) {
+    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  // 그리드 슬롯: 선택한 사진들 + (여유 있으면) 추가 슬롯 1개
+  const slots: ('add' | string)[] = [...photos];
+  if (photos.length < MAX_PHOTOS) slots.push('add');
 
   return (
     <AppShell
       step={2}
-      eyebrow="Occupation"
-      title="직업"
-      subtitle="가입 심사 위원회가 서류를 검토해 직업 뱃지를 부여합니다. 카테고리마다 필요한 서류가 다릅니다."
+      total={8}
+      eyebrow="Photographs"
+      title="사진"
+      subtitle="얼굴이 선명히 보이는 사진을 최소 2장 등록해 주세요. 첫 사진이 대표 이미지가 됩니다."
       footer={
         <FormFooter
-          next="다음 — 사진"
-          disabled={!picked}
+          next="다음 — 키"
+          disabled={photos.length < 2}
+          hint={photos.length < 2 ? '사진을 2장 이상 등록해 주세요.' : undefined}
           onNext={() => {
-            set({ jobCategory: picked! });
+            set({ photos, photoCount: photos.length });
             router.push('/signup/step03');
           }}
         />
       }
     >
-      {/* 성별 토글 */}
-      <View
-        style={{
-          flexDirection: 'row',
-          borderWidth: 1,
-          borderColor: C.hairLight,
-          borderRadius: RADIUS,
-          marginBottom: 20,
-        }}
-      >
-        {(['male', 'female'] as const).map((g) => (
-          <Pressable
-            key={g}
-            onPress={() => {
-              setGender(g);
-              setPicked(null);
-            }}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              alignItems: 'center',
-              backgroundColor: gender === g ? C.ink2 : 'transparent',
-            }}
-          >
-            <Txt size={12.5} color={gender === g ? C.ivory : C.gray}>
-              {g === 'male' ? '남성 회원' : '여성 회원'}
-            </Txt>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* 2열 그리드 */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {jobs.map((j: Job) => {
-          const on = picked === j.id;
-          return (
+        {slots.map((slot, i) =>
+          slot === 'add' ? (
             <Pressable
-              key={`${gender}-${j.id}`}
-              onPress={() => setPicked(j.id)}
+              key="add"
+              onPress={onAdd}
               style={{
-                width: '48%',
-                minHeight: 88,
-                padding: 12,
+                width: '31.5%',
+                aspectRatio: 3 / 4,
                 borderWidth: 1,
-                borderColor: on ? C.ink2 : C.hairLight,
-                backgroundColor: on ? C.ink2 : 'transparent',
+                borderStyle: 'dashed',
+                borderColor: C.graySoft,
                 borderRadius: RADIUS,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Txt
-                variant="serifEn"
-                size={11}
-                color={on ? C.champagne : C.gray}
-                style={{ marginBottom: 6 }}
-              >
-                {j.en}
-              </Txt>
-              <Txt size={14.5} weight="600" color={on ? C.ivory : C.ink2}>
-                {j.kr}
-              </Txt>
-              <Txt
-                size={10.5}
-                color={on ? 'rgba(250,247,242,0.6)' : C.gray}
-                style={{ marginTop: 4 }}
-              >
-                {j.detail}
+              <Txt variant="mono" size={20} color={C.graySoft}>
+                +
               </Txt>
             </Pressable>
-          );
-        })}
+          ) : (
+            <View key={`${slot}-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
+              <Image
+                source={{ uri: slot }}
+                resizeMode="cover"
+                style={{ width: '100%', height: '100%', borderRadius: RADIUS }}
+              />
+              {i === 0 ? (
+                <Txt
+                  variant="mono"
+                  size={8}
+                  color={C.ivory}
+                  style={{
+                    position: 'absolute',
+                    bottom: 6,
+                    left: 6,
+                    backgroundColor: C.ink2,
+                    paddingHorizontal: 5,
+                    paddingVertical: 2,
+                  }}
+                >
+                  대표
+                </Txt>
+              ) : null}
+              <Pressable
+                onPress={() => removeAt(i)}
+                hitSlop={8}
+                style={{
+                  position: 'absolute',
+                  top: 5,
+                  right: 5,
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  backgroundColor: 'rgba(15,16,20,0.66)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Txt size={12} color={C.ivory}>
+                  ✕
+                </Txt>
+              </Pressable>
+            </View>
+          ),
+        )}
       </View>
 
-      {/* 검증 기준 메타 스트립 */}
-      {selected ? (
-        <View
-          style={{
-            marginTop: 16,
-            borderLeftWidth: 2,
-            borderLeftColor: C.champagne,
-            backgroundColor: C.ivory2,
-            padding: 14,
-          }}
-        >
-          <Txt variant="eyebrow" style={{ marginBottom: 6 }}>
-            검증 기준 · {selected.kr}
-          </Txt>
-          <Txt size={12.5} color={C.ink2}>
-            필수 재직증명서 + 자격/면허 ·{' '}
-            <Txt size={12.5} color={C.gray}>
-              선택 명함
+      <Txt variant="mono" size={10} color={C.gray} style={{ marginTop: 12 }}>
+        {photos.length} / {MAX_PHOTOS}
+      </Txt>
+
+      <View style={{ marginTop: 20 }}>
+        <Txt variant="eyebrow" style={{ marginBottom: 12 }}>
+          가이드라인
+        </Txt>
+        {GUIDE.map((g) => (
+          <View
+            key={g}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}
+          >
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.champagne }} />
+            <Txt size={12.5} color={C.ink2}>
+              {g}
             </Txt>
-          </Txt>
-        </View>
-      ) : null}
+          </View>
+        ))}
+      </View>
     </AppShell>
   );
 }

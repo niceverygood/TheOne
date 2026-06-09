@@ -1,0 +1,10 @@
+# Railway 업로드 제외 목록 (이 파일이 있으면 .gitignore 대신 사용됨)
+# ⚠️ libs/ (OkCert3 JAR)는 빌드에 필요 → 제외하지 않음(업로드 포함)
+# 라이선스 .dat 는 업로드 금지(런타임에 KCB_LICENSE_B64 시크릿으로 주입)
+secret/
+*.dat
+target/
+.env
+.env.*
+.git/
+node_modules/

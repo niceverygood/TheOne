@@ -5,7 +5,7 @@
  * 이름 등 직접식별정보는 스키마에 보관하지 않는다(privacy-design §2-4).
  */
 import { prisma } from './index';
-import type { Gender, User } from '@prisma/client';
+import type { Gender, Prisma, User } from '@prisma/client';
 
 export class DuplicateUserError extends Error {
   constructor() {
@@ -23,6 +23,20 @@ export interface CreateSignupArgs {
   email?: string;
   /** 본인인증 고유식별 해시(privacy-design §2-4) */
   ciHash?: string;
+  /** 추천인 userId (추천코드 해석 결과) */
+  referredById?: string;
+  // ── 가입 설문(Phase 4) ─────────────────────────────
+  height?: number;
+  residenceRegion?: string;
+  activityRegion?: string;
+  school?: string;
+  hobbies?: string[];
+  drinkingFrequency?: string;
+  drinkingAmount?: string;
+  smoking?: string;
+  bodyType?: string;
+  /** AI 생성 + 사용자 편집 자기소개 섹션 */
+  introSections?: Record<string, string>;
 }
 
 /** 가입 1건 생성(상태 pending). 휴대폰/이메일/CI 중복 시 DuplicateUserError. */
@@ -36,10 +50,24 @@ export async function createSignupUser(args: CreateSignupArgs): Promise<User> {
         phone: args.phone ?? null,
         email: args.email ?? null,
         ciHash: args.ciHash ?? null,
+        referredById: args.referredById ?? null,
         // status 는 스키마 기본값 pending(가입 심사 대기)
         profile: {
           // 실제 사진은 S3 업로드 후 키를 보관한다(지금은 빈 배열).
-          create: { photos: [] },
+          create: {
+            photos: [],
+            region: args.residenceRegion ?? null,
+            height: args.height ?? null,
+            residenceRegion: args.residenceRegion ?? null,
+            activityRegion: args.activityRegion ?? null,
+            school: args.school ?? null,
+            hobbies: args.hobbies ?? [],
+            drinkingFrequency: args.drinkingFrequency ?? null,
+            drinkingAmount: args.drinkingAmount ?? null,
+            smoking: args.smoking ?? null,
+            bodyType: args.bodyType ?? null,
+            introSections: (args.introSections ?? undefined) as Prisma.InputJsonValue | undefined,
+          },
         },
       },
     });

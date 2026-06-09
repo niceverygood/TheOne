@@ -3,7 +3,7 @@
     "name": "THE ONE",
     "slug": "theone",
     "scheme": "theone",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAF7F2",
@@ -29,7 +29,7 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "runtimeVersion": "1.0.0"
+      "runtimeVersion": "1.0.1"
     },
     "android": {
       "package": "kr.theone.app",
@@ -56,6 +56,7 @@
       "expo-router",
       "expo-font",
       "./plugins/withIapStoreFlavor",
+      "./plugins/withFmtConstevalFix",
       [
         "expo-build-properties",
         {

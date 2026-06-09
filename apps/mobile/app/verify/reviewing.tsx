@@ -58,7 +58,21 @@ export default function Reviewing() {
           Ticket №V-2026-0518
         </Txt>
         <Txt size={13} color={C.gray} style={{ marginTop: 8 }}>
-          평균 5일 소요 · 완료 시 알림을 보내드립니다
+          평균 1일 소요 · 완료 시 알림을 보내드립니다
+        </Txt>
+        <Txt
+          variant="mono"
+          size={11}
+          color={C.sage}
+          style={{
+            marginTop: 14,
+            borderWidth: 1,
+            borderColor: C.sage,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+          }}
+        >
+          ✓ 승인 시 크레딧이 자동 지급됩니다
         </Txt>
 
         <View style={{ marginTop: 44, alignSelf: 'stretch' }}>

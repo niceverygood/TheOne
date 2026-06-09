@@ -138,6 +138,35 @@ public class KcbController {
         return "done"; // templates/done.html
     }
 
+    // ── 임시 테스트 트리거 (KCB 점검용, env 로 on/off) ─────────────────────
+    //  Bearer 없이 브라우저로 직접 휴대폰 본인확인 플로우를 확인할 수 있게 한다.
+    //  GET /kcb/test → START → 팝업으로 리다이렉트 → KCB 인증창 → /kcb/return → /kcb/done.
+    //  실제 KCB 거래가 발생하므로 KCB_TEST_PAGE_ENABLED=true 일 때만 동작(평시 404). 점검 후 끈다.
+    @GetMapping("/kcb/test")
+    public String test() {
+        if (!props.isTestPageEnabled()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "not_found");
+        }
+        try {
+            JsonNode res = okcert.start("KCB test");
+            if (!OkCertClient.isOk(res)) {
+                String cd = OkCertClient.text(res, "RSLT_CD");
+                String msg = OkCertClient.text(res, "RSLT_MSG");
+                log.warn("TEST START 실패 RSLT_CD={} {}", cd, msg);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, cd + " " + msg);
+            }
+            String mdlTkn = OkCertClient.text(res, "MDL_TKN");
+            String txSeqNo = OkCertClient.text(res, "TX_SEQ_NO");
+            String token = store.createPopupToken(mdlTkn, txSeqNo);
+            return "redirect:" + props.popupBootstrapUrl(token);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("TEST START 예외", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "kcb_start_failed");
+        }
+    }
+
     // ── 5) 결과 조회 (신뢰 백엔드 전용, Bearer, 1회성) ─────────────────────
     @PostMapping(value = "/kcb/result/{txSeqNo}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody

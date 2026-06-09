@@ -1,0 +1,421 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>THE ONE · 매칭 알고리즘 더미 검증 리포트</title>
+<style>
+  :root{color-scheme:light}
+  *{box-sizing:border-box}
+  body{margin:0;background:#FAF7F2;color:#1A1F2E;font-family:-apple-system,"Apple SD Gothic Neo",Pretendard,sans-serif;line-height:1.55}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  .eyebrow{font-family:Georgia,serif;font-style:italic;color:#B8956A;font-size:14px}
+  h1{font-family:"Noto Serif KR",Georgia,serif;font-size:30px;font-weight:700;margin:6px 0 2px}
+  .lead{color:#8B8378;font-size:13.5px;margin-bottom:8px}
+  .rules{background:#F5F1EA;border-left:2px solid #B8956A;padding:12px 16px;font-size:12.5px;border-radius:2px;margin:18px 0 28px}
+  h2{font-family:"Noto Serif KR",Georgia,serif;font-size:18px;margin:34px 0 14px;border-bottom:1px solid #EDE8DE;padding-bottom:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .card{border:1px solid #EDE8DE;border-radius:2px;overflow:hidden;background:#fff}
+  .ava{aspect-ratio:5/6;background:#1A1F2E}
+  .meta{padding:9px 11px}
+  .key{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+  .g{font-size:10px;padding:1px 6px;border-radius:2px}
+  .g.female{background:#f3e7d6;color:#B8956A}
+  .g.male{background:#e3ece8;color:#6B8E7F}
+  .sub{color:#8B8378;font-size:11px}
+  .pills{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+  .pill{font-size:10px;border:1px solid #B8956A;color:#B8956A;padding:1px 6px;border-radius:2px}
+  .pill.muted{border-color:#EDE8DE;color:#8B8378}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  .cur td,.cur th{border-bottom:1px solid #EDE8DE;padding:9px 8px;text-align:left;vertical-align:top}
+  .cur th{color:#8B8378;font-weight:600;font-size:11px}
+  .vk{font-weight:700}
+  .arrow{color:#B8956A;width:20px}
+  .score{color:#6B8E7F;font-weight:700}
+  .none{color:#A85547}
+  .ranked span{display:inline-block;margin-right:8px;color:#8B8378;font-variant-numeric:tabular-nums}
+  .ranked .win{color:#1A1F2E;font-weight:700}
+  .mwrap{overflow-x:auto;border:1px solid #EDE8DE;border-radius:2px}
+  .mtx{font-size:11.5px;min-width:680px}
+  .mtx th,.mtx td{border:1px solid #EDE8DE;padding:6px 4px;text-align:center}
+  .mtx thead th{background:#F5F1EA;color:#1A1F2E;font-size:10.5px}
+  .mtx .rk{background:#F5F1EA;text-align:left;padding-left:8px;white-space:nowrap}
+  .cell{font-variant-numeric:tabular-nums;color:#1A1F2E}
+  .cell.off{color:#cfc8ba}
+  .cell.win{background:#6B8E7F;color:#fff;font-weight:700}
+  .foot{margin-top:30px;color:#8B8378;font-size:11.5px}
+</style></head><body><div class="wrap">
+  <div class="eyebrow">Matching Engine v1 · Rule-based</div>
+  <h1>매칭 알고리즘 더미 검증 리포트</h1>
+  <div class="lead">더미 10남 + 10여 · 실제 알고리즘(scoreCandidate / isEligible / pickTodayCuration)으로 계산</div>
+  <div class="rules"><b>규칙</b> — 하드필터: 같은/인접 광역시도 + 나이 ±5세 · 점수: 같은지역 +30 / 인접 +12 / 나이근접 (5−|차|)×4 / 인증뱃지 겹침 ×8 / 상대 뱃지수 ×3</div>
+
+  <h2>더미 프로필 (20명) · 아바타는 자체 SVG placeholder (GPT 실사 사진으로 교체 가능)</h2>
+  <div class="grid"><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M01</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M01 <span class="g male">남</span></div>
+      <div class="sub">서울 · 32세 · legal</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span><span class="pill">차량</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M02</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M02 <span class="g male">남</span></div>
+      <div class="sub">서울 · 35세 · finance</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M03</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M03 <span class="g male">남</span></div>
+      <div class="sub">경기 · 30세 · medical</div>
+      <div class="pills"><span class="pill">재산</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M04</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M04 <span class="g male">남</span></div>
+      <div class="sub">부산 · 38세 · corporate</div>
+      <div class="pills"><span class="pill">학력</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M05</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M05 <span class="g male">남</span></div>
+      <div class="sub">서울 · 41세 · finance</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span><span class="pill">차량</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M06</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M06 <span class="g male">남</span></div>
+      <div class="sub">인천 · 29세 · tech</div>
+      <div class="pills"><span class="pill muted">미인증</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M07</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M07 <span class="g male">남</span></div>
+      <div class="sub">대구 · 33세 · medical</div>
+      <div class="pills"><span class="pill">차량</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M08</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M08 <span class="g male">남</span></div>
+      <div class="sub">서울 · 36세 · legal</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M09</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M09 <span class="g male">남</span></div>
+      <div class="sub">경기 · 28세 · corporate</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span><span class="pill">차량</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#6B8E7F" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#6B8E7F" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#6B8E7F" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">M10</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">M10 <span class="g male">남</span></div>
+      <div class="sub">제주 · 40세 · accounting</div>
+      <div class="pills"><span class="pill">재산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F01</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F01 <span class="g female">여</span></div>
+      <div class="sub">서울 · 31세 · medical</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span><span class="pill">차량</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F02</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F02 <span class="g female">여</span></div>
+      <div class="sub">서울 · 33세 · finance</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F03</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F03 <span class="g female">여</span></div>
+      <div class="sub">경기 · 29세 · legal</div>
+      <div class="pills"><span class="pill">재산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F04</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F04 <span class="g female">여</span></div>
+      <div class="sub">부산 · 37세 · corporate</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F05</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F05 <span class="g female">여</span></div>
+      <div class="sub">서울 · 30세 · medical</div>
+      <div class="pills"><span class="pill">학력</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F06</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F06 <span class="g female">여</span></div>
+      <div class="sub">인천 · 34세 · finance</div>
+      <div class="pills"><span class="pill">차량</span><span class="pill">재산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F07</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F07 <span class="g female">여</span></div>
+      <div class="sub">대구 · 32세 · legal</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">차량</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F08</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F08 <span class="g female">여</span></div>
+      <div class="sub">서울 · 39세 · accounting</div>
+      <div class="pills"><span class="pill">학력</span><span class="pill">재산</span><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F09</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F09 <span class="g female">여</span></div>
+      <div class="sub">경기 · 41세 · corporate</div>
+      <div class="pills"><span class="pill">부동산</span></div>
+    </div>
+  </div><div class="card">
+    <div class="ava"><svg viewBox="0 0 100 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="120" fill="#1A1F2E"/>
+    <circle cx="50" cy="44" r="20" fill="none" stroke="#B8956A" stroke-width="1.2" opacity="0.9"/>
+    <circle cx="50" cy="38" r="8" fill="#B8956A" opacity="0.55"/>
+    <path d="M30 70 Q50 54 70 70 L70 120 L30 120 Z" fill="#B8956A" opacity="0.18"/>
+    <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="15" fill="#FAF7F2" letter-spacing="1">F10</text>
+  </svg></div>
+    <div class="meta">
+      <div class="key">F10 <span class="g female">여</span></div>
+      <div class="sub">제주 · 28세 · medical</div>
+      <div class="pills"><span class="pill">학력</span></div>
+    </div>
+  </div></div>
+
+  <h2>남성 → 여성 큐레이션</h2>
+    <table class="cur"><thead><tr><th>회원</th><th></th><th>오늘의 큐레이션 (최고점)</th><th>적격 상위3</th></tr></thead><tbody><tr>
+        <td class="vk">M01<br><span class="sub">서울·32</span></td>
+        <td class="arrow">→</td>
+        <td><b>F01</b> <span class="sub">서울·31</span> <span class="score">90점</span></td>
+        <td class="ranked"><span class="win">F01:90</span> <span class="">F02:68</span> <span class="">F05:53</span></td>
+      </tr><tr>
+        <td class="vk">M02<br><span class="sub">서울·35</span></td>
+        <td class="arrow">→</td>
+        <td><b>F02</b> <span class="sub">서울·33</span> <span class="score">64점</span></td>
+        <td class="ranked"><span class="win">F02:64</span> <span class="">F01:62</span> <span class="">F08:59</span></td>
+      </tr><tr>
+        <td class="vk">M03<br><span class="sub">경기·30</span></td>
+        <td class="arrow">→</td>
+        <td><b>F03</b> <span class="sub">경기·29</span> <span class="score">57점</span></td>
+        <td class="ranked"><span class="win">F03:57</span> <span class="">F01:56</span> <span class="">F05:35</span></td>
+      </tr><tr>
+        <td class="vk">M04<br><span class="sub">부산·38</span></td>
+        <td class="arrow">→</td>
+        <td><b>F04</b> <span class="sub">부산·37</span> <span class="score">60점</span></td>
+        <td class="ranked"><span class="win">F04:60</span></td>
+      </tr><tr>
+        <td class="vk">M05<br><span class="sub">서울·41</span></td>
+        <td class="arrow">→</td>
+        <td><b>F08</b> <span class="sub">서울·39</span> <span class="score">67점</span></td>
+        <td class="ranked"><span class="win">F08:67</span> <span class="">F09:35</span></td>
+      </tr><tr>
+        <td class="vk">M06<br><span class="sub">인천·29</span></td>
+        <td class="arrow">→</td>
+        <td><b>F01</b> <span class="sub">서울·31</span> <span class="score">36점</span></td>
+        <td class="ranked"><span class="win">F01:36</span> <span class="">F06:36</span> <span class="">F03:35</span></td>
+      </tr><tr>
+        <td class="vk">M07<br><span class="sub">대구·33</span></td>
+        <td class="arrow">→</td>
+        <td><b>F07</b> <span class="sub">대구·32</span> <span class="score">60점</span></td>
+        <td class="ranked"><span class="win">F07:60</span></td>
+      </tr><tr>
+        <td class="vk">M08<br><span class="sub">서울·36</span></td>
+        <td class="arrow">→</td>
+        <td><b>F08</b> <span class="sub">서울·39</span> <span class="score">63점</span></td>
+        <td class="ranked"><span class="win">F08:63</span> <span class="">F01:58</span> <span class="">F02:52</span></td>
+      </tr><tr>
+        <td class="vk">M09<br><span class="sub">경기·28</span></td>
+        <td class="arrow">→</td>
+        <td><b>F01</b> <span class="sub">서울·31</span> <span class="score">64점</span></td>
+        <td class="ranked"><span class="win">F01:64</span> <span class="">F03:57</span> <span class="">F05:35</span></td>
+      </tr><tr>
+        <td class="vk">M10<br><span class="sub">제주·40</span></td>
+        <td class="arrow">→</td>
+        <td><span class="none">적격 후보 없음</span></td>
+        <td class="ranked">—</td>
+      </tr></tbody></table>
+  <h2>여성 → 남성 큐레이션</h2>
+    <table class="cur"><thead><tr><th>회원</th><th></th><th>오늘의 큐레이션 (최고점)</th><th>적격 상위3</th></tr></thead><tbody><tr>
+        <td class="vk">F01<br><span class="sub">서울·31</span></td>
+        <td class="arrow">→</td>
+        <td><b>M01</b> <span class="sub">서울·32</span> <span class="score">90점</span></td>
+        <td class="ranked"><span class="win">M01:90</span> <span class="">M09:64</span> <span class="">M02:56</span></td>
+      </tr><tr>
+        <td class="vk">F02<br><span class="sub">서울·33</span></td>
+        <td class="arrow">→</td>
+        <td><b>M01</b> <span class="sub">서울·32</span> <span class="score">74점</span></td>
+        <td class="ranked"><span class="win">M01:74</span> <span class="">M02:64</span> <span class="">M08:52</span></td>
+      </tr><tr>
+        <td class="vk">F03<br><span class="sub">경기·29</span></td>
+        <td class="arrow">→</td>
+        <td><b>M09</b> <span class="sub">경기·28</span> <span class="score">66점</span></td>
+        <td class="ranked"><span class="win">M09:66</span> <span class="">M03:60</span> <span class="">M01:40</span></td>
+      </tr><tr>
+        <td class="vk">F04<br><span class="sub">부산·37</span></td>
+        <td class="arrow">→</td>
+        <td><b>M04</b> <span class="sub">부산·38</span> <span class="score">57점</span></td>
+        <td class="ranked"><span class="win">M04:57</span></td>
+      </tr><tr>
+        <td class="vk">F05<br><span class="sub">서울·30</span></td>
+        <td class="arrow">→</td>
+        <td><b>M01</b> <span class="sub">서울·32</span> <span class="score">62점</span></td>
+        <td class="ranked"><span class="win">M01:62</span> <span class="">M02:44</span> <span class="">M09:44</span></td>
+      </tr><tr>
+        <td class="vk">F06<br><span class="sub">인천·34</span></td>
+        <td class="arrow">→</td>
+        <td><b>M01</b> <span class="sub">서울·32</span> <span class="score">52점</span></td>
+        <td class="ranked"><span class="win">M01:52</span> <span class="">M02:42</span> <span class="">M03:30</span></td>
+      </tr><tr>
+        <td class="vk">F07<br><span class="sub">대구·32</span></td>
+        <td class="arrow">→</td>
+        <td><b>M07</b> <span class="sub">대구·33</span> <span class="score">57점</span></td>
+        <td class="ranked"><span class="win">M07:57</span></td>
+      </tr><tr>
+        <td class="vk">F08<br><span class="sub">서울·39</span></td>
+        <td class="arrow">→</td>
+        <td><b>M05</b> <span class="sub">서울·41</span> <span class="score">67점</span></td>
+        <td class="ranked"><span class="win">M05:67</span> <span class="">M08:60</span> <span class="">M02:56</span></td>
+      </tr><tr>
+        <td class="vk">F09<br><span class="sub">경기·41</span></td>
+        <td class="arrow">→</td>
+        <td><b>M05</b> <span class="sub">서울·41</span> <span class="score">41점</span></td>
+        <td class="ranked"><span class="win">M05:41</span> <span class="">M08:26</span></td>
+      </tr><tr>
+        <td class="vk">F10<br><span class="sub">제주·28</span></td>
+        <td class="arrow">→</td>
+        <td><span class="none">적격 후보 없음</span></td>
+        <td class="ranked">—</td>
+      </tr></tbody></table>
+  <h2>점수 매트릭스 (행=남 / 열=여, 하이라이트=큐레이션 선택, · =지역/나이 필터 탈락)</h2>
+    <div class="mwrap"><table class="mtx"><thead><tr><th></th><th>F01<br><span class="sub">서울·31</span></th><th>F02<br><span class="sub">서울·33</span></th><th>F03<br><span class="sub">경기·29</span></th><th>F04<br><span class="sub">부산·37</span></th><th>F05<br><span class="sub">서울·30</span></th><th>F06<br><span class="sub">인천·34</span></th><th>F07<br><span class="sub">대구·32</span></th><th>F08<br><span class="sub">서울·39</span></th><th>F09<br><span class="sub">경기·41</span></th><th>F10<br><span class="sub">제주·28</span></th></tr></thead><tbody><tr><th class="rk">M01<br><span class="sub">서울·32</span></th><td class="cell win">90</td><td class="cell ">68</td><td class="cell ">31</td><td class="cell off">·</td><td class="cell ">53</td><td class="cell ">46</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M02<br><span class="sub">서울·35</span></th><td class="cell ">62</td><td class="cell win">64</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell ">41</td><td class="cell ">42</td><td class="cell off">·</td><td class="cell ">59</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M03<br><span class="sub">경기·30</span></th><td class="cell ">56</td><td class="cell ">34</td><td class="cell win">57</td><td class="cell off">·</td><td class="cell ">35</td><td class="cell ">30</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M04<br><span class="sub">부산·38</span></th><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell win">60</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M05<br><span class="sub">서울·41</span></th><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell win">67</td><td class="cell ">35</td><td class="cell off">·</td></tr><tr><th class="rk">M06<br><span class="sub">인천·29</span></th><td class="cell win">36</td><td class="cell ">22</td><td class="cell ">35</td><td class="cell off">·</td><td class="cell ">31</td><td class="cell ">36</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M07<br><span class="sub">대구·33</span></th><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell win">60</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M08<br><span class="sub">서울·36</span></th><td class="cell ">58</td><td class="cell ">52</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell ">30</td><td class="cell off">·</td><td class="cell win">63</td><td class="cell ">23</td><td class="cell off">·</td></tr><tr><th class="rk">M09<br><span class="sub">경기·28</span></th><td class="cell win">64</td><td class="cell ">34</td><td class="cell ">57</td><td class="cell off">·</td><td class="cell ">35</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr><tr><th class="rk">M10<br><span class="sub">제주·40</span></th><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td><td class="cell off">·</td></tr></tbody></table></div>
+
+  <div class="foot">생성: THE ONE 매칭 검증 스크립트 · 더미는 로컬 DB 한정 · 실서비스 프로필 사진은 실제 인증 회원만(AI 가짜 인물 금지).</div>
+</div></body></html>

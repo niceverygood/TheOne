@@ -70,13 +70,19 @@ public class OkCertClient {
         String reqStr = om.writeValueAsString(reqJson);
         String license = props.getLicensePath();
 
-        // Executable jar 환경에서 path 기반 로드가 실패할 수 있어, 미캐시 시 InputStream 오버로드 사용(샘플 권장 패턴).
+        // OkCert3 모듈은 단일 인스턴스에 호출별 상태(AES 키/IV 등)를 보관해 thread-safe 하지 않다.
+        // 동시 요청이 같은 okcert 인스턴스를 건드리면 복호화 상태가 깨져 간헐적으로
+        // "AES decrypt Error - BadPadding(CODE:46)" 이 발생한다 → callOkCert 호출을 직렬화한다.
+        // (본인인증 거래량은 낮아 직렬화 비용보다 정확성/신뢰성이 우선)
         String resultStr;
-        if (okcert.containsLicense(license)) {
-            resultStr = okcert.callOkCert(props.getTarget(), props.getCpCd(), svcName, license, reqStr);
-        } else {
-            try (InputStream is = new FileInputStream(license)) {
-                resultStr = okcert.callOkCert(props.getTarget(), props.getCpCd(), svcName, license, reqStr, is);
+        synchronized (okcert) {
+            // Executable jar 환경에서 path 기반 로드가 실패할 수 있어, 미캐시 시 InputStream 오버로드 사용(샘플 권장 패턴).
+            if (okcert.containsLicense(license)) {
+                resultStr = okcert.callOkCert(props.getTarget(), props.getCpCd(), svcName, license, reqStr);
+            } else {
+                try (InputStream is = new FileInputStream(license)) {
+                    resultStr = okcert.callOkCert(props.getTarget(), props.getCpCd(), svcName, license, reqStr, is);
+                }
             }
         }
 

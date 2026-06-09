@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Linking, Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { AppShell, FormFooter } from '../../src/app-shell';
@@ -20,9 +20,102 @@ import { useSignup } from '../../src/store';
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
 const USE_KCB = IDENTITY_PROVIDER === 'kcb' && !!API_BASE;
 
+// 통신사 PASS 앱 유니버셜 링크 호스트(iOS). WebView 안에서 열지 말고 OS로 넘겨 PASS 앱을 띄운다.
+// (KCB '앱연동가이드(휴대폰본인확인)' — SKT/KT/LGU)
+const PASS_UNIVERSAL_HOSTS = ['www.sktpass.com', 'fido.kt.com', 'fido.uplus.co.kr'];
+
+function hostOf(url: string): string {
+  return (url.replace(/^https?:\/\//i, '').split('/')[0] ?? '').toLowerCase();
+}
+
+// 안드로이드 intent:// URI 를 커스텀 스킴 URL 로 변환해 실행한다.
+// RN Linking 은 intent:// 를 그대로 못 여므로(스킴/패키지 파싱 안 됨) 직접 변환한다.
+//  intent://host/path?q#Intent;scheme=xxx;package=pkg;end → xxx://host/path?q
+//  intent:scheme://...#Intent;package=pkg;end            → scheme://...
+function launchAndroidIntent(url: string) {
+  const hashIdx = url.indexOf('#Intent;');
+  const meta = hashIdx >= 0 ? url.slice(hashIdx) : '';
+  const scheme = meta.match(/scheme=([^;]+)/)?.[1];
+  const pkg = meta.match(/package=([^;]+)/)?.[1];
+  let body = hashIdx >= 0 ? url.slice(0, hashIdx) : url;
+  let target = '';
+  if (body.startsWith('intent://')) {
+    body = body.slice('intent://'.length);
+    target = scheme ? `${scheme}://${body}` : '';
+  } else if (body.startsWith('intent:')) {
+    target = body.slice('intent:'.length); // 본문이 이미 scheme:// 형태
+  } else {
+    target = body;
+  }
+  const market = pkg ? `market://details?id=${pkg}` : undefined;
+  if (target) {
+    Linking.openURL(target).catch(() => {
+      if (market) Linking.openURL(market).catch(() => {});
+    });
+  } else if (market) {
+    Linking.openURL(market).catch(() => {});
+  }
+}
+
+// 통신사 PASS 앱 실행: intent://(안드로이드)·앱스킴·유니버셜 링크를 OS로 넘긴다.
+function openPassApp(url: string) {
+  if (/^intent:/i.test(url)) {
+    launchAndroidIntent(url);
+    return;
+  }
+  Linking.openURL(url).catch(() => {});
+}
+
+// WebView 가 로드를 시도하기 전 호출 — KCB 페이지는 그대로 로드하고,
+// 통신사 PASS 앱(intent://·커스텀 스킴·유니버셜 링크)만 외부로 보낸다.
+// 이 처리가 없으면 내장 WebView 는 intent:// 를 무시해 PASS 앱이 안 열리고 푸시도 오지 않는다.
+function shouldLoadInWebView(url: string): boolean {
+  if (/^https?:\/\//i.test(url)) {
+    if (PASS_UNIVERSAL_HOSTS.includes(hostOf(url))) {
+      openPassApp(url);
+      return false; // 통신사 유니버셜 링크 → 외부(PASS 앱)
+    }
+    return true; // 일반 KCB 인증 페이지는 WebView 안에서
+  }
+  // intent:// 또는 통신사 앱 커스텀 스킴(tauthlink/ktauth/upluscorporation 등)
+  openPassApp(url);
+  return false;
+}
+
+// 본인인증 결과 표시용 포맷터 ─────────────────────────────
+function koreanAge(birth?: string): number | undefined {
+  if (!birth) return undefined;
+  const s = birth.replace(/\D/g, ''); // YYYYMMDD
+  if (s.length < 8) return undefined;
+  const y = +s.slice(0, 4);
+  const m = +s.slice(4, 6);
+  const d = +s.slice(6, 8);
+  const t = new Date();
+  let age = t.getFullYear() - y;
+  // 생일이 안 지났으면 한 살 빼기 → 만 나이
+  if (t.getMonth() + 1 < m || (t.getMonth() + 1 === m && t.getDate() < d)) age -= 1;
+  return age >= 0 && age < 130 ? age : undefined;
+}
+
+function formatPhone(p?: string): string | undefined {
+  if (!p) return undefined;
+  const d = p.replace(/\D/g, '');
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return p;
+}
+
+function genderKr(g?: string): string {
+  return g === 'female' ? '여성' : g === 'male' ? '남성' : '—';
+}
+
 export default function Step01() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
+  // 본인인증으로 확정된 신원(표시용) — finishKcb/onVerify 가 store 에 저장한 값
+  const gender = useSignup((s) => s.gender);
+  const birth = useSignup((s) => s.birth);
+  const phone = useSignup((s) => s.phone);
   const [carrier, setCarrier] = useState(0);
   const [sent, setSent] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -124,10 +217,16 @@ export default function Step01() {
       <View style={{ flex: 1, backgroundColor: C.ivory }}>
         <WebView
           source={{ uri: popupUrl }}
+          // intent:// 등 비-http 스킴이 onShouldStartLoadWithRequest 로 들어오게 허용
+          originWhitelist={['*']}
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
           javaScriptEnabled
           domStorageEnabled
+          // KCB 페이지가 window.open 으로 PASS 를 띄우는 경우도 같은 핸들러로 처리
+          setSupportMultipleWindows={false}
+          // 통신사 PASS 앱(intent://·앱스킴·유니버셜 링크)을 OS 로 넘겨 실행
+          onShouldStartLoadWithRequest={(req) => shouldLoadInWebView(req.url)}
           onNavigationStateChange={(s) => {
             // identity-kcb 가 인증 완료 후 /kcb/done 으로 이동 → 가드 후 결과 조회
             if (!doneRef.current && /\/kcb\/done\b/.test(s.url)) {
@@ -146,9 +245,10 @@ export default function Step01() {
       eyebrow="Identity"
       title="본인 인증"
       subtitle="실명 확인을 위해 휴대폰 본인 인증을 진행합니다. 정보는 매칭 상대에게 노출되지 않습니다."
+      total={8}
       footer={
         <FormFooter
-          next="다음 — 직업"
+          next="다음 — 사진"
           disabled={!verified}
           onNext={() => router.push('/signup/step02')}
         />
@@ -186,6 +286,46 @@ export default function Step01() {
               ✓ 본인인증 완료
             </Txt>
           )}
+
+          {/* 본인인증으로 확정된 신원 — 성별·휴대폰·나이(만) */}
+          {verified ? (
+            <View
+              style={{
+                marginTop: 16,
+                borderWidth: 1,
+                borderColor: C.hairLight,
+                borderRadius: RADIUS,
+              }}
+            >
+              {(
+                [
+                  ['성별', genderKr(gender)],
+                  ['휴대폰', formatPhone(phone) ?? '—'],
+                  ['나이', koreanAge(birth) != null ? `만 ${koreanAge(birth)}세` : '—'],
+                ] as [string, string][]
+              ).map(([label, value], i) => (
+                <View
+                  key={label}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: 13,
+                    paddingHorizontal: 14,
+                    borderTopWidth: i === 0 ? 0 : 1,
+                    borderTopColor: C.hairLight,
+                  }}
+                >
+                  <Txt size={12.5} color={C.gray}>
+                    {label}
+                  </Txt>
+                  <Txt size={13.5} weight="600" color={C.ink2}>
+                    {value}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+          ) : null}
           {err ? (
             <Txt size={11} color={C.terra} style={{ marginTop: 12 }}>
               {err}
@@ -327,6 +467,20 @@ export default function Step01() {
           </Txt>
         </>
       )}
+
+      {/* 본인 명의가 아닌 경우 — 운영자 수동 본인인증 경로 */}
+      <View
+        style={{ marginTop: 24, borderTopWidth: 1, borderTopColor: C.hairLight, paddingTop: 16 }}
+      >
+        <Pressable onPress={() => router.push('/signup/manual-identity')}>
+          <Txt size={12.5} color={C.ink2} weight="500">
+            본인 명의 휴대폰이 아니신가요?
+          </Txt>
+          <Txt size={11} color={C.gray} style={{ marginTop: 4, lineHeight: 17 }}>
+            가족 명의 등으로 본인인증이 어려우면, 신분증 사진으로 운영자가 직접 확인해 드립니다 →
+          </Txt>
+        </Pressable>
+      </View>
     </AppShell>
   );
 }

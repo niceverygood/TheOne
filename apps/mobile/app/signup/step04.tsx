@@ -1,84 +1,78 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { REGIONS, REGION_SUBS } from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C } from '../../src/theme';
-import { Txt } from '../../src/ui';
+import { OptionChips, Txt } from '../../src/ui';
+import { useSignup } from '../../src/store';
 
-const QUESTIONS = [
-  '결혼은 인생에서 반드시 이루고 싶은 목표다.',
-  '결혼 후에도 각자의 커리어를 이어가야 한다.',
-  '재정은 부부가 투명하게 공유해야 한다.',
-  '아이를 갖는 것은 결혼의 중요한 부분이다.',
-];
+/** 저장값(시도 또는 시도.세부)에서 시도 슬러그 추출 */
+function sidoOf(v?: string): string | undefined {
+  if (!v) return undefined;
+  const dot = v.indexOf('.');
+  return dot > 0 ? v.slice(0, dot) : v;
+}
 
-function Likert({ q, value, onPick }: { q: string; value: number; onPick: (n: number) => void }) {
+/** 시도 → (있으면) 세부 지역 2단계 선택 */
+function RegionPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  onChange: (v: string) => void;
+}) {
+  const sido = sidoOf(value);
+  const subs = sido ? REGION_SUBS[sido] : undefined;
+  const subValue = value && value.includes('.') ? value : undefined;
   return (
-    <View style={{ marginBottom: 22 }}>
-      <Txt size={13.5} color={C.ink2} style={{ marginBottom: 10, lineHeight: 20 }}>
-        {q}
+    <View style={{ marginBottom: 28 }}>
+      <Txt variant="eyebrow" style={{ marginBottom: 12 }}>
+        {label}
       </Txt>
-      <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-end' }}>
-        {[1, 2, 3, 4, 5].map((n) => {
-          const sel = n === value;
-          const h = 14 + Math.abs(n - 3) * 8;
-          return (
-            <Pressable key={n} onPress={() => onPick(n)} style={{ flex: 1 }}>
-              <View style={{ height: h, backgroundColor: sel ? C.champagne : C.ivory3 }} />
-            </Pressable>
-          );
-        })}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-        <Txt size={10} color={C.gray}>
-          전혀 아니다
-        </Txt>
-        <Txt size={10} color={C.gray}>
-          매우 그렇다
-        </Txt>
-      </View>
+      <OptionChips options={REGIONS} value={sido} onChange={(v) => onChange(v as string)} />
+      {subs ? (
+        <View style={{ marginTop: 14 }}>
+          <Txt size={11} color={C.gray} style={{ marginBottom: 10 }}>
+            세부 지역 (선택)
+          </Txt>
+          <OptionChips options={subs} value={subValue} onChange={(v) => onChange(v as string)} />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 export default function Step04() {
   const router = useRouter();
-  const [answers, setAnswers] = useState<number[]>([5, 4, 5, 4]);
+  const set = useSignup((s) => s.set);
+  const [residence, setResidence] = useState<string | undefined>(
+    useSignup.getState().residenceRegion,
+  );
+  const [activity, setActivity] = useState<string | undefined>(useSignup.getState().activityRegion);
+
   return (
     <AppShell
       step={4}
-      total={5}
-      eyebrow="60 Questions"
-      title="가치관 설문"
-      subtitle="총 60문항 · 결혼관 / 라이프스타일 / 관계 / 갈등. 매칭 케미 분석의 기반이 됩니다."
-      footer={<FormFooter next="다음 — 추천인" onNext={() => router.push('/signup/step05')} />}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 8,
-        }}
-      >
-        <Txt variant="mono" size={11} color={C.champagne}>
-          결혼관 · 1/4
-        </Txt>
-        <Txt variant="mono" size={10} color={C.gray}>
-          14 / 60
-        </Txt>
-      </View>
-      <View style={{ height: 2, backgroundColor: C.ivory3, marginBottom: 28 }}>
-        <View style={{ width: '23%', height: '100%', backgroundColor: C.ink2 }} />
-      </View>
-      {QUESTIONS.map((q, i) => (
-        <Likert
-          key={q}
-          q={q}
-          value={answers[i] ?? 3}
-          onPick={(n) => setAnswers((a) => a.map((v, idx) => (idx === i ? n : v)))}
+      total={8}
+      eyebrow="Region"
+      title="지역"
+      subtitle="주로 생활하는 지역과 활동(만남)이 편한 지역을 알려 주세요. 시·도를 고르면 세부 지역을 선택할 수 있습니다."
+      footer={
+        <FormFooter
+          next="다음 — 직업·학교"
+          disabled={!residence || !activity}
+          onNext={() => {
+            set({ residenceRegion: residence, activityRegion: activity });
+            router.push('/signup/step05');
+          }}
         />
-      ))}
+      }
+    >
+      <RegionPicker label="사는 지역" value={residence} onChange={setResidence} />
+      <RegionPicker label="활동 지역" value={activity} onChange={setActivity} />
     </AppShell>
   );
 }

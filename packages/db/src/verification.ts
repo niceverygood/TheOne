@@ -3,6 +3,7 @@
  * 모든 서류 열람/처리는 AccessLog 기록을 동반한다 (privacy-design §2-4).
  */
 import { prisma } from './index';
+import { awardVerificationReward } from './economy';
 import type {
   AccessAction,
   Operator,
@@ -99,19 +100,23 @@ export async function getQueueStats(): Promise<QueueStats> {
   return { pending, urgent, approvedToday, rejectedToday };
 }
 
-/** 승인 — 신청 상태 변경 + 뱃지 upsert + AccessLog. reviewer 이상만 호출(상위에서 검증). */
+/**
+ * 승인 — 신청 상태 변경 + 뱃지 upsert + 인앱화폐 보상 지급 + AccessLog.
+ * reviewer 이상만 호출(상위에서 검증). 보상은 applicationId 기준 멱등(재승인 중복지급 없음).
+ * @returns 이번 승인으로 지급된 보상 크레딧(이미 지급됐거나 재승인이면 0)
+ */
 export async function approveApplication(args: {
   applicationId: string;
   operatorId: string;
   ip?: string;
-}): Promise<void> {
+}): Promise<{ rewardCredits: number }> {
   const app = await prisma.verificationApplication.findUnique({
     where: { id: args.applicationId },
   });
   if (!app) throw new Error('APPLICATION_NOT_FOUND');
 
-  await prisma.$transaction([
-    prisma.verificationApplication.update({
+  return prisma.$transaction(async (tx) => {
+    await tx.verificationApplication.update({
       where: { id: app.id },
       data: {
         status: 'approved',
@@ -119,8 +124,8 @@ export async function approveApplication(args: {
         reviewedAt: new Date(),
         rejectReason: null,
       },
-    }),
-    prisma.verificationBadge.upsert({
+    });
+    await tx.verificationBadge.upsert({
       where: { userId_type: { userId: app.userId, type: app.type } },
       create: {
         userId: app.userId,
@@ -129,8 +134,8 @@ export async function approveApplication(args: {
         expiresAt: badgeExpiryFrom(),
       },
       update: { valueTier: app.valueTier, verifiedAt: new Date(), expiresAt: badgeExpiryFrom() },
-    }),
-    prisma.accessLog.create({
+    });
+    await tx.accessLog.create({
       data: {
         operatorId: args.operatorId,
         action: 'approve',
@@ -138,8 +143,11 @@ export async function approveApplication(args: {
         targetUserId: app.userId,
         ip: args.ip,
       },
-    }),
-  ]);
+    });
+    // 인앱화폐 보상 — 타입별 차등, applicationId 멱등.
+    const { awarded } = await awardVerificationReward(app.userId, app.type, app.id, tx);
+    return { rewardCredits: awarded };
+  });
 }
 
 /** 반려 — 사유 기록 + AccessLog. */

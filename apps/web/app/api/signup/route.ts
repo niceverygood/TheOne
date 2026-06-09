@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signupInputSchema } from '@theone/shared';
-import { createSignupUser, DuplicateUserError } from '@theone/db';
+import { createSignupUser, DuplicateUserError, resolveReferrer } from '@theone/db';
 import { openIdentity } from '@/lib/identity-token';
 
 export const runtime = 'nodejs';
@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 추천 코드 → 추천인 userId (형식/체크섬 검증). 유효하지 않으면 무시.
+  const referredById = await resolveReferrer(input.referralCode);
+
   try {
     const user = await createSignupUser({
       gender: input.gender,
@@ -48,6 +51,18 @@ export async function POST(req: NextRequest) {
       phone: input.phone,
       email: input.email,
       ciHash,
+      referredById: referredById ?? undefined,
+      // 가입 설문(Phase 4)
+      height: input.height,
+      residenceRegion: input.residenceRegion,
+      activityRegion: input.activityRegion,
+      school: input.school,
+      hobbies: input.hobbies,
+      drinkingFrequency: input.drinkingFrequency,
+      drinkingAmount: input.drinkingAmount,
+      smoking: input.smoking,
+      bodyType: input.bodyType,
+      introSections: input.introSections as Record<string, string> | undefined,
     });
     return NextResponse.json({ ok: true, userId: user.id, status: user.status });
   } catch (e) {

@@ -1,16 +1,14 @@
-import { useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CREDIT_PACKAGES } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Screen, Txt } from '../src/ui';
 import { getIap } from '../src/iap';
+import { useSignup } from '../src/store';
 
 const API_BASE =
   process.env.EXPO_PUBLIC_API_BASE ?? (typeof window !== 'undefined' ? window.location.origin : '');
-
-// 세션 연동 전까지는 데모 유저. API/auth 연동 시 교체.
-const DEMO_USER_ID = 'demo-user';
 
 function bonusRate(pkg: { credits: number; baseCredits: number }): number {
   if (pkg.credits === pkg.baseCredits) return 0;
@@ -24,24 +22,49 @@ function fmtWon(n: number): string {
 /** Screen 16 · 크레딧 충전 — packages/shared 8패키지 + IAP 결제 */
 export default function Credits() {
   const router = useRouter();
+  const userId = useSignup((s) => s.userId);
   const [sel, setSel] = useState<number>(3);
   const [busy, setBusy] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+
+  // 잔액 조회 (가입 완료 userId 기준)
+  const loadBalance = useCallback(async () => {
+    if (!userId || !API_BASE) return;
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/credits/balance?userId=${encodeURIComponent(userId)}`,
+      );
+      const data = await res.json();
+      if (data.ok) setBalance(data.balance);
+    } catch {
+      /* 무시 — 표시는 '—' */
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void loadBalance();
+  }, [loadBalance]);
 
   async function onPurchase() {
     const pkg = CREDIT_PACKAGES[sel];
     if (!pkg) return;
+    if (!userId) {
+      Alert.alert('가입 후 이용 가능', '크레딧 충전은 가입을 완료한 뒤 이용할 수 있습니다.');
+      return;
+    }
     setBusy(true);
     try {
       const iap = getIap();
       await iap.init();
-      const purchase = await iap.buy(pkg.appleProductId);
+      const productId = Platform.OS === 'android' ? pkg.googleProductId : pkg.appleProductId;
+      const purchase = await iap.buy(productId);
 
       const res = await fetch(`${API_BASE}/api/payment/iap/verify`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          userId: DEMO_USER_ID,
-          platform: 'ios',
+          userId,
+          platform: Platform.OS === 'android' ? 'android' : 'ios',
           productId: purchase.productId,
           receipt: purchase.receipt,
         }),
@@ -50,6 +73,7 @@ export default function Credits() {
       if (!res.ok || !data.ok) throw new Error(data.reason ?? 'verify_failed');
 
       await iap.finish(purchase);
+      await loadBalance();
       Alert.alert('충전 완료', `${data.credited} 크레딧이 적립되었습니다.`, [
         { text: '확인', onPress: () => router.back() },
       ]);
@@ -100,7 +124,7 @@ export default function Credits() {
             현재 잔액
           </Txt>
           <Txt variant="mono" size={20} weight="600" color={C.ivory}>
-            187 C
+            {balance != null ? `${balance.toLocaleString('ko-KR')} C` : '— C'}
           </Txt>
         </View>
 

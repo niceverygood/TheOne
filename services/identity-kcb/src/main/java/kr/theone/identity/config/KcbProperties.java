@@ -47,6 +47,13 @@ public class KcbProperties {
     /** 팝업 토큰·결과 보관 TTL(초). KCB 서버 시간 허용오차(±10분)와 동일하게 600. */
     private long sessionTtlSeconds = 600;
 
+    /**
+     * 임시 공개 테스트 트리거(GET /kcb/test) 활성화 여부.
+     * Bearer 없이 브라우저에서 휴대폰 본인확인 플로우를 직접 확인할 수 있게 한다(KCB 점검용).
+     * 실제 KCB 거래가 발생하므로 기본 false. 점검이 끝나면 다시 끈다.
+     */
+    private boolean testPageEnabled = false;
+
     public String getCpCd() { return cpCd; }
     public void setCpCd(String cpCd) { this.cpCd = cpCd; }
 
@@ -76,6 +83,9 @@ public class KcbProperties {
 
     public long getSessionTtlSeconds() { return sessionTtlSeconds; }
     public void setSessionTtlSeconds(long sessionTtlSeconds) { this.sessionTtlSeconds = sessionTtlSeconds; }
+
+    public boolean isTestPageEnabled() { return testPageEnabled; }
+    public void setTestPageEnabled(boolean testPageEnabled) { this.testPageEnabled = testPageEnabled; }
 
     /** RETURN_URL = {selfBaseUrl}/kcb/return */
     public String returnUrl() {

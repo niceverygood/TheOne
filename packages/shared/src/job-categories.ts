@@ -1,7 +1,8 @@
 /**
- * 직업 카테고리 — 남성 11개 / 여성 13개.
+ * 직업 카테고리 — 남성 18개 / 여성 18개 (상위 전문직·고소득 중심).
  * 가입 심사 직업 선택 + Phase 1 웨이팅리스트 폼 + 검증 서류 매핑에 재사용.
  * 차별적 워딩 금지. 카테고리별 필수/선택 서류 묶음 포함.
+ * ⚠️ apps/mobile/src/jobs.ts 와 id·라벨 동기화(모바일 미러).
  */
 
 export type Gender = 'male' | 'female';
@@ -24,265 +25,157 @@ export interface JobCategory {
   docs: JobDoc[];
 }
 
+const DOC_EMPLOY: JobDoc[] = [
+  { label: '재직증명서', required: true },
+  { label: '명함 / 사원증', required: true },
+  { label: '자격·면허', required: false },
+];
+const DOC_LICENSE: JobDoc[] = [
+  { label: '면허·자격증', required: true },
+  { label: '재직증명서 / 개원 허가증', required: true },
+  { label: '전문 자격증', required: false },
+];
+const DOC_OWNER: JobDoc[] = [
+  { label: '사업자등록증', required: true },
+  { label: '법인등기부등본 / 임원 재직증명', required: true },
+  { label: '재무·매출 증빙', required: false },
+];
+const DOC_ACADEMIA: JobDoc[] = [
+  { label: '임용증 / 재직증명서', required: true },
+  { label: '학위증명서', required: true },
+  { label: '명함', required: false },
+];
+
 export const MALE_JOB_CATEGORIES: JobCategory[] = [
-  {
-    id: 'legal',
-    kr: '법조계',
-    en: 'Legal',
-    detail: '변호사·판사·검사·법무관',
-    docs: [
-      { label: '변협 등록증', required: true },
-      { label: '재직증명서', required: true },
-      { label: '명함', required: false },
-    ],
-  },
-  {
-    id: 'medical',
-    kr: '의료계',
-    en: 'Medical',
-    detail: '의사·치과의사·한의사·약사',
-    docs: [
-      { label: '의사 면허증', required: true },
-      { label: '재직증명서 / 개원 허가증', required: true },
-      { label: '전문의 자격증', required: false },
-    ],
-  },
+  { id: 'legal', kr: '법조계', en: 'Legal', detail: '변호사·판사·검사', docs: DOC_LICENSE },
+  { id: 'medical', kr: '의료계', en: 'Medical', detail: '의사·전문의·교수', docs: DOC_LICENSE },
+  { id: 'dental', kr: '치과·한의', en: 'Dental·KM', detail: '치과의사·한의사', docs: DOC_LICENSE },
+  { id: 'pharma', kr: '약사·제약', en: 'Pharma', detail: '약사·바이오', docs: DOC_LICENSE },
   {
     id: 'accounting',
     kr: '회계·세무·변리',
     en: 'Acc·Tax·IP',
-    detail: 'CPA·세무사·변리사·관세사',
-    docs: [
-      { label: '자격증', required: true },
-      { label: '재직증명서', required: true },
-    ],
+    detail: 'CPA·세무사·변리사',
+    docs: DOC_LICENSE,
   },
+  { id: 'finance', kr: '금융', en: 'Finance', detail: '은행·증권·자산운용', docs: DOC_EMPLOY },
+  { id: 'ibpe', kr: 'IB·PE·VC', en: 'Capital', detail: '투자은행·사모펀드·VC', docs: DOC_EMPLOY },
+  { id: 'corporate', kr: '대기업', en: 'Corporate', detail: '재계 50위 과장급↑', docs: DOC_EMPLOY },
   {
-    id: 'corporate',
-    kr: '대기업',
-    en: 'Corporate',
-    detail: '재계 50위 그룹사·과장급 이상',
-    docs: [
-      { label: '재직증명서(직급 표기)', required: true },
-      { label: '사원증 / 명함', required: true },
-      { label: '원천징수영수증', required: false },
-    ],
+    id: 'executive',
+    kr: '임원·C레벨',
+    en: 'Executive',
+    detail: '대기업·외국계 임원',
+    docs: DOC_OWNER,
   },
+  { id: 'tech', kr: 'IT·테크', en: 'Tech', detail: '시니어 개발·CTO', docs: DOC_EMPLOY },
   {
-    id: 'finance',
-    kr: '금융',
-    en: 'Finance',
-    detail: '은행·증권·자산운용·VC·PE',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '투자상담사 · CFA 자격증', required: false },
-    ],
-  },
-  {
-    id: 'tech',
-    kr: 'IT·테크',
-    en: 'Tech',
-    detail: '시니어 개발자·CTO·테크 임원·창업자',
-    docs: [
-      { label: '재직증명서 / 사업자등록증', required: true },
-      { label: '사원증', required: true },
-      { label: 'GitHub · 특허', required: false },
-    ],
-  },
-  {
-    id: 'public',
-    kr: '공직',
-    en: 'Public',
-    detail: '5급 이상 행정·외무·법조 공무원',
-    docs: [
-      { label: '재직증명서(직급 명시)', required: true },
-      { label: '합격증 사본', required: false },
-    ],
-  },
-  {
-    id: 'architecture',
-    kr: '건축·디자인',
-    en: 'Architecture',
-    detail: '건축가·도시설계·인테리어 디렉터',
-    docs: [
-      { label: '건축사 자격증 / 재직증명서', required: true },
-      { label: '대표 프로젝트 PDF', required: false },
-    ],
+    id: 'startup',
+    kr: '창업·대표',
+    en: 'Founder',
+    detail: '스타트업 대표·공동창업',
+    docs: DOC_OWNER,
   },
   {
     id: 'consulting',
     kr: '컨설팅',
     en: 'Consulting',
-    detail: 'MBB·전략 컨설팅·M&A 자문',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '명함', required: true },
-      { label: '학위증명서', required: false },
-    ],
+    detail: 'MBB·전략·M&A 자문',
+    docs: DOC_EMPLOY,
   },
+  { id: 'public', kr: '고위공직', en: 'Public', detail: '5급↑·법조 공무원', docs: DOC_EMPLOY },
+  { id: 'diplomat', kr: '외교·국제', en: 'Global', detail: '외교관·국제기구', docs: DOC_EMPLOY },
   {
-    id: 'academia',
-    kr: '학계·연구',
+    id: 'professor',
+    kr: '교수·연구',
     en: 'Academia',
-    detail: '교수·국책 연구원·박사',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '학위증명서', required: true },
-      { label: '논문 리스트', required: false },
-    ],
+    detail: '교수·국책연구·박사',
+    docs: DOC_ACADEMIA,
   },
   {
-    id: 'founder',
-    kr: '사업·임원',
-    en: 'Founder',
-    detail: '대표·C-level·임원(연매출 30억 이상)',
-    docs: [
-      { label: '사업자등록증', required: true },
-      { label: '임원 재직증명', required: true },
-      { label: '법인등기부등본', required: false },
-    ],
+    id: 'architect',
+    kr: '건축·설계',
+    en: 'Architecture',
+    detail: '건축가·디렉터',
+    docs: DOC_EMPLOY,
   },
+  { id: 'pilot', kr: '전문기술', en: 'Specialist', detail: '파일럿·전문직', docs: DOC_LICENSE },
+  { id: 'owner', kr: '사업가·자산가', en: 'Owner', detail: '연매출 30억↑·자산가', docs: DOC_OWNER },
 ];
 
 export const FEMALE_JOB_CATEGORIES: JobCategory[] = [
+  { id: 'medical', kr: '의료계', en: 'Medical', detail: '의사·치과·한의', docs: DOC_LICENSE },
+  { id: 'pharma', kr: '약사·바이오', en: 'Pharma', detail: '약사·제약', docs: DOC_LICENSE },
+  { id: 'law', kr: '법조계', en: 'Legal', detail: '변호사·판사·검사', docs: DOC_LICENSE },
   {
     id: 'professional',
     kr: '전문직',
     en: 'Professional',
-    detail: '의사·약사·변호사·회계사·세무사',
-    docs: [
-      { label: '면허증 · 자격증', required: true },
-      { label: '재직증명서', required: true },
-    ],
-  },
-  {
-    id: 'broadcast',
-    kr: '방송·미디어',
-    en: 'Broadcast',
-    detail: '아나운서·기자·PD·작가',
-    docs: [
-      { label: '소속사 재직증명', required: true },
-      { label: '출연 이력', required: true },
-      { label: '사원증', required: false },
-    ],
-  },
-  {
-    id: 'arts',
-    kr: '예술·문화',
-    en: 'Arts',
-    detail: '큐레이터·연주자·갤러리스트·시각예술 작가',
-    docs: [
-      { label: '전시·공연 이력 PDF', required: true },
-      { label: '소속 증명', required: true },
-      { label: '학위증명서', required: false },
-    ],
-  },
-  {
-    id: 'hospitality',
-    kr: '항공·호텔',
-    en: 'Hospitality',
-    detail: '승무원·호텔리어·MICE 매니저·의전',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '사원증 / ID 카드', required: true },
-    ],
-  },
-  {
-    id: 'education',
-    kr: '교육·연구',
-    en: 'Academia',
-    detail: '교수·교사·국책 연구원·박사과정',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '학위증명서', required: true },
-      { label: '논문 리스트', required: false },
-    ],
-  },
-  {
-    id: 'fashion',
-    kr: '패션·뷰티',
-    en: 'Fashion',
-    detail: '디자이너·MD·브랜드 디렉터·바이어',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '매체 노출 포트폴리오', required: true },
-      { label: '명함', required: false },
-    ],
-  },
-  {
-    id: 'creator',
-    kr: '인플루언서·크리에이터',
-    en: 'Creator',
-    detail: 'IG·유튜브 콘텐츠·모델·디지털 크리에이터',
-    docs: [
-      { label: '채널 본인 인증', required: true },
-      { label: '인사이트·팔로워 검증', required: true },
-      { label: 'MCN 정산서', required: false },
-    ],
-  },
-  {
-    id: 'marketing',
-    kr: '마케팅·PR',
-    en: 'Marketing',
-    detail: 'CMO·브랜드 매니저·홍보 디렉터·광고 기획',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '명함', required: true },
-      { label: '캠페인 포트폴리오', required: false },
-    ],
-  },
-  {
-    id: 'lifestyle',
-    kr: 'F&B·라이프스타일',
-    en: 'Lifestyle',
-    detail: '셰프·소믈리에·바리스타·공간 기획자',
-    docs: [
-      { label: '자격증 / 재직증명서', required: true },
-      { label: '사업자등록증', required: true },
-      { label: '매체 노출', required: false },
-    ],
-  },
-  {
-    id: 'tech',
-    kr: 'IT·테크',
-    en: 'Tech',
-    detail: '프로덕트 매니저·디자이너·테크 창업자',
-    docs: [
-      { label: '재직증명서 / 사업자등록증', required: true },
-      { label: '포트폴리오', required: false },
-    ],
+    detail: '회계사·변리사·감정평가',
+    docs: DOC_LICENSE,
   },
   {
     id: 'finance',
     kr: '금융·컨설팅',
     en: 'Finance',
     detail: '애널리스트·IB·컨설턴트',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '자격증', required: false },
-    ],
+    docs: DOC_EMPLOY,
   },
   {
-    id: 'global',
-    kr: '외교·국제',
-    en: 'Global',
-    detail: '외교관·국제기구·NGO 디렉터',
-    docs: [
-      { label: '재직증명서', required: true },
-      { label: '학위증명서', required: false },
-    ],
+    id: 'broadcast',
+    kr: '방송·미디어',
+    en: 'Broadcast',
+    detail: '아나운서·기자·PD',
+    docs: DOC_EMPLOY,
+  },
+  { id: 'arts', kr: '예술·문화', en: 'Arts', detail: '큐레이터·연주자·작가', docs: DOC_EMPLOY },
+  {
+    id: 'hospitality',
+    kr: '항공·호텔',
+    en: 'Hospitality',
+    detail: '승무원·호텔리어·의전',
+    docs: DOC_EMPLOY,
   },
   {
-    id: 'founder',
-    kr: '사업·임원',
-    en: 'Founder',
-    detail: '대표·C-level·공동대표',
-    docs: [
-      { label: '사업자등록증', required: true },
-      { label: '임원 재직증명', required: true },
-      { label: '법인등기부등본', required: false },
-    ],
+    id: 'academia',
+    kr: '교수·연구',
+    en: 'Academia',
+    detail: '교수·연구원·박사',
+    docs: DOC_ACADEMIA,
   },
+  { id: 'teacher', kr: '교육', en: 'Education', detail: '교사·강사·교육기획', docs: DOC_EMPLOY },
+  { id: 'fashion', kr: '패션·뷰티', en: 'Fashion', detail: '디자이너·MD·디렉터', docs: DOC_EMPLOY },
+  {
+    id: 'creator',
+    kr: '인플루언서',
+    en: 'Creator',
+    detail: '콘텐츠·모델·크리에이터',
+    docs: DOC_OWNER,
+  },
+  {
+    id: 'marketing',
+    kr: '마케팅·PR',
+    en: 'Marketing',
+    detail: 'CMO·브랜드·홍보',
+    docs: DOC_EMPLOY,
+  },
+  {
+    id: 'lifestyle',
+    kr: 'F&B·라이프스타일',
+    en: 'Lifestyle',
+    detail: '셰프·소믈리에·공간기획',
+    docs: DOC_EMPLOY,
+  },
+  { id: 'tech', kr: 'IT·테크', en: 'Tech', detail: 'PM·디자이너·창업', docs: DOC_EMPLOY },
+  { id: 'global', kr: '외교·국제', en: 'Global', detail: '외교관·국제기구·NGO', docs: DOC_EMPLOY },
+  {
+    id: 'corporate',
+    kr: '대기업·외국계',
+    en: 'Corporate',
+    detail: '대기업·외국계 전문직',
+    docs: DOC_EMPLOY,
+  },
+  { id: 'owner', kr: '사업·임원', en: 'Owner', detail: '대표·C-level·자산가', docs: DOC_OWNER },
 ];
 
 export function jobCategories(gender: Gender): JobCategory[] {
