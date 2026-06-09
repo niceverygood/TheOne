@@ -2,6 +2,21 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## Phase 5-c — 회원 추천 보상 (MVP) ◐
+
+지인 추천 → **품질 이벤트(심사 통과·첫 결제)** 에 크레딧 보상. 1단계·셀프차단·클로백으로 어뷰징/다단계 리스크 최소화. (현금·외부 파트너스·"매칭 성공" 보상은 법적 검토 전제로 후속.)
+
+- **규칙**: 피추천인 심사 통과 시 추천인 +30C / 첫 결제 시 결제 크레딧의 10%. 7일 내 탈퇴·환불 시 회수.
+- **packages/shared/referral.ts**: `referralSeqFromCode`(체크섬 검증) + `REFERRAL_REWARD` 상수.
+- **packages/db**: `User.seq`(코드 파생)·`referredById`(자기참조), `ReferralReward` 원장(`@@unique[referee,type]` 멱등) + enum, `CreditReason.referral_reward`/`referral_clawback`. 마이그레이션 `20260609000000_referral_rewards`.
+  - `referral.ts`(grant/clawback/resolveReferrer/summary), `members.ts`(approveMembership→심사통과 보상), `economy.markOrderPaid`(첫결제 보상)·`refundOrder`(클로백) 훅, `signup` referredById.
+- **apps/web**: `/api/signup` 추천코드→referredById, `/api/referral/summary`.
+- **apps/admin**: `/members`(가입 심사 대기열·활성화→보상 지급, 추천인 표시) + 홈 네비.
+- **apps/mobile**: `/referral`(내 코드·현황·공유·보상안내) + 메뉴 진입. (가입 step08의 추천코드 입력은 기존)
+
+**검증**: shared/db/web/admin/mobile `tsc` OK · web/admin `lint` OK · shared `vitest`(추천코드 라운드트립·체크섬) OK.
+**잔여(사용자)**: ① 마이그레이션 SQL Supabase 실행 ② "매칭 성공 보상"·현금 파트너스는 **변호사 검토(결혼중개업법·다단계·세무)** 후 확장.
+
 ## Phase 5-b — 인앱결제(IAP) 양 플랫폼 완성 ◐
 
 iOS 단독이던 IAP를 **Android(Google Play)까지** 확장하고, 충전 화면을 실제 회원·잔액에 연결.

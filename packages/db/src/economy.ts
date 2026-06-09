@@ -11,6 +11,7 @@ import {
   type VerificationType,
 } from '@theone/shared';
 import type { Prisma } from '@prisma/client';
+import { grantFirstPurchaseReward, clawbackReward } from './referral';
 
 export class InsufficientCreditError extends Error {
   constructor() {
@@ -42,26 +43,28 @@ export async function createOrder(userId: string, packageId: string, provider = 
   });
 }
 
-/** 결제 성공 처리 — 주문 paid + 크레딧 적립 + 트랜잭션 (멱등). */
+/** 결제 성공 처리 — 주문 paid + 크레딧 적립 + 트랜잭션 + (첫 결제면) 추천 보상 (멱등). */
 export async function markOrderPaid(orderId: string, paymentId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error('ORDER_NOT_FOUND');
   if (order.status === 'paid') return order; // 멱등
 
-  await prisma.$transaction([
-    prisma.order.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
       where: { id: orderId },
       data: { status: 'paid', paymentId, paidAt: new Date() },
-    }),
-    prisma.credit.upsert({
+    });
+    await tx.credit.upsert({
       where: { userId: order.userId },
       create: { userId: order.userId, balance: order.credits },
       update: { balance: { increment: order.credits } },
-    }),
-    prisma.creditTransaction.create({
+    });
+    await tx.creditTransaction.create({
       data: { userId: order.userId, delta: order.credits, reason: 'charge', refId: orderId },
-    }),
-  ]);
+    });
+    // 첫 결제 추천 보상 — 피추천인×first_purchase 1회(멱등). 두 번째 결제부터는 no-op.
+    await grantFirstPurchaseReward(order.userId, orderId, order.credits, tx);
+  });
   return prisma.order.findUnique({ where: { id: orderId } });
 }
 
@@ -82,19 +85,26 @@ export async function refundOrder(orderId: string) {
 
   // 환불 크레딧 = 환불 비율만큼 차감
   const refundCredits = Math.min(credit?.balance ?? 0, order.baseCredits);
-  await prisma.$transaction([
-    prisma.order.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
       where: { id: orderId },
       data: { status: won >= order.amountWon ? 'refunded' : 'partial_refunded', refundedWon: won },
-    }),
-    prisma.credit.update({
+    });
+    await tx.credit.update({
       where: { userId: order.userId },
       data: { balance: { decrement: refundCredits } },
-    }),
-    prisma.creditTransaction.create({
+    });
+    await tx.creditTransaction.create({
       data: { userId: order.userId, delta: -refundCredits, reason: 'refund', refId: orderId },
-    }),
-  ]);
+    });
+    // 이 주문으로 나간 첫결제 추천 보상 회수
+    await clawbackReward({
+      refereeId: order.userId,
+      type: 'first_purchase',
+      expectRefId: orderId,
+      tx,
+    });
+  });
   return { refundedWon: won, order };
 }
 

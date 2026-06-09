@@ -21,6 +21,8 @@ export * from './waitlist';
 export * from './signup';
 export * from './verification';
 export * from './identity-review';
+export * from './referral';
+export * from './members';
 export * from './matching';
 export * from './economy';
 export * from './messaging';

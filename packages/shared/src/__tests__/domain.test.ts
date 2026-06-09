@@ -12,6 +12,7 @@ import {
 import { refundableAmount, getPackage, LETTER_COST } from '../credits';
 import { VERIFY_REWARD_CREDITS, VERIFICATION_LABELS, REQUIRED_DOCS } from '../verification';
 import { verificationTypeSchema, signupInputSchema } from '../schemas';
+import { referralCodeFromSeq, referralSeqFromCode } from '../referral';
 
 describe('maskExternalContact', () => {
   it('마스킹: 휴대폰 번호', () => {
@@ -130,6 +131,23 @@ describe('verification (8종 + 보상)', () => {
     expect(VERIFY_REWARD_CREDITS.income).toBe(50);
     expect(VERIFY_REWARD_CREDITS.family_wealth).toBe(80);
     expect(VERIFY_REWARD_CREDITS.reputation).toBe(80);
+  });
+});
+
+describe('referral code', () => {
+  it('seq ↔ code 라운드트립', () => {
+    for (const seq of [1, 42, 142, 9999, 100000]) {
+      expect(referralSeqFromCode(referralCodeFromSeq(seq))).toBe(seq);
+    }
+  });
+  it('소문자·공백 허용', () => {
+    const code = referralCodeFromSeq(142);
+    expect(referralSeqFromCode(`  ${code.toLowerCase()} `)).toBe(142);
+  });
+  it('형식/체크섬 위반은 null', () => {
+    expect(referralSeqFromCode('THE-0142-XX')).toBeNull(); // tail 불일치
+    expect(referralSeqFromCode('NOPE')).toBeNull();
+    expect(referralSeqFromCode('THE-0000-2')).toBeNull(); // seq 0
   });
 });
 

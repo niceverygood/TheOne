@@ -25,6 +25,7 @@ const GROUPS: { title: string; items: [string, Href][] }[] = [
     title: '경제',
     items: [
       ['크레딧 충전', '/credits'],
+      ['내 추천 코드', '/referral'],
       ['케미 리포트', '/chemistry'],
     ],
   },

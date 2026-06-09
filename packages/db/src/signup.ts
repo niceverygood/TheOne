@@ -23,6 +23,8 @@ export interface CreateSignupArgs {
   email?: string;
   /** 본인인증 고유식별 해시(privacy-design §2-4) */
   ciHash?: string;
+  /** 추천인 userId (추천코드 해석 결과) */
+  referredById?: string;
   // ── 가입 설문(Phase 4) ─────────────────────────────
   height?: number;
   residenceRegion?: string;
@@ -48,6 +50,7 @@ export async function createSignupUser(args: CreateSignupArgs): Promise<User> {
         phone: args.phone ?? null,
         email: args.email ?? null,
         ciHash: args.ciHash ?? null,
+        referredById: args.referredById ?? null,
         // status 는 스키마 기본값 pending(가입 심사 대기)
         profile: {
           // 실제 사진은 S3 업로드 후 키를 보관한다(지금은 빈 배열).

@@ -77,6 +77,19 @@ enum CreditReason {
   refund // 환불
   bonus // 보너스
   verify_reward // 추가 인증 승인 보상
+  referral_reward // 회원 추천 보상
+  referral_clawback // 추천 보상 회수
+}
+
+/// 회원 추천 보상 이벤트 (MVP)
+enum ReferralRewardType {
+  signup_approved // 피추천인 가입 심사 통과
+  first_purchase // 피추천인 첫 결제
+}
+
+enum ReferralRewardStatus {
+  granted // 지급됨
+  clawed_back // 회수됨(탈퇴·정지·환불)
 }
 
 /// 본인 명의 아님 — 수동 본인인증 요청 상태
@@ -179,6 +192,7 @@ model AnalyticsEvent {
 
 model User {
   id          String     @id @default(cuid())
+  seq         Int        @unique @default(autoincrement()) // 추천 코드 파생용 순번
   phone       String?    @unique // 본인인증 후 (암호화 대상)
   email       String?    @unique
   gender      Gender
@@ -187,6 +201,10 @@ model User {
   status      UserStatus @default(pending)
   /// 본인인증 고유식별 (암호화 컬럼 — privacy-design §2-4)
   ciHash      String?    @unique @map("ci_hash")
+  /// 추천인(가입 시 추천코드로 연결). 자기참조.
+  referredById String?   @map("referred_by_id")
+  referredBy   User?     @relation("referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]    @relation("referral")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
   withdrawnAt DateTime?  @map("withdrawn_at")
@@ -206,10 +224,13 @@ model User {
   curationsFor CurationLog[]             @relation("curationViewer")
   curationsAs  CurationLog[]             @relation("curationCandidate")
   orders       Order[]
+  rewardsAsReferrer ReferralReward[]     @relation("rewardReferrer")
+  rewardsAsReferee  ReferralReward[]     @relation("rewardReferee")
   /// 누적 정지 횟수 (신고 3회 자동 일시정지 — trust-safety §3-2)
   suspendCount Int                       @default(0) @map("suspend_count")
 
   @@index([status])
+  @@index([referredById])
   @@map("users")
 }
 
@@ -424,6 +445,26 @@ model CreditTransaction {
 
   @@index([userId, createdAt])
   @@map("credit_transactions")
+}
+
+/// 회원 추천 보상 원장 — 추천인이 받은 보상 1건. 피추천인×타입 1회(멱등).
+model ReferralReward {
+  id         String               @id @default(cuid())
+  referrerId String               @map("referrer_id")
+  refereeId  String               @map("referee_id")
+  referrer   User                 @relation("rewardReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee    User                 @relation("rewardReferee", fields: [refereeId], references: [id], onDelete: Cascade)
+  type       ReferralRewardType
+  credits    Int
+  status     ReferralRewardStatus @default(granted)
+  /// 결제 보상의 경우 참조 주문
+  refId      String?              @map("ref_id")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  clawedBackAt DateTime?          @map("clawed_back_at")
+
+  @@unique([refereeId, type])
+  @@index([referrerId])
+  @@map("referral_rewards")
 }
 
 // ============================================================
