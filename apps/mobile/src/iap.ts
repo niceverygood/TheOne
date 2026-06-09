@@ -59,7 +59,12 @@ export function getIap(): IapApi {
         await RNIap.initConnection();
       },
       async buy(productId) {
-        await RNIap.getProducts({ skus: [productId] });
+        // 스토어에 상품이 등록/승인되어 있어야 함. 빈 배열이면 'Invalid product ID' 대신
+        // 명확한 에러로 사용자에게 안내 (App Store 가이드 2.1(b) 대응).
+        const products = await RNIap.getProducts({ skus: [productId] });
+        if (!products || products.length === 0) {
+          throw new Error('상품 정보를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        }
         const purchase = await RNIap.requestPurchase({ sku: productId });
         const p = Array.isArray(purchase) ? purchase[0] : purchase;
         if (!p) throw new Error('purchase_empty');

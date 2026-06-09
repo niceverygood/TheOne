@@ -10,6 +10,9 @@ import { useSignup } from '../src/store';
 const API_BASE =
   process.env.EXPO_PUBLIC_API_BASE ?? (typeof window !== 'undefined' ? window.location.origin : '');
 
+/** 결제·환불 안내에 노출할 스토어명 — iOS 바이너리에는 Google Play 언급 금지(가이드 2.3.10). */
+const storeName = Platform.OS === 'android' ? 'Google Play' : 'Apple App Store';
+
 function bonusRate(pkg: { credits: number; baseCredits: number }): number {
   if (pkg.credits === pkg.baseCredits) return 0;
   return Math.round(((pkg.credits - pkg.baseCredits) / pkg.baseCredits) * 100);
@@ -177,8 +180,8 @@ export default function Credits() {
           })}
         </View>
         <Txt size={11} color={C.gray} style={{ marginTop: 16, lineHeight: 18 }}>
-          신청서 일반 20C · 슈퍼 50C. 결제는 Apple/Google 스토어를 통해 처리되며 환불은 스토어
-          정책을 따릅니다.
+          신청서 일반 20C · 슈퍼 50C. 결제는 {storeName}를 통해 처리되며 환불은 {storeName} 정책을
+          따릅니다.
         </Txt>
         <Btn
           label={busy ? '결제 중…' : '결제하기'}
