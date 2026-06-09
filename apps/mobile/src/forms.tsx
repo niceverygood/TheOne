@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, RADIUS } from './theme';
 import { Btn, Hairline, Screen, Txt } from './ui';
@@ -210,37 +210,46 @@ export function VerifyShell({
   return (
     <Screen scroll={false}>
       <View style={{ flex: 1 }}>
-        <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 22,
-            }}
-          >
-            <Pressable onPress={() => router.back()}>
-              <Txt variant="mono" size={18} color={C.ink2}>
-                ←
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 22,
+              }}
+            >
+              <Pressable onPress={() => router.back()}>
+                <Txt variant="mono" size={18} color={C.ink2}>
+                  ←
+                </Txt>
+              </Pressable>
+              <Txt variant="mono" size={10} color={C.gray}>
+                평균 {days}일
               </Txt>
-            </Pressable>
-            <Txt variant="mono" size={10} color={C.gray}>
-              평균 {days}일
+            </View>
+            <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 8 }}>
+              {en}
             </Txt>
+            <Txt variant="serifKr" size={26} weight="700" color={C.ink2}>
+              {title}
+            </Txt>
+            {subtitle ? (
+              <Txt size={13} color={C.gray} style={{ marginTop: 8, lineHeight: 21 }}>
+                {subtitle}
+              </Txt>
+            ) : null}
           </View>
-          <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 8 }}>
-            {en}
-          </Txt>
-          <Txt variant="serifKr" size={26} weight="700" color={C.ink2}>
-            {title}
-          </Txt>
-          {subtitle ? (
-            <Txt size={13} color={C.gray} style={{ marginTop: 8, lineHeight: 21 }}>
-              {subtitle}
-            </Txt>
-          ) : null}
-        </View>
-        <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>{children}</View>
+          <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 }}>
+            {children}
+          </View>
+        </ScrollView>
         <View>
           <Hairline />
           <View style={{ padding: 24 }}>
