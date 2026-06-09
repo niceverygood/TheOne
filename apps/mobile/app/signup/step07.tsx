@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { DRINKING_FREQUENCY, DRINKING_AMOUNT, SMOKING, BODY_TYPES } from '@theone/shared';
+import { DRINKING_FREQUENCY, SMOKING, BODY_TYPES } from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { OptionChips, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
@@ -33,11 +33,10 @@ export default function Step07() {
   const gender = useSignup((s) => s.gender);
   const s = useSignup.getState();
   const [drinkingFrequency, setFreq] = useState<string | undefined>(s.drinkingFrequency);
-  const [drinkingAmount, setAmount] = useState<string | undefined>(s.drinkingAmount);
   const [smoking, setSmoking] = useState<string | undefined>(s.smoking);
   const [bodyType, setBody] = useState<string | undefined>(s.bodyType);
 
-  const complete = !!(drinkingFrequency && drinkingAmount && smoking && bodyType);
+  const complete = !!(drinkingFrequency && smoking && bodyType);
 
   return (
     <AppShell
@@ -52,7 +51,7 @@ export default function Step07() {
           disabled={!complete}
           hint={!complete ? '모든 항목을 선택해 주세요.' : undefined}
           onNext={() => {
-            set({ drinkingFrequency, drinkingAmount, smoking, bodyType });
+            set({ drinkingFrequency, smoking, bodyType });
             router.push('/signup/step08');
           }}
         />
@@ -64,7 +63,6 @@ export default function Step07() {
         value={drinkingFrequency}
         onChange={setFreq}
       />
-      <Block label="주량" options={DRINKING_AMOUNT} value={drinkingAmount} onChange={setAmount} />
       <Block label="흡연" options={SMOKING} value={smoking} onChange={setSmoking} />
       <Block label="체형" options={BODY_TYPES[gender]} value={bodyType} onChange={setBody} />
     </AppShell>

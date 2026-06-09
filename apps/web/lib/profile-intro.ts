@@ -10,13 +10,12 @@ import {
   type ProfileGenerateInput,
   type IntroSections,
   INTRO_SECTIONS,
-  REGIONS,
   HOBBIES,
   DRINKING_FREQUENCY,
-  DRINKING_AMOUNT,
   SMOKING,
   BODY_TYPES,
   optionLabel,
+  regionLabel,
   jobCategories,
 } from '@theone/shared';
 
@@ -34,15 +33,13 @@ export function describeProfile(input: ProfileGenerateInput): Record<string, str
   if (job) out['직업'] = `${job.kr}(${job.detail})`;
   if (input.school) out['학교'] = input.school;
   if (input.height) out['키'] = `${input.height}cm`;
-  const res = optionLabel(REGIONS, input.residenceRegion);
-  const act = optionLabel(REGIONS, input.activityRegion);
+  const res = regionLabel(input.residenceRegion);
+  const act = regionLabel(input.activityRegion);
   if (res) out['사는 지역'] = res;
   if (act) out['활동 지역'] = act;
   if (hobbies.length) out['취미'] = hobbies.join(', ');
   const freq = optionLabel(DRINKING_FREQUENCY, input.drinkingFrequency);
-  const amt = optionLabel(DRINKING_AMOUNT, input.drinkingAmount);
   if (freq) out['음주 빈도'] = freq;
-  if (amt) out['주량'] = amt;
   const smk = optionLabel(SMOKING, input.smoking);
   if (smk) out['흡연'] = smk;
   const body = optionLabel(BODY_TYPES[input.gender], input.bodyType);

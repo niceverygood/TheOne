@@ -51,7 +51,7 @@
 apps/web      Next.js 14 App Router — 랜딩 + 웨이팅리스트 (Phase 1)
 apps/admin    Next.js — 운영자 인증심사 콘솔 (Basic Auth → Phase 3 권한 분리)
 apps/mobile   Expo SDK 51 + RN + Expo Router — 본 앱 (Phase 4)
-packages/shared  Zod 스키마, 타입, 디자인 토큰, 직업 카테고리(남11/여13)
+packages/shared  Zod 스키마, 타입, 디자인 토큰, 직업 카테고리(남18/여18)
 packages/db      Prisma + PostgreSQL 16
 packages/auth    인증 검증 로직 (CODEF 등 보비 인프라 재사용)
 ```
