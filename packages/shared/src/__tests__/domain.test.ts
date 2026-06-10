@@ -10,8 +10,15 @@ import {
   scoreCandidate,
   type Candidate,
 } from '../matching';
-import { refundableAmount, getPackage, LETTER_COST } from '../credits';
-import { VERIFY_REWARD_CREDITS, VERIFICATION_LABELS, REQUIRED_DOCS } from '../verification';
+import { refundableAmount, getPackage, LETTER_COST, letterCost } from '../credits';
+import {
+  VERIFY_REWARD_CREDITS,
+  VERIFICATION_LABELS,
+  REQUIRED_DOCS,
+  badgeExpiresAt,
+  daysUntilExpiry,
+  isBadgeExpiringSoon,
+} from '../verification';
 import { verificationTypeSchema, signupInputSchema } from '../schemas';
 import { referralCodeFromSeq, referralSeqFromCode } from '../referral';
 
@@ -135,6 +142,32 @@ describe('credits & refund', () => {
         daysSinceCharge: 1,
       }),
     ).toBe(38461);
+  });
+});
+
+describe('letterCost (첫 신청 무료)', () => {
+  it('첫 일반 신청은 0C, 이후엔 정가', () => {
+    expect(letterCost('normal', { isFirstLetter: true })).toBe(0);
+    expect(letterCost('normal')).toBe(LETTER_COST.normal);
+  });
+  it('Super 는 첫 신청이어도 정가', () => {
+    expect(letterCost('super', { isFirstLetter: true })).toBe(LETTER_COST.super);
+  });
+});
+
+describe('badge expiry (유효기간 1년 + 30일 전 갱신 안내)', () => {
+  const approved = new Date('2025-01-01T00:00:00Z');
+  const expires = badgeExpiresAt(approved);
+  it('만료일 = 승인 + 365일', () => {
+    expect(daysUntilExpiry(expires, approved)).toBe(365);
+  });
+  it('만료 30일 전부터 갱신 대상, 그 전엔 아님', () => {
+    const d31 = new Date(expires.getTime() - 31 * 24 * 60 * 60 * 1000);
+    const d15 = new Date(expires.getTime() - 15 * 24 * 60 * 60 * 1000);
+    const after = new Date(expires.getTime() + 24 * 60 * 60 * 1000);
+    expect(isBadgeExpiringSoon(expires, d31)).toBe(false);
+    expect(isBadgeExpiringSoon(expires, d15)).toBe(true);
+    expect(isBadgeExpiringSoon(expires, after)).toBe(false); // 이미 만료 → 갱신 아닌 재인증
   });
 });
 

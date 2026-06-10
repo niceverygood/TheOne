@@ -1,8 +1,17 @@
 import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
-import { VERIFY_REWARD_CREDITS, type VerificationType } from '@theone/shared';
+import {
+  VERIFY_REWARD_CREDITS,
+  badgeExpiresAt,
+  daysUntilExpiry,
+  isBadgeExpiringSoon,
+  type VerificationType,
+} from '@theone/shared';
 import { C } from '../src/theme';
 import { Hairline, Screen, Txt } from '../src/ui';
+
+// 갱신 안내 — 서버 연동 전 프리뷰: 학력 인증 승인 ~11개월 경과 가정
+const EDU_EXPIRES = badgeExpiresAt(new Date(Date.now() - 344 * 24 * 60 * 60 * 1000));
 
 type Row = {
   en: string;
@@ -107,6 +116,35 @@ export default function VerifyHub() {
             {verifiedCount} / {ROWS.length}
           </Txt>
         </View>
+
+        {/* 만료 임박 갱신 배너 — RENEWAL_NOTICE_DAYS 이내 */}
+        {isBadgeExpiringSoon(EDU_EXPIRES) ? (
+          <Pressable
+            onPress={() => router.push('/verify/education')}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: C.champagne,
+              borderRadius: 2,
+              padding: 14,
+              marginTop: 12,
+            }}
+          >
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Txt variant="mono" size={9} color={C.champagne}>
+                RENEWAL · D-{daysUntilExpiry(EDU_EXPIRES)}
+              </Txt>
+              <Txt size={12.5} color={C.ink2} style={{ marginTop: 4, lineHeight: 19 }}>
+                학력 인증이 곧 만료됩니다. 갱신하면 뱃지가 끊김 없이 유지돼요.
+              </Txt>
+            </View>
+            <Txt variant="mono" size={12} color={C.champagne}>
+              갱신 →
+            </Txt>
+          </Pressable>
+        ) : null}
 
         <View style={{ marginTop: 16 }}>
           {ROWS.map((r) => {

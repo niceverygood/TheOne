@@ -32,6 +32,13 @@ const SECTIONS: { en: string; kr: string; score: string; lines: string[] }[] = [
   },
 ];
 
+// 대화 시작점 — 공통점·차이에서 뽑은 첫 질문 (P1-6 케미 인사이트)
+const STARTERS: { from: string; q: string }[] = [
+  { from: '결혼관 일치', q: '결혼 후 어떤 일상을 가장 기대하세요?' },
+  { from: '문화생활 공통', q: '최근에 가장 좋았던 전시나 공연이 있었나요?' },
+  { from: '운동 강도 차이', q: '주말 아침엔 활동적인 편이세요, 느긋한 편이세요?' },
+];
+
 /** Screen 17 · 케미 분석 리포트 — 상위 8% + 3섹션 */
 export default function Chemistry() {
   const router = useRouter();
@@ -96,6 +103,39 @@ export default function Chemistry() {
             ))}
           </View>
         ))}
+        {/* 대화 시작점 — 리포트를 행동으로 연결 */}
+        <Hairline style={{ marginTop: 24 }} />
+        <View style={{ marginTop: 20 }}>
+          <Txt variant="serifEn" size={13} color={C.champagne}>
+            Conversation Starters
+          </Txt>
+          <Txt variant="serifKr" size={18} weight="700" color={C.ink2} style={{ marginTop: 2 }}>
+            대화 시작점
+          </Txt>
+          <Txt size={12.5} color={C.gray} style={{ marginTop: 8, lineHeight: 20 }}>
+            두 분의 공통점과 차이에서 뽑은 첫 질문입니다. 채팅에서 그대로 써보세요.
+          </Txt>
+          {STARTERS.map((s) => (
+            <View
+              key={s.q}
+              style={{
+                borderWidth: 1,
+                borderColor: C.hairLight,
+                borderRadius: 2,
+                padding: 14,
+                marginTop: 10,
+              }}
+            >
+              <Txt variant="mono" size={9} color={C.champagne}>
+                {s.from}
+              </Txt>
+              <Txt size={13.5} color={C.ink2} style={{ marginTop: 6, lineHeight: 21 }}>
+                “{s.q}”
+              </Txt>
+            </View>
+          ))}
+        </View>
+
         <Btn label="리포트 PDF 저장" variant="outline" style={{ marginTop: 32 }} />
       </View>
     </Screen>

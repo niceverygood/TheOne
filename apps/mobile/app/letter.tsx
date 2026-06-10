@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { letterCost } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt } from '../src/ui';
 import { ChoiceRow } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
+
+// 서버 연동 전 프리뷰 상태 — 첫 신청 여부·잔액
+const IS_FIRST_LETTER = true;
+const BALANCE = 187;
 
 /** 작성 가이드 — 수락률을 높이는 3요소. 탭하면 문장 시작점을 본문에 추가한다. */
 const GUIDES: { label: string; starter: string }[] = [
@@ -22,6 +27,9 @@ export default function Letter() {
   const [sup, setSup] = useState(false);
   const len = body.length;
   const enough = len >= 80;
+
+  const cost = letterCost(sup ? 'super' : 'normal', { isFirstLetter: IS_FIRST_LETTER });
+  const short = BALANCE < cost; // 잔액 부족 → 충전 유도
 
   function appendStarter(starter: string) {
     setBody((b) => (b.trim().length === 0 ? starter : `${b.trimEnd()}\n${starter}`));
@@ -45,7 +53,7 @@ export default function Letter() {
               </Txt>
             </Pressable>
             <Txt variant="mono" size={10} color={C.gray}>
-              잔액 187 C
+              잔액 {BALANCE} C
             </Txt>
           </View>
           <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 8 }}>
@@ -138,7 +146,7 @@ export default function Letter() {
               전송 방식
             </Txt>
             <ChoiceRow
-              label="일반 신청서 · 20C"
+              label={IS_FIRST_LETTER ? '일반 신청서 · 첫 신청 무료' : `일반 신청서 · ${20}C`}
               hint="매칭함에 순서대로 도착"
               selected={!sup}
               onPress={() => setSup(false)}
@@ -155,11 +163,22 @@ export default function Letter() {
         <View>
           <Hairline />
           <View style={{ padding: 24 }}>
+            {short ? (
+              <Txt size={11} color={C.terra} style={{ marginBottom: 10, textAlign: 'center' }}>
+                잔액이 {cost - BALANCE}C 부족합니다. 충전 후 보낼 수 있어요.
+              </Txt>
+            ) : null}
             <Btn
-              label={`신청서 보내기 · ${sup ? 50 : 20}C 차감`}
+              label={
+                short
+                  ? '크레딧 충전하기'
+                  : cost === 0
+                    ? '신청서 보내기 · 첫 신청 무료'
+                    : `신청서 보내기 · ${cost}C 차감`
+              }
               variant="solid"
-              disabled={!enough}
-              onPress={() => router.replace('/inbox')}
+              disabled={!enough && !short}
+              onPress={() => (short ? router.push('/credits') : router.replace('/inbox'))}
             />
           </View>
         </View>

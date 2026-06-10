@@ -50,6 +50,17 @@ export function getPackageByProductId(productId: string): CreditPackage | undefi
 /** 신청서 비용 */
 export const LETTER_COST = { normal: 20, super: 50 } as const;
 
+/** 첫 일반 신청서 무료 — 첫 전환 활성화 정책(feature-roadmap P1-9). Super는 제외. */
+export const FIRST_LETTER_FREE = true;
+
+export function letterCost(
+  kind: keyof typeof LETTER_COST,
+  opts?: { isFirstLetter?: boolean },
+): number {
+  if (FIRST_LETTER_FREE && opts?.isFirstLetter && kind === 'normal') return 0;
+  return LETTER_COST[kind];
+}
+
 /**
  * 환불 가능액 산정 (전자상거래법 7일 청약철회 + 디지털콘텐츠 일부사용 차감).
  * IAP(provider='iap_apple'|'iap_google') 주문은 스토어 정책으로 위임 — 이 함수는 외부 PG 전용.

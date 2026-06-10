@@ -39,6 +39,10 @@ const SUGGEST = [
   '혹시 선호하는 시간대가 있으세요?',
 ];
 
+// 관계 진전 트래커 — 수락 → 대화 → 만남 약속 (P1-8)
+const STAGES = ['신청 수락', '대화 중', '만남 약속'] as const;
+const CURRENT_STAGE = 1; // 0-base: 대화 중
+
 /** Screen 15 · 채팅 — 매칭 7일째 캡션 + AI 추천 + 외부 연락처 마스킹 */
 export default function Chat() {
   const router = useRouter();
@@ -119,6 +123,34 @@ export default function Chat() {
           </Txt>
           <Txt size={11.5} color={C.gray} style={{ marginTop: 4 }}>
             두 분이 매칭된 지 7일째입니다
+          </Txt>
+          {/* 진전 단계 — 다음 단계 넛지 */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
+            {STAGES.map((s, i) => (
+              <View key={s} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: 3,
+                    backgroundColor: i <= CURRENT_STAGE ? C.sage : C.hairLight,
+                  }}
+                />
+                <Txt
+                  variant="mono"
+                  size={9}
+                  color={i === CURRENT_STAGE ? C.ink2 : i < CURRENT_STAGE ? C.sage : C.graySoft}
+                >
+                  {s}
+                </Txt>
+                {i < STAGES.length - 1 ? (
+                  <View style={{ width: 14, height: 1, backgroundColor: C.hairLight }} />
+                ) : null}
+              </View>
+            ))}
+          </View>
+          <Txt size={10.5} color={C.gray} style={{ marginTop: 8 }}>
+            대화가 무르익었어요 — 이번 주말 만남을 제안해 보세요.
           </Txt>
         </View>
         {msgs.map((m) => (

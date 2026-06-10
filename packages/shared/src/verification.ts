@@ -13,6 +13,27 @@ export const BADGE_VALID_DAYS = 365;
 /** 검토 완료 후 서류 자동 파기까지 (privacy-design §2-3). */
 export const DOCUMENT_PURGE_DAYS = 30;
 
+/** 만료 며칠 전부터 갱신 안내(푸시·배너)를 보내는가 (verification-sop). */
+export const RENEWAL_NOTICE_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** 승인 시점 기준 뱃지 만료일 (유효기간 1년). */
+export function badgeExpiresAt(approvedAt: Date): Date {
+  return new Date(approvedAt.getTime() + BADGE_VALID_DAYS * DAY_MS);
+}
+
+/** 만료까지 남은 일수 (만료 지남 = 음수). */
+export function daysUntilExpiry(expiresAt: Date, now: Date = new Date()): number {
+  return Math.ceil((expiresAt.getTime() - now.getTime()) / DAY_MS);
+}
+
+/** 갱신 안내 대상인가 — 만료 30일 전 ~ 만료일 사이. */
+export function isBadgeExpiringSoon(expiresAt: Date, now: Date = new Date()): boolean {
+  const d = daysUntilExpiry(expiresAt, now);
+  return d >= 0 && d <= RENEWAL_NOTICE_DAYS;
+}
+
 /** 운영자 권한 3단계 */
 export const OPERATOR_ROLES = ['viewer', 'reviewer', 'admin'] as const;
 export type OperatorRole = (typeof OPERATOR_ROLES)[number];
