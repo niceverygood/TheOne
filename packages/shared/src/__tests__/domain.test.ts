@@ -4,6 +4,7 @@ import {
   ageEligible,
   badgeOverlap,
   isEligible,
+  matchReasons,
   pickTodayCuration,
   regionEligible,
   scoreCandidate,
@@ -67,6 +68,34 @@ describe('matching rules', () => {
   it('적합 후보 없으면 null', () => {
     const viewer: Candidate = { region: '제주', age: 30, badges: [] };
     expect(pickTodayCuration(viewer, [{ region: '서울', age: 30, badges: [] }])).toBeNull();
+  });
+});
+
+describe('matchReasons (큐레이션 사유)', () => {
+  it('같은 지역·비슷한 나이·뱃지 겹침 → 문장 3개, 숫자 점수 비노출', () => {
+    const rs = matchReasons(
+      { region: '서울', age: 34, badges: ['education', 'job'] },
+      { region: '서울', age: 32, badges: ['education', 'job', 'wealth'] },
+    );
+    expect(rs).toHaveLength(3);
+    expect(rs[0]).toContain('같은 생활권');
+    expect(rs.join('')).toContain('학력');
+    for (const r of rs) expect(r).not.toMatch(/\d+%|점/);
+  });
+  it('인접 지역·뱃지 무겹침이면 후보 뱃지 수 기반 문구', () => {
+    const rs = matchReasons(
+      { region: '서울', age: 30, badges: [] },
+      { region: '경기', age: 34, badges: ['education', 'wealth', 'realestate'] },
+    );
+    expect(rs.some((r) => r.includes('생활권이 가까워'))).toBe(true);
+    expect(rs.some((r) => r.includes('3종 인증'))).toBe(true);
+  });
+  it('근거 없으면 빈 배열(억지 사유 생성 금지)', () => {
+    const rs = matchReasons(
+      { region: '서울', age: 30, badges: [] },
+      { region: '부산', age: 45, badges: [] },
+    );
+    expect(rs).toHaveLength(0);
   });
 });
 

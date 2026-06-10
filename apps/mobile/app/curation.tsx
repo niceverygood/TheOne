@@ -1,5 +1,6 @@
 import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { matchReasons } from '@theone/shared';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
@@ -9,6 +10,12 @@ const CHEMI: [string, number][] = [
   ['라이프스타일', 78],
   ['갈등 해결', 85],
 ];
+
+// 큐레이션 사유 — 서버 연동 전까지 프리뷰 페어 기준(이번 회원/오늘의 상대)
+const REASONS = matchReasons(
+  { region: '서울', age: 34, badges: ['education', 'job', 'wealth'] },
+  { region: '서울', age: 32, badges: ['education', 'job', 'wealth', 'realestate'] },
+);
 
 export default function Curation() {
   const router = useRouter();
@@ -86,6 +93,24 @@ export default function Curation() {
         <Txt variant="serifEn" size={17} color={C.champagne} style={{ lineHeight: 26 }}>
           “주말엔 한남동 작은 갤러리들을 천천히 도는 걸 좋아해요.”
         </Txt>
+
+        {/* 추천 이유 — 문장형 근거(점수 비노출 정책) */}
+        <View style={{ marginTop: 28 }}>
+          <Txt variant="eyebrow" color={C.graySoft} style={{ marginBottom: 14 }}>
+            Why this match · 추천 이유
+          </Txt>
+          {REASONS.map((r) => (
+            <View
+              key={r}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}
+            >
+              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.sage }} />
+              <Txt size={13} color="rgba(250,247,242,0.85)">
+                {r}
+              </Txt>
+            </View>
+          ))}
+        </View>
 
         <View style={{ marginTop: 28 }}>
           <Txt variant="eyebrow" color={C.graySoft} style={{ marginBottom: 14 }}>

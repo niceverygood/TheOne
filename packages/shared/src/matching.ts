@@ -80,6 +80,46 @@ export function scoreCandidate(viewer: Candidate, c: Candidate): number {
   return s;
 }
 
+/** 인증 타입 → 한국어 라벨 (사유 문장용) */
+const BADGE_LABEL: Partial<Record<VerificationType, string>> = {
+  education: '학력',
+  wealth: '재산',
+  vehicle: '차량',
+  realestate: '부동산',
+  job: '직업',
+  income: '소득',
+};
+
+/**
+ * 큐레이션 사유 — 점수 숫자 대신 문장형 근거(최대 3개).
+ * 화면 정책: 점수·퍼센트 노출 금지(좋아요 카운터 금기), 근거는 검증 사실 기반.
+ */
+export function matchReasons(viewer: Candidate, c: Candidate, max = 3): string[] {
+  const out: string[] = [];
+
+  if (viewer.region === c.region) out.push('같은 생활권에 거주하고 있어요');
+  else if (regionEligible(viewer.region, c.region)) out.push('생활권이 가까워 만남이 수월해요');
+
+  const diff = Math.abs(viewer.age - c.age);
+  if (diff <= 2) out.push('나이대가 비슷해 공감대가 깊어요');
+  else if (diff <= AGE_WINDOW) out.push('서로 어울리는 나이대예요');
+
+  const setB = new Set(c.badges);
+  const shared = viewer.badges.filter((t) => setB.has(t));
+  if (shared.length > 0) {
+    const labels = shared
+      .map((t) => BADGE_LABEL[t])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('·');
+    out.push(`${labels} 인증을 나란히 완료했어요`);
+  } else if (c.badges.length >= 3) {
+    out.push(`${c.badges.length}종 인증을 마친 검증된 회원이에요`);
+  }
+
+  return out.slice(0, max);
+}
+
 /** 후보군에서 오늘의 1명 선택(최고 점수). 동점은 입력 순서 유지. */
 export function pickTodayCuration<T extends Candidate>(viewer: Candidate, pool: T[]): T | null {
   let best: T | null = null;

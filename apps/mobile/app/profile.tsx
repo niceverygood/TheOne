@@ -4,11 +4,14 @@ import { C } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 
-const VERIF: [string, 'verified' | 'pending'][] = [
+// 인증 뱃지 월 — 6종 전체를 상태와 함께 노출(서류는 비공개, 뱃지만 공개)
+const VERIF: [string, 'verified' | 'pending' | 'none'][] = [
   ['직업', 'verified'],
   ['학력', 'verified'],
   ['재산', 'verified'],
   ['부동산', 'pending'],
+  ['차량', 'none'],
+  ['소득', 'none'],
 ];
 const CHEMI: [string, number][] = [
   ['결혼관', 92],
@@ -36,7 +39,7 @@ export default function Profile() {
           <VerifiedDots marks={4} />
         </View>
 
-        {/* 검증 4중 */}
+        {/* 인증 뱃지 월 — 6종, 미인증은 회색 표시 */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 24 }}>
           {VERIF.map(([k, s]) => (
             <View
@@ -47,20 +50,28 @@ export default function Profile() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: C.hairLight,
+                borderColor: s === 'verified' ? C.sage : C.hairLight,
                 padding: 12,
                 borderRadius: 2,
+                opacity: s === 'none' ? 0.55 : 1,
               }}
             >
               <Txt size={12} color={C.ink2}>
                 {k}
               </Txt>
-              <Txt variant="mono" size={9.5} color={s === 'verified' ? C.sage : C.champagne}>
-                {s === 'verified' ? '✓ 승인' : '심사중'}
+              <Txt
+                variant="mono"
+                size={9.5}
+                color={s === 'verified' ? C.sage : s === 'pending' ? C.champagne : C.gray}
+              >
+                {s === 'verified' ? '✓ 승인' : s === 'pending' ? '심사중' : '미인증'}
               </Txt>
             </View>
           ))}
         </View>
+        <Txt size={10.5} color={C.gray} style={{ marginTop: 10, lineHeight: 16 }}>
+          인증 서류는 운영진만 확인하며, 상대에게는 승인 뱃지만 공개됩니다.
+        </Txt>
 
         <View style={{ marginTop: 32 }}>
           <Txt variant="eyebrow" style={{ marginBottom: 12 }}>

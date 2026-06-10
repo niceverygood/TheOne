@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MASK_NOTICE, maskExternalContact } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Txt, VerifiedDots, Portrait } from '../src/ui';
-import { Bubble, maskContact } from '../src/forms';
+import { Bubble } from '../src/forms';
 import { previewPortraits } from '../src/preview-assets';
 
 interface Msg {
@@ -43,14 +44,33 @@ export default function Chat() {
   const router = useRouter();
   const [msgs, setMsgs] = useState(SEED);
   const [draft, setDraft] = useState('');
-  const masked = maskContact(draft).masked;
+  const masked = maskExternalContact(draft).masked;
 
   function send(text?: string) {
     const raw = (text ?? draft).trim();
     if (!raw) return;
-    const { text: safe } = maskContact(raw);
+    const { text: safe } = maskExternalContact(raw);
     setMsgs((m) => [...m, { id: String(m.length + 1), me: true, time: '방금', text: safe }]);
     setDraft('');
+  }
+
+  // 신고/차단 — trust-safety.md 신고 8종 매트릭스 진입점
+  function openSafetyMenu() {
+    Alert.alert('안전 도구', '문제가 있었나요? 운영진이 24시간 내 확인합니다.', [
+      {
+        text: '신고하기',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('신고 접수', '신고가 접수되었습니다. 검토 후 알림으로 결과를 알려드립니다.'),
+      },
+      {
+        text: '차단하기',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('차단 완료', '상대에게 더 이상 노출되지 않으며, 대화가 종료됩니다.'),
+      },
+      { text: '닫기', style: 'cancel' },
+    ]);
   }
 
   return (
@@ -73,7 +93,7 @@ export default function Chat() {
           <View style={{ width: 38, height: 38 }}>
             <Portrait fill source={previewPortraits.jiyoon} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Txt size={15} weight="500" color={C.ink2}>
                 김지윤
@@ -84,6 +104,11 @@ export default function Chat() {
               변호사 · 서초
             </Txt>
           </View>
+          <Pressable onPress={openSafetyMenu} hitSlop={10}>
+            <Txt variant="mono" size={18} color={C.gray}>
+              ⋯
+            </Txt>
+          </Pressable>
         </View>
       </View>
 
@@ -143,7 +168,7 @@ export default function Chat() {
       >
         {masked ? (
           <Txt size={10.5} color={C.terra} style={{ marginBottom: 6 }}>
-            외부 연락처는 매칭 성사 후 자동 공유됩니다.
+            {MASK_NOTICE}
           </Txt>
         ) : null}
         <View

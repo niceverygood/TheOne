@@ -6,6 +6,13 @@ import { Btn, Hairline, Portrait, Screen, Txt } from '../src/ui';
 import { ChoiceRow } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 
+/** 작성 가이드 — 수락률을 높이는 3요소. 탭하면 문장 시작점을 본문에 추가한다. */
+const GUIDES: { label: string; starter: string }[] = [
+  { label: '프로필에서 끌린 점', starter: '프로필에서 ' },
+  { label: '나의 가치관 한 줄', starter: '저는 관계에서 ' },
+  { label: '구체적인 만남 제안', starter: '괜찮으시다면 ' },
+];
+
 /** Screen 12 · 만남 신청서 (Interest Letter) — 골드스푼식 진지한 글쓰기 + 크레딧 차감 */
 export default function Letter() {
   const router = useRouter();
@@ -15,6 +22,10 @@ export default function Letter() {
   const [sup, setSup] = useState(false);
   const len = body.length;
   const enough = len >= 80;
+
+  function appendStarter(starter: string) {
+    setBody((b) => (b.trim().length === 0 ? starter : `${b.trimEnd()}\n${starter}`));
+  }
 
   return (
     <Screen scroll={false}>
@@ -76,6 +87,26 @@ export default function Letter() {
           <Txt variant="eyebrow" style={{ marginTop: 20, marginBottom: 10 }}>
             마음을 담아 · 최소 80자
           </Txt>
+          {/* 작성 가이드 칩 — 수락률 높은 신청서의 3요소 */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+            {GUIDES.map((g) => (
+              <Pressable
+                key={g.label}
+                onPress={() => appendStarter(g.starter)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: C.hairLight,
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  borderRadius: RADIUS,
+                }}
+              >
+                <Txt variant="mono" size={10} color={C.gray}>
+                  + {g.label}
+                </Txt>
+              </Pressable>
+            ))}
+          </View>
           <TextInput
             value={body}
             onChangeText={setBody}
