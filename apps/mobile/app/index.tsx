@@ -61,6 +61,13 @@ export default function Splash() {
           onPress={() => router.push('/signup/intro')}
         />
         <Btn
+          label="회원 로그인"
+          variant="outline"
+          onPress={() => router.push('/login')}
+          style={{ borderColor: C.champagne }}
+          labelColor={C.champagne}
+        />
+        <Btn
           label="오늘의 큐레이션 미리보기"
           variant="outline"
           onPress={() => router.push('/curation')}

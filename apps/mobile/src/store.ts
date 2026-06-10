@@ -44,6 +44,12 @@ export interface SignupState {
   idToken?: string;
   // 가입 제출 후 서버가 발급한 회원 ID (추가 인증 신청 시 사용)
   userId?: string;
+  /**
+   * 데모(심사) 모드 — App Review 가이드라인 2.1(a) demonstration mode.
+   * 데모 계정 로그인 시 true: 전 기능 열람 + 크레딧 구매는 서버 검증 없이
+   * StoreKit 샌드박스로 완결(잔액은 로컬 가산). 일반 사용자 흐름에는 영향 없음.
+   */
+  demoMode: boolean;
 
   set: (patch: Partial<SignupState>) => void;
   reset: () => void;
@@ -57,6 +63,7 @@ export const useSignup = create<SignupState>((set) => ({
   photos: [],
   photoCount: 0,
   hobbies: [],
+  demoMode: false,
   set: (patch) => set(patch),
   reset: () =>
     set({
@@ -82,5 +89,6 @@ export const useSignup = create<SignupState>((set) => ({
       referralCode: undefined,
       idToken: undefined,
       userId: undefined,
+      demoMode: false,
     }),
 }));

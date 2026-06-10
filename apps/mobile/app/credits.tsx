@@ -26,12 +26,17 @@ function fmtWon(n: number): string {
 export default function Credits() {
   const router = useRouter();
   const userId = useSignup((s) => s.userId);
+  const demoMode = useSignup((s) => s.demoMode);
   const [sel, setSel] = useState<number>(3);
   const [busy, setBusy] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
 
-  // 잔액 조회 (가입 완료 userId 기준)
+  // 잔액 조회 (가입 완료 userId 기준) — 데모 모드는 로컬 잔액 사용
   const loadBalance = useCallback(async () => {
+    if (demoMode) {
+      setBalance((b) => b ?? 0);
+      return;
+    }
     if (!userId || !API_BASE) return;
     try {
       const res = await fetch(
@@ -42,7 +47,7 @@ export default function Credits() {
     } catch {
       /* 무시 — 표시는 '—' */
     }
-  }, [userId]);
+  }, [userId, demoMode]);
 
   useEffect(() => {
     void loadBalance();
@@ -61,6 +66,16 @@ export default function Credits() {
       await iap.init();
       const productId = Platform.OS === 'android' ? pkg.googleProductId : pkg.appleProductId;
       const purchase = await iap.buy(productId);
+
+      // 데모(심사) 모드 — 스토어 결제(샌드박스)는 실제로 완료하고, 서버 적립만 로컬로 대체.
+      if (demoMode) {
+        await iap.finish(purchase);
+        setBalance((b) => (b ?? 0) + pkg.credits);
+        Alert.alert('충전 완료', `${pkg.credits} 크레딧이 적립되었습니다.`, [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+        return;
+      }
 
       const res = await fetch(`${API_BASE}/api/payment/iap/verify`, {
         method: 'POST',
