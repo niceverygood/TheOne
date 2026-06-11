@@ -76,7 +76,7 @@ export function AppShell({
           </View>
         </ScrollView>
         {footer ? (
-          <View>
+          <View style={{ backgroundColor: C.ivory }}>
             <Hairline />
             <View style={{ padding: S.gutter }}>{footer}</View>
           </View>

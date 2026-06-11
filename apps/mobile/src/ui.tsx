@@ -110,19 +110,20 @@ export function Screen({
   scroll?: boolean;
 }) {
   const bg = dark ? C.ink : C.ivory;
-  const inner = <View style={{ flex: 1, minHeight: '100%' as unknown as number }}>{children}</View>;
+  // minHeight:'100%' 금지 — RN 0.79(Yoga)부터 SafeAreaView 인셋 패딩 포함 높이로 계산돼
+  // 내부 뷰가 화면을 넘치고 푸터가 본문과 겹친다. flex/flexGrow 로만 채운다.
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top', 'bottom']}>
       {scroll ? (
         <ScrollView
           style={{ backgroundColor: bg }}
-          contentContainerStyle={{ minHeight: '100%' }}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
-          {inner}
+          <View style={{ flex: 1 }}>{children}</View>
         </ScrollView>
       ) : (
-        inner
+        <View style={{ flex: 1 }}>{children}</View>
       )}
     </SafeAreaView>
   );
