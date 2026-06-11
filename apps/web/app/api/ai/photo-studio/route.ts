@@ -10,21 +10,96 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 스타일 4종 병렬 생성 대기
 
+// 모델은 GPT Image 2 고정 — 실사 인물 품질이 목적이라 다른 모델로 대체하지 않는다.
+const OPENAI_MODEL = 'gpt-image-2';
+const OPENROUTER_MODEL = 'openai/gpt-5.4-image-2'; // OpenRouter 의 GPT Image 2 노출명
 const OPENAI_EDITS_URL = 'https://api.openai.com/v1/images/edits';
-const MODEL = process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-2';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const QUALITY = process.env.OPENAI_IMAGE_QUALITY ?? 'medium';
+
+function stylePrompt(style: (typeof PHOTO_STUDIO_STYLES)[number]): string {
+  return `${PHOTO_STUDIO_IDENTITY_RULES}\n\nScene & style: ${style.prompt}`;
+}
+
+/** OpenAI 직통 — images/edits (3:4 사이즈·품질 제어 가능, 1순위) */
+async function generateViaOpenAI(
+  key: string,
+  image: File,
+  style: (typeof PHOTO_STUDIO_STYLES)[number],
+): Promise<PhotoStudioImage | null> {
+  const fd = new FormData();
+  fd.append('model', OPENAI_MODEL);
+  fd.append('image', image, 'photo.jpg');
+  fd.append('prompt', stylePrompt(style));
+  fd.append('size', '1024x1536'); // 앱 사진 슬롯과 동일한 3:4 세로
+  fd.append('quality', QUALITY);
+  fd.append('output_format', 'jpeg');
+  fd.append('n', '1');
+
+  const res = await fetch(OPENAI_EDITS_URL, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}` },
+    body: fd,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`[photo-studio:openai] ${style.id} ${res.status}: ${text.slice(0, 300)}`);
+    return null;
+  }
+  const data = (await res.json()) as { data?: { b64_json?: string }[] };
+  const b64 = data.data?.[0]?.b64_json;
+  return b64 ? { style: style.id, b64, mime: 'image/jpeg' } : null;
+}
+
+/** OpenRouter 경유 — chat completions + modalities (키만 있으면 동작, 2순위) */
+async function generateViaOpenRouter(
+  key: string,
+  dataUrl: string,
+  style: (typeof PHOTO_STUDIO_STYLES)[number],
+): Promise<PhotoStudioImage | null> {
+  const res = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      modalities: ['image', 'text'],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: stylePrompt(style) },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    console.error(`[photo-studio:openrouter] ${style.id} ${res.status}: ${text.slice(0, 300)}`);
+    return null;
+  }
+  const data = (await res.json()) as {
+    choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[];
+  };
+  const url = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  const m = url?.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+  return m ? { style: style.id, b64: m[2]!, mime: m[1]! } : null;
+}
 
 /**
  * POST /api/ai/photo-studio
  * multipart/form-data: image(파일 1장, jpeg/png/webp, ≤8MB)
  *
- * gpt-image-2 images/edits 로 동일 인물 스타일 4종을 병렬 생성한다.
+ * GPT Image 2 로 동일 인물 스타일 4종을 병렬 생성한다 (모델 고정).
+ * 키 우선순위: OPENAI_API_KEY(직통) → OPENROUTER_API_KEY(경유). 둘 다 없으면 503.
  * 동일 인물 보존 규칙은 @theone/shared PHOTO_STUDIO_IDENTITY_RULES 가 진실의 원천.
  * 원본·결과 모두 서버에 저장하지 않는다(생성 후 즉시 반환, privacy-design §보유).
  */
 export async function POST(req: NextRequest) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openaiKey && !openrouterKey) {
     return NextResponse.json({ ok: false, reason: 'not_configured' }, { status: 503 });
   }
 
@@ -40,31 +115,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'unsupported_type' }, { status: 415 });
   }
 
+  // OpenRouter 경로는 입력 이미지를 data URL 로 전달
+  const dataUrl = openaiKey
+    ? null
+    : `data:${image.type};base64,${Buffer.from(await image.arrayBuffer()).toString('base64')}`;
+
   const results = await Promise.all(
     PHOTO_STUDIO_STYLES.map(async (style) => {
-      const fd = new FormData();
-      fd.append('model', MODEL);
-      fd.append('image', image, 'photo.jpg');
-      fd.append('prompt', `${PHOTO_STUDIO_IDENTITY_RULES}\n\nScene & style: ${style.prompt}`);
-      fd.append('size', '1024x1536'); // 앱 사진 슬롯과 동일한 3:4 세로
-      fd.append('quality', QUALITY);
-      fd.append('output_format', 'jpeg');
-      fd.append('n', '1');
-
       try {
-        const res = await fetch(OPENAI_EDITS_URL, {
-          method: 'POST',
-          headers: { authorization: `Bearer ${key}` },
-          body: fd,
-        });
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          console.error(`[photo-studio] ${style.id} ${res.status}: ${text.slice(0, 300)}`);
-          return null;
-        }
-        const data = (await res.json()) as { data?: { b64_json?: string }[] };
-        const b64 = data.data?.[0]?.b64_json;
-        return b64 ? { style: style.id, b64 } : null;
+        return openaiKey
+          ? await generateViaOpenAI(openaiKey, image, style)
+          : await generateViaOpenRouter(openrouterKey!, dataUrl!, style);
       } catch (e) {
         console.error(`[photo-studio] ${style.id} failed:`, e);
         return null;

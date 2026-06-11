@@ -105,10 +105,10 @@ export default function Step02() {
       }
       const byId = new Map(PHOTO_STUDIO_STYLES.map((s) => [s.id as string, s.label]));
       setAiResults(
-        (data.images as { style: string; b64: string }[]).map((img) => ({
+        (data.images as { style: string; b64: string; mime?: string }[]).map((img) => ({
           style: img.style,
           label: byId.get(img.style) ?? img.style,
-          uri: `data:image/jpeg;base64,${img.b64}`,
+          uri: `data:${img.mime ?? 'image/jpeg'};base64,${img.b64}`,
           added: false,
         })),
       );

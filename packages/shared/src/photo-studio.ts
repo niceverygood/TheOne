@@ -50,8 +50,9 @@ export type PhotoStudioStyleId = (typeof PHOTO_STUDIO_STYLES)[number]['id'];
 /** 업로드 원본 최대 크기 (서버·클라이언트 공통 검증) */
 export const PHOTO_STUDIO_MAX_BYTES = 8 * 1024 * 1024;
 
-/** 생성 결과 한 장 (b64 는 jpeg) */
+/** 생성 결과 한 장 — OpenAI 직통은 jpeg, OpenRouter 경유는 모델 반환 mime 그대로 */
 export interface PhotoStudioImage {
   style: PhotoStudioStyleId;
   b64: string;
+  mime: string;
 }
