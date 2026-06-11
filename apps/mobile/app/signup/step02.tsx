@@ -304,7 +304,7 @@ export default function Step02() {
           >
             <Txt size={13} weight="500" color={C.ink2}>
               {aiBusy
-                ? '생성 중 — 최대 1분 정도 걸립니다'
+                ? '생성 중 — 1~3분 정도 걸립니다'
                 : aiResults.length > 0
                   ? '다시 생성하기'
                   : '스튜디오 컷 만들기'}

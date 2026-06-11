@@ -8,7 +8,7 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120; // 스타일 4종 병렬 생성 대기
+export const maxDuration = 300; // 스타일 4종 병렬 생성 — OpenRouter 경유 실측 ~190초
 
 // 모델은 GPT Image 2 고정 — 실사 인물 품질이 목적이라 다른 모델로 대체하지 않는다.
 const OPENAI_MODEL = 'gpt-image-2';
