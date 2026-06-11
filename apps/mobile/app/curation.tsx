@@ -1,4 +1,5 @@
-import { Image, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Image, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { matchReasons } from '@theone/shared';
 import { C } from '../src/theme';
@@ -19,6 +20,44 @@ const REASONS = matchReasons(
 
 export default function Curation() {
   const router = useRouter();
+  const [passed, setPassed] = useState(false);
+
+  // Pass — 확인 후 오늘의 큐레이션을 접고 자정 갱신 안내 상태로 전환
+  function onPass() {
+    Alert.alert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
+      { text: '취소', style: 'cancel' },
+      { text: '넘기기', style: 'destructive', onPress: () => setPassed(true) },
+    ]);
+  }
+
+  if (passed) {
+    return (
+      <Screen dark>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          <Txt variant="serifEn" size={15} color={C.champagne}>
+            See you tomorrow
+          </Txt>
+          <Txt
+            variant="serifKr"
+            size={24}
+            weight="700"
+            color={C.ivory}
+            style={{ marginTop: 12, lineHeight: 34 }}
+          >
+            오늘의 큐레이션을{'\n'}넘겼습니다
+          </Txt>
+          <Txt size={13.5} color="rgba(250,247,242,0.72)" style={{ marginTop: 14, lineHeight: 22 }}>
+            자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의
+            방식입니다.
+          </Txt>
+          <View style={{ marginTop: 32 }}>
+            <Btn label="매칭함 보기" variant="outline" onPress={() => router.push('/inbox')} />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen dark>
       {/* 풀블리드 인물 */}
@@ -59,6 +98,22 @@ export default function Curation() {
             </Txt>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
+            {/* 메뉴 진입점 — 프로필 설정·크레딧 충전 (App Review: 로그인 후 접근 경로) */}
+            <Pressable
+              onPress={() => router.push('/menu')}
+              hitSlop={10}
+              style={{
+                borderWidth: 1,
+                borderColor: 'rgba(15,16,20,0.35)',
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                marginBottom: 8,
+              }}
+            >
+              <Txt variant="mono" size={10} color={C.ink2}>
+                ☰ MENU
+              </Txt>
+            </Pressable>
             <Txt variant="mono" size={9} color="rgba(15,16,20,0.5)">
               NEXT IN
             </Txt>
@@ -143,12 +198,14 @@ export default function Curation() {
               variant="outline"
               labelColor={C.graySoft}
               style={{ flex: 1, borderColor: C.inkSoft }}
+              onPress={onPass}
             />
             <Btn
               label="Super Like"
               variant="outline"
               labelColor={C.champagne}
               style={{ flex: 1, borderColor: C.champagne }}
+              onPress={() => router.push('/letter?mode=super')}
             />
           </View>
         </View>

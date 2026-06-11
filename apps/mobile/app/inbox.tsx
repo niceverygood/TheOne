@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ImageSourcePropType, View } from 'react-native';
+import { ImageSourcePropType, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
@@ -60,9 +60,28 @@ export default function Inbox() {
   return (
     <Screen>
       <View style={{ padding: 24 }}>
-        <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 6 }}>
-          The Inbox
-        </Txt>
+        <View
+          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 6 }}>
+            The Inbox
+          </Txt>
+          {/* 메뉴 진입점 — 프로필 설정·크레딧 충전 */}
+          <Pressable
+            onPress={() => router.push('/menu')}
+            hitSlop={10}
+            style={{
+              borderWidth: 1,
+              borderColor: C.hairLight,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+            }}
+          >
+            <Txt variant="mono" size={10} color={C.gray}>
+              ☰ MENU
+            </Txt>
+          </Pressable>
+        </View>
         <Txt variant="serifKr" size={27} weight="700" color={C.ink2}>
           받은 신청서
         </Txt>
