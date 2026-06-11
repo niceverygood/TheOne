@@ -7,3 +7,4 @@ export * from './verification';
 export * from './masking';
 export * from './matching';
 export * from './credits';
+export * from './photo-studio';

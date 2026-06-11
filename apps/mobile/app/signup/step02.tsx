@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { PHOTO_STUDIO_STYLES } from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
 
 const MAX_PHOTOS = 5;
+
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_BASE ?? (typeof window !== 'undefined' ? window.location.origin : '');
+
+type AiResult = { style: string; label: string; uri: string; added: boolean };
 
 const GUIDE = [
   '최근 6개월 이내 촬영한 본인 사진',
@@ -63,6 +69,65 @@ export default function Step02() {
 
   function removeAt(i: number) {
     setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  // AI 스튜디오 — 첫 사진(대표) 기반으로 스타일 4종 생성. 동일 인물 유지가 원칙.
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResults, setAiResults] = useState<AiResult[]>([]);
+
+  async function runAiStudio() {
+    const source = photos[0];
+    if (!source || aiBusy) return;
+    setAiBusy(true);
+    setAiResults([]);
+    try {
+      const form = new FormData();
+      if (Platform.OS === 'web') {
+        const blob = await fetch(source).then((r) => r.blob());
+        form.append('image', blob, 'photo.jpg');
+      } else {
+        // RN FormData 파일 파트 — 타입 정의에 없어 캐스팅
+        form.append('image', {
+          uri: source,
+          name: 'photo.jpg',
+          type: 'image/jpeg',
+        } as unknown as Blob);
+      }
+      const res = await fetch(`${API_BASE}/api/ai/photo-studio`, { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        const msg =
+          data.reason === 'not_configured'
+            ? 'AI 스튜디오가 아직 준비 중입니다. 잠시 후 다시 시도해 주세요.'
+            : '생성에 실패했습니다. 다른 사진으로 다시 시도해 주세요.';
+        Alert.alert('AI 스튜디오', msg);
+        return;
+      }
+      const byId = new Map(PHOTO_STUDIO_STYLES.map((s) => [s.id as string, s.label]));
+      setAiResults(
+        (data.images as { style: string; b64: string }[]).map((img) => ({
+          style: img.style,
+          label: byId.get(img.style) ?? img.style,
+          uri: `data:image/jpeg;base64,${img.b64}`,
+          added: false,
+        })),
+      );
+    } catch {
+      Alert.alert('AI 스튜디오', '네트워크 오류로 생성하지 못했습니다.');
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function addAiResult(idx: number) {
+    const r = aiResults[idx];
+    if (!r || r.added) return;
+    if (photos.length >= MAX_PHOTOS) {
+      Alert.alert('사진이 가득 찼어요', `최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`);
+      return;
+    }
+    setPhotos((prev) => [...prev, r.uri].slice(0, MAX_PHOTOS));
+    setAiResults((prev) => prev.map((x, i) => (i === idx ? { ...x, added: true } : x)));
   }
 
   // 그리드 슬롯: 선택한 사진들 + (여유 있으면) 추가 슬롯 1개
@@ -160,6 +225,98 @@ export default function Step02() {
       <Txt variant="mono" size={10} color={C.gray} style={{ marginTop: 12 }}>
         {photos.length} / {MAX_PHOTOS}
       </Txt>
+
+      {/* AI 스튜디오 — 같은 사람, 스튜디오 품질. 이목구비는 바꾸지 않는다. */}
+      {photos.length >= 1 ? (
+        <View
+          style={{
+            marginTop: 20,
+            borderWidth: 1,
+            borderColor: C.hairLight,
+            borderRadius: RADIUS,
+            padding: 16,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Txt variant="serifEn" size={13} color={C.champagne}>
+              AI Studio
+            </Txt>
+            {aiBusy ? <ActivityIndicator size="small" color={C.champagne} /> : null}
+          </View>
+          <Txt size={13.5} weight="500" color={C.ink2} style={{ marginTop: 6 }}>
+            대표 사진으로 스튜디오 컷 4종을 만들어 드립니다
+          </Txt>
+          <Txt size={11.5} color={C.gray} style={{ marginTop: 4, lineHeight: 17 }}>
+            같은 사람, 더 좋은 조명과 구도 — 이목구비는 바꾸지 않습니다. 검증 위원이 원본과
+            대조합니다.
+          </Txt>
+
+          {aiResults.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+              {aiResults.map((r, idx) => (
+                <Pressable
+                  key={r.style}
+                  onPress={() => addAiResult(idx)}
+                  style={{ width: '48%', aspectRatio: 3 / 4 }}
+                >
+                  <Image
+                    source={{ uri: r.uri }}
+                    resizeMode="cover"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: RADIUS,
+                      opacity: r.added ? 0.55 : 1,
+                    }}
+                  />
+                  <Txt
+                    variant="mono"
+                    size={8}
+                    color={C.ivory}
+                    style={{
+                      position: 'absolute',
+                      bottom: 6,
+                      left: 6,
+                      backgroundColor: r.added ? C.sage : C.ink2,
+                      paddingHorizontal: 5,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    {r.added ? '✓ 추가됨' : r.label}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
+          <Pressable
+            onPress={runAiStudio}
+            disabled={aiBusy}
+            style={{
+              marginTop: 14,
+              borderWidth: 1,
+              borderColor: C.ink2,
+              borderRadius: RADIUS,
+              paddingVertical: 11,
+              alignItems: 'center',
+              opacity: aiBusy ? 0.4 : 1,
+            }}
+          >
+            <Txt size={13} weight="500" color={C.ink2}>
+              {aiBusy
+                ? '생성 중 — 최대 1분 정도 걸립니다'
+                : aiResults.length > 0
+                  ? '다시 생성하기'
+                  : '스튜디오 컷 만들기'}
+            </Txt>
+          </Pressable>
+          {aiResults.length > 0 ? (
+            <Txt size={11} color={C.gray} style={{ marginTop: 8, textAlign: 'center' }}>
+              마음에 드는 컷을 탭하면 사진 목록에 추가됩니다.
+            </Txt>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={{ marginTop: 20 }}>
         <Txt variant="eyebrow" style={{ marginBottom: 12 }}>
