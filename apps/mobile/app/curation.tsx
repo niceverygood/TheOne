@@ -15,6 +15,9 @@ const FALLBACK_CHEMI: { kr: string; value: number }[] = [
   { kr: '갈등 해결', value: 85 },
 ];
 
+/** 오늘의 큐레이션 대상 — 채팅/프로필과 동일 데모 회원(차단 시 노출 제외). */
+const CURATION_SUBJECT = { id: 'demo-match-jiyoon', name: '김지윤' };
+
 // 큐레이션 사유 — 서버 연동 전까지 프리뷰 페어 기준(이번 회원/오늘의 상대)
 const REASONS = matchReasons(
   { region: '서울', age: 34, badges: ['education', 'job', 'wealth'] },
@@ -24,9 +27,11 @@ const REASONS = matchReasons(
 export default function Curation() {
   const router = useRouter();
   const userId = useSignup((s) => s.userId);
+  const blocked = useSignup((s) => s.blocked);
   const [axes, setAxes] = useState(FALLBACK_CHEMI);
   const [overall, setOverall] = useState<number | null>(null);
   const [passed, setPassed] = useState(false);
+  const isBlocked = blocked.includes(CURATION_SUBJECT.id);
 
   // 오늘의 큐레이션 케미를 실데이터로 — 가치관 일치도가 더원의 킥.
   useEffect(() => {
@@ -50,7 +55,7 @@ export default function Curation() {
     ]);
   }
 
-  if (passed) {
+  if (passed || isBlocked) {
     return (
       <Screen dark>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
@@ -64,11 +69,16 @@ export default function Curation() {
             color={C.ivory}
             style={{ marginTop: 12, lineHeight: 34 }}
           >
-            오늘의 큐레이션을{'\n'}넘겼습니다
+            {isBlocked ? (
+              <>오늘의 큐레이션을{'\n'}숨겼습니다</>
+            ) : (
+              <>오늘의 큐레이션을{'\n'}넘겼습니다</>
+            )}
           </Txt>
           <Txt size={13.5} color="rgba(250,247,242,0.72)" style={{ marginTop: 14, lineHeight: 22 }}>
-            자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의
-            방식입니다.
+            {isBlocked
+              ? '차단한 회원은 더 이상 큐레이션·매칭에 노출되지 않습니다. 자정 이후 새로운 한 분을 소개해 드릴게요.'
+              : '자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의 방식입니다.'}
           </Txt>
           <View style={{ marginTop: 32 }}>
             <Btn label="매칭함 보기" variant="outline" onPress={() => router.push('/inbox')} />

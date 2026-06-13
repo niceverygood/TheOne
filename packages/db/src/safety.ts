@@ -34,6 +34,34 @@ export async function createReport(args: {
   return { report, openCount, autoSuspended };
 }
 
+/** 사용자 간 차단 — 차단자는 피차단자를 큐레이션·매칭·채팅에서 더 이상 보지 않는다(중복은 무시). */
+export async function blockUser(args: { blockerId: string; blockedId: string }) {
+  if (args.blockerId === args.blockedId) throw new Error('cannot_block_self');
+  return prisma.blockList.upsert({
+    where: { blockerId_blockedId: { blockerId: args.blockerId, blockedId: args.blockedId } },
+    update: {},
+    create: args,
+  });
+}
+
+/** 차단 해제 */
+export async function unblockUser(args: { blockerId: string; blockedId: string }) {
+  await prisma.blockList.deleteMany({
+    where: { blockerId: args.blockerId, blockedId: args.blockedId },
+  });
+}
+
+/** 내가 차단했거나 나를 차단한 상대의 id 집합 — 양방향으로 노출에서 제외한다. */
+export async function listBlockedIds(userId: string): Promise<string[]> {
+  const rows = await prisma.blockList.findMany({
+    where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+    select: { blockerId: true, blockedId: true },
+  });
+  const ids = new Set<string>();
+  for (const r of rows) ids.add(r.blockerId === userId ? r.blockedId : r.blockerId);
+  return [...ids];
+}
+
 /** 운영자 수동 정지/강퇴 */
 export async function moderateUser(args: {
   userId: string;

@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MASK_NOTICE, maskExternalContact } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Txt, VerifiedDots, Portrait } from '../src/ui';
 import { Bubble } from '../src/forms';
+import { SafetySheet } from '../src/safety';
 import { previewPortraits } from '../src/preview-assets';
+
+/** 채팅 상대 — 데모 매칭(실서비스에선 매칭 레코드의 상대 회원 id). */
+const PARTNER = { id: 'demo-match-jiyoon', name: '김지윤' };
 
 interface Msg {
   id: string;
@@ -48,6 +52,7 @@ export default function Chat() {
   const router = useRouter();
   const [msgs, setMsgs] = useState(SEED);
   const [draft, setDraft] = useState('');
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const masked = maskExternalContact(draft).masked;
 
   function send(text?: string) {
@@ -58,27 +63,16 @@ export default function Chat() {
     setDraft('');
   }
 
-  // 신고/차단 — trust-safety.md 신고 8종 매트릭스 진입점
-  function openSafetyMenu() {
-    Alert.alert('안전 도구', '문제가 있었나요? 운영진이 24시간 내 확인합니다.', [
-      {
-        text: '신고하기',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert('신고 접수', '신고가 접수되었습니다. 검토 후 알림으로 결과를 알려드립니다.'),
-      },
-      {
-        text: '차단하기',
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert('차단 완료', '상대에게 더 이상 노출되지 않으며, 대화가 종료됩니다.'),
-      },
-      { text: '닫기', style: 'cancel' },
-    ]);
-  }
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.ivory }} edges={['top', 'bottom']}>
+      {/* 신고/차단 — trust-safety.md 신고 8종 매트릭스 (App Store 1.2) */}
+      <SafetySheet
+        visible={safetyOpen}
+        reportedName={PARTNER.name}
+        reportedId={PARTNER.id}
+        onClose={() => setSafetyOpen(false)}
+        onBlocked={() => router.back()}
+      />
       {/* 헤더 */}
       <View
         style={{
@@ -108,7 +102,7 @@ export default function Chat() {
               변호사 · 서초
             </Txt>
           </View>
-          <Pressable onPress={openSafetyMenu} hitSlop={10}>
+          <Pressable onPress={() => setSafetyOpen(true)} hitSlop={10}>
             <Txt variant="mono" size={18} color={C.gray}>
               ⋯
             </Txt>

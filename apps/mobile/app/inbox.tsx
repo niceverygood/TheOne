@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
+import { useSignup } from '../src/store';
 
 interface Letter {
   id: string;
+  senderId: string;
   name: string;
   meta: string;
   marks: number;
@@ -18,6 +20,7 @@ interface Letter {
 const SEED: Letter[] = [
   {
     id: '1',
+    senderId: 'demo-letter-minjun',
     name: '김민준',
     meta: '32 · 변호사 · 서초',
     marks: 4,
@@ -29,6 +32,7 @@ const SEED: Letter[] = [
   },
   {
     id: '2',
+    senderId: 'demo-letter-dohyun',
     name: '이도현',
     meta: '35 · 정형외과 전문의 · 압구정',
     marks: 4,
@@ -39,6 +43,7 @@ const SEED: Letter[] = [
   },
   {
     id: '3',
+    senderId: 'demo-letter-woosung',
     name: '정우성',
     meta: '38 · 자산운용사 대표 · 한남',
     marks: 3,
@@ -51,7 +56,10 @@ const SEED: Letter[] = [
 
 export default function Inbox() {
   const router = useRouter();
+  const blocked = useSignup((s) => s.blocked);
   const [letters, setLetters] = useState(SEED);
+  // 차단한 발신자는 받은 신청서에서도 제외 (App Store 1.2 차단 일관성)
+  const visibleLetters = letters.filter((l) => !blocked.includes(l.senderId));
 
   function decline(id: string) {
     setLetters((l) => l.filter((x) => x.id !== id));
@@ -90,7 +98,7 @@ export default function Inbox() {
         </Txt>
 
         <View style={{ marginTop: 20 }}>
-          {letters.length === 0 ? (
+          {visibleLetters.length === 0 ? (
             <View
               style={{
                 padding: 32,
@@ -105,7 +113,7 @@ export default function Inbox() {
               </Txt>
             </View>
           ) : (
-            letters.map((l) => (
+            visibleLetters.map((l) => (
               <View
                 key={l.id}
                 style={{

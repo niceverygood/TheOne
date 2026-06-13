@@ -1,8 +1,13 @@
-import { View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
+import { SafetySheet } from '../src/safety';
 import { previewPortraits } from '../src/preview-assets';
+
+/** 프로필 대상 — 데모(실서비스에선 큐레이션이 전달한 상대 회원 id). */
+const SUBJECT = { id: 'demo-match-jiyoon', name: '김지윤' };
 
 // 인증 뱃지 월 — 6종 전체를 상태와 함께 노출(서류는 비공개, 뱃지만 공개)
 const VERIF: [string, 'verified' | 'pending' | 'none'][] = [
@@ -21,9 +26,39 @@ const CHEMI: [string, number][] = [
 
 export default function Profile() {
   const router = useRouter();
+  const [safetyOpen, setSafetyOpen] = useState(false);
   return (
     <Screen>
-      <Portrait height={400} radius={0} source={previewPortraits.jiyoon} />
+      <SafetySheet
+        visible={safetyOpen}
+        reportedName={SUBJECT.name}
+        reportedId={SUBJECT.id}
+        onClose={() => setSafetyOpen(false)}
+        onBlocked={() => router.back()}
+      />
+      <View>
+        <Portrait height={400} radius={0} source={previewPortraits.jiyoon} />
+        {/* 신고/차단 진입 (App Store 1.2) */}
+        <Pressable
+          onPress={() => setSafetyOpen(true)}
+          hitSlop={12}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 20,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(15,16,20,0.42)',
+          }}
+        >
+          <Txt variant="mono" size={18} color={C.ivory}>
+            ⋯
+          </Txt>
+        </Pressable>
+      </View>
       <View style={{ padding: 24 }}>
         <View
           style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}

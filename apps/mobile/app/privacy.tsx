@@ -4,6 +4,13 @@ import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Hairline, Screen, Txt } from '../src/ui';
 import { Toggle } from '../src/forms';
+import { openLegal, type LegalDoc } from '../src/safety';
+
+const LEGAL: [LegalDoc, string][] = [
+  ['terms', '이용약관'],
+  ['privacy', '개인정보처리방침'],
+  ['child-safety', '커뮤니티 가이드라인'],
+];
 
 const TOGGLES: [string, string, boolean][] = [
   ['프로필 비공개 휴식', '큐레이션에서 잠시 제외됩니다', false],
@@ -64,6 +71,33 @@ export default function Privacy() {
               </View>
               <Hairline />
             </View>
+          ))}
+        </View>
+
+        {/* 약관 · 정책 (앱 내 열람 — App Store 1.2) */}
+        <View style={{ marginTop: 8 }}>
+          <Txt variant="eyebrow" style={{ marginBottom: 4 }}>
+            약관 · 정책
+          </Txt>
+          {LEGAL.map(([doc, label]) => (
+            <Pressable key={doc} onPress={() => openLegal(doc)}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingVertical: 16,
+                }}
+              >
+                <Txt size={14.5} color={C.ink2}>
+                  {label}
+                </Txt>
+                <Txt variant="mono" size={13} color={C.graySoft}>
+                  ›
+                </Txt>
+              </View>
+              <Hairline />
+            </Pressable>
           ))}
         </View>
 
