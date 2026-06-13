@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: '아동 안전 표준 (Child Safety Standards) · THE ONE',
+  title: '아동 안전 표준 (Child Safety Standards)',
   description:
     'THE ONE의 아동 성적 학대 및 착취(CSAE) 방지 표준. 만 18세 이상 성인 전용 서비스로 아동 성착취·학대를 전면 금지하며 Google Play 아동 안전 표준 정책을 준수합니다.',
 };

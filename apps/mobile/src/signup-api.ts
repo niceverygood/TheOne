@@ -3,6 +3,7 @@
  * 베이스는 EXPO_PUBLIC_API_BASE_URL (미설정 시 server reason 으로 실패 반환).
  */
 import type {
+  CurationTodayResult,
   IntroSections,
   ManualIdentitySubmitResult,
   ProfileGenerateResult,
@@ -31,6 +32,8 @@ export interface SubmitSignupArgs {
   drinkingAmount?: string;
   smoking?: string;
   bodyType?: string;
+  /** 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력 */
+  surveyAnswers?: number[];
   introSections?: Partial<IntroSections>;
   /** 본인인증 봉인 토큰 (KCB 결과에서 받은 값 그대로) */
   idToken?: string;
@@ -102,6 +105,17 @@ export async function submitSignup(args: SubmitSignupArgs): Promise<SignupSubmit
       body: JSON.stringify(args),
     });
     return (await res.json()) as SignupSubmitResult;
+  } catch {
+    return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+/** 오늘의 큐레이션 1명 + 케미(가치관 일치도) 조회. API 미설정 시 server reason. */
+export async function fetchTodayCuration(userId: string): Promise<CurationTodayResult> {
+  if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
+  try {
+    const res = await fetch(`${API_BASE}/api/curation/today?userId=${encodeURIComponent(userId)}`);
+    return (await res.json()) as CurationTodayResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
   }

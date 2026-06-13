@@ -5,6 +5,7 @@ export * from './schemas';
 export * from './referral';
 export * from './verification';
 export * from './masking';
+export * from './survey';
 export * from './matching';
 export * from './credits';
 export * from './photo-studio';

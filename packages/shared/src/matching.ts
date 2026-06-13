@@ -1,9 +1,11 @@
 /**
  * 매칭 엔진 v1 (룰베이스) — verification-sop/큐레이션 정책.
- * 큐레이션 풀 = 같은 광역시도 ± 인접 + 나이대 ±5세 + 인증 뱃지 매치.
- * ML은 데이터 1만 건 이후. 그 전엔 가중치를 사람이 조정(WEIGHTS).
+ * 큐레이션 풀 = 같은 광역시도 ± 인접 + 나이대 ±5세.
+ * 정렬 = 가치관(60문항) 일치도가 단일 최대 가중치 — "검증은 입장권, 매칭은 가치관".
+ * 인증 뱃지·지역·나이는 보조 가산. ML은 데이터 1만 건 이후, 그 전엔 사람이 WEIGHTS 조정.
  */
 import type { VerificationType } from './schemas';
+import { surveyAlignment } from './survey';
 
 /** 광역시도 인접 그래프 (간소화) */
 export const REGION_ADJACENCY: Record<string, string[]> = {
@@ -54,9 +56,13 @@ export interface Candidate {
   region: string;
   age: number;
   badges: VerificationType[];
+  /** 가치관 설문 60문항 응답(Likert 1~5). 미완료면 생략 — 가치관 가산 없음(중립). */
+  survey?: number[];
 }
 
 export const WEIGHTS = {
+  // 가치관 일치도(0~1) * 100 — 단일 최대 가중치. 더원의 킥: 검증은 필터, 매칭은 가치관.
+  valuesAlignment: 100,
   sameRegion: 30,
   adjacentRegion: 12,
   ageCloseness: 4, // (window - |diff|) * 4
@@ -69,9 +75,12 @@ export function isEligible(viewer: Candidate, c: Candidate): boolean {
   return regionEligible(viewer.region, c.region) && ageEligible(viewer.age, c.age);
 }
 
-/** 후보 점수 (높을수록 우선 큐레이션). 하드 필터 통과 가정. */
+/** 후보 점수 (높을수록 우선 큐레이션). 하드 필터 통과 가정. 정수 반환. */
 export function scoreCandidate(viewer: Candidate, c: Candidate): number {
   let s = 0;
+  // 가치관 일치도 — 단일 최대 가중치. 양쪽 설문 완료 시에만 가산.
+  const align = surveyAlignment(viewer.survey, c.survey);
+  if (align !== null) s += Math.round((align / 100) * WEIGHTS.valuesAlignment);
   if (viewer.region === c.region) s += WEIGHTS.sameRegion;
   else if (regionEligible(viewer.region, c.region)) s += WEIGHTS.adjacentRegion;
   s += (AGE_WINDOW - Math.abs(viewer.age - c.age)) * WEIGHTS.ageCloseness;
