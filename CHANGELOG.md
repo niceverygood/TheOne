@@ -11,9 +11,10 @@
 - **packages/shared/schemas.ts**: `surveyAnswersSchema`(60문항·1~5) + `signupInputSchema.surveyAnswers` 옵션.
 - **packages/db**: `Profile.surveyAnswers Int[]`(기본 `[]`), `CurationLog.chemistry Int?`(0~100 스냅샷). 마이그레이션 `20260613000000_curation_values_chemistry`. `matching.ts`가 설문을 후보에 싣고 케미를 로그에 기록, `signup.ts`가 설문 저장.
 - **apps/web `/api/signup`·apps/mobile signup-api**: `surveyAnswers` 전달 경로 연결.
+- **케미 노출**: `chemistryAxes`(도시에 3축 — 결혼관·라이프·갈등), `getTodayCuration` 이 `breakdown` 동반 반환, `GET /api/curation/today`(케미 종합+3축+뱃지·메타, 이름 미포함), 모바일 `curation` 화면이 실데이터로 렌더(API 미설정 시 목업 폴백)·종합 % 표기.
 
-**검증**: shared `vitest` 29/29(가치관 일치도·카테고리 분해·"인증 많은 후보 < 가치관 일치 후보") OK · shared/db `tsc` OK · web/mobile signup typecheck OK. (이메일 템플릿 `tsc` 에러는 base 기존 이슈, 무관.)
-**잔여(사용자)**: ① 마이그레이션 SQL 실행 ② 모바일 step05 설문 UI가 실제 60문항 응답을 수집·제출하도록 연결(현재는 목업) ③ 도시에에 `CurationLog.chemistry`·`surveyBreakdown` 노출.
+**검증**: shared `vitest` 30/30(가치관 일치도·카테고리 분해·"인증 많은 후보 < 가치관 일치 후보"·도시에 3축) OK · shared/db/mobile `tsc` OK · web 신규 라우트 `tsc` 클린. (이메일·legal·landing의 JSX `tsc` 에러는 base 기존 이슈, 무관.)
+**잔여(사용자)**: ① 마이그레이션 SQL 실행 ② 모바일 step05 설문 UI가 실제 60문항 응답을 수집·제출하도록 연결(현재는 목업) ③ 도시에 상대 이름/사진은 직접식별정보 정책상 미저장 — 표시 정책 결정 필요.
 
 ## Phase 5-c — 회원 추천 보상 (MVP) ◐
 
