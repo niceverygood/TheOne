@@ -31,6 +31,8 @@ export interface SubmitSignupArgs {
   drinkingAmount?: string;
   smoking?: string;
   bodyType?: string;
+  /** 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력 */
+  surveyAnswers?: number[];
   introSections?: Partial<IntroSections>;
   /** 본인인증 봉인 토큰 (KCB 결과에서 받은 값 그대로) */
   idToken?: string;

@@ -1,12 +1,14 @@
 /**
  * 큐레이션 매칭 (Phase 5) — packages/shared 룰을 DB에 적용.
- * 같은 광역시도 ±인접 + 나이 ±5 + 인증 뱃지 매치로 오늘의 1명 선택 후 CurationLog 기록.
+ * 가치관 60문항 일치도(단일 최대 가중치) + 광역시도 ±인접 + 나이 ±5 + 인증 뱃지로
+ * 오늘의 1명 선택 후 CurationLog에 점수·케미를 스냅샷.
  */
 import { prisma } from './index';
 import {
   ageFromBirth,
   pickTodayCuration,
   scoreCandidate,
+  surveyAlignment,
   type Candidate,
   type VerificationType,
 } from '@theone/shared';
@@ -16,12 +18,16 @@ interface UserForMatch {
   region: string;
   age: number;
   badges: VerificationType[];
+  survey: number[];
 }
 
 async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
   const u = await prisma.user.findUnique({
     where: { id: userId },
-    include: { profile: { select: { region: true } }, badges: { select: { type: true } } },
+    include: {
+      profile: { select: { region: true, surveyAnswers: true } },
+      badges: { select: { type: true } },
+    },
   });
   if (!u || !u.birth) return null;
   return {
@@ -29,6 +35,7 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
     region: u.profile?.region ?? '서울',
     age: ageFromBirth(u.birth),
     badges: u.badges.map((b) => b.type),
+    survey: u.profile?.surveyAnswers ?? [],
   };
 }
 
@@ -74,7 +81,10 @@ export async function getTodayCuration(userId: string) {
       id: { notIn: [userId, ...seenIds] },
       birth: { not: null },
     },
-    include: { profile: { select: { region: true } }, badges: { select: { type: true } } },
+    include: {
+      profile: { select: { region: true, surveyAnswers: true } },
+      badges: { select: { type: true } },
+    },
     take: 500,
   });
 
@@ -86,10 +96,16 @@ export async function getTodayCuration(userId: string) {
         region: p.profile?.region ?? '서울',
         age: ageFromBirth(p.birth!),
         badges: p.badges.map((b) => b.type) as VerificationType[],
+        survey: p.profile?.surveyAnswers ?? [],
       } as Candidate,
     }));
 
-  const viewerCand: Candidate = { region: viewer.region, age: viewer.age, badges: viewer.badges };
+  const viewerCand: Candidate = {
+    region: viewer.region,
+    age: viewer.age,
+    badges: viewer.badges,
+    survey: viewer.survey,
+  };
   const best = pickTodayCuration(
     viewerCand,
     candidates.map((c) => c.cand),
@@ -98,9 +114,10 @@ export async function getTodayCuration(userId: string) {
 
   const chosen = candidates.find((c) => c.cand === best)!;
   const score = scoreCandidate(viewerCand, best);
+  const chemistry = surveyAlignment(viewerCand.survey, best.survey);
 
   const log = await prisma.curationLog.create({
-    data: { userId, candidateId: chosen.raw.id, action: 'sent', score },
+    data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
   });
   return { log, candidate: chosen.raw };
 }

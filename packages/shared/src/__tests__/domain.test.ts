@@ -7,8 +7,16 @@ import {
   pickTodayCuration,
   regionEligible,
   scoreCandidate,
+  WEIGHTS,
+  AGE_WINDOW,
   type Candidate,
 } from '../matching';
+import {
+  surveyAlignment,
+  surveyBreakdown,
+  isCompleteSurvey,
+  SURVEY_QUESTION_COUNT,
+} from '../survey';
 import { refundableAmount, getPackage, LETTER_COST } from '../credits';
 import { VERIFY_REWARD_CREDITS, VERIFICATION_LABELS, REQUIRED_DOCS } from '../verification';
 import { verificationTypeSchema, signupInputSchema } from '../schemas';
@@ -67,6 +75,85 @@ describe('matching rules', () => {
   it('적합 후보 없으면 null', () => {
     const viewer: Candidate = { region: '제주', age: 30, badges: [] };
     expect(pickTodayCuration(viewer, [{ region: '서울', age: 30, badges: [] }])).toBeNull();
+  });
+});
+
+describe('가치관 설문(60문항) — 더원의 킥', () => {
+  const fill = (n: number) => Array.from({ length: SURVEY_QUESTION_COUNT }, () => n);
+
+  it('완전성 검증: 60문항 1~5만 통과', () => {
+    expect(isCompleteSurvey(fill(3))).toBe(true);
+    expect(isCompleteSurvey([])).toBe(false);
+    expect(isCompleteSurvey(fill(3).slice(0, 59))).toBe(false); // 59문항
+    expect(isCompleteSurvey([...fill(3).slice(0, 59), 6])).toBe(false); // 6 = 범위 밖
+  });
+
+  it('동일 응답은 100%, 정반대는 0%', () => {
+    expect(surveyAlignment(fill(3), fill(3))).toBe(100);
+    expect(surveyAlignment(fill(1), fill(5))).toBe(0);
+  });
+
+  it('한 칸 차이는 75% (1 - 1/4)', () => {
+    expect(surveyAlignment(fill(3), fill(4))).toBe(75);
+  });
+
+  it('미완료는 null(중립) — 매칭 가산 없음', () => {
+    expect(surveyAlignment(fill(3), [])).toBeNull();
+    expect(surveyAlignment(undefined, fill(3))).toBeNull();
+  });
+
+  it('카테고리 분해(결혼관/라이프/관계/갈등)', () => {
+    const a = fill(3);
+    const b = [...fill(3)];
+    for (let i = 0; i < 15; i++) b[i] = 5; // 결혼관만 어긋남
+    const bd = surveyBreakdown(a, b);
+    expect(bd).not.toBeNull();
+    expect(bd!.marriage).toBeLessThan(bd!.lifestyle);
+    expect(bd!.lifestyle).toBe(100);
+    expect(bd!.relationship).toBe(100);
+  });
+});
+
+describe('킥: 가치관이 단일 최대 가중치', () => {
+  const fill = (n: number) => Array.from({ length: SURVEY_QUESTION_COUNT }, () => n);
+
+  it('가치관 만점은 인증 4종+동일지역보다 큰 가산을 준다', () => {
+    expect(WEIGHTS.valuesAlignment).toBeGreaterThanOrEqual(100);
+    const viewer: Candidate = { region: '서울', age: 32, badges: [], survey: fill(3) };
+    const aligned: Candidate = { region: '서울', age: 32, badges: [], survey: fill(3) };
+    // 가치관 100% 가산분(=100)이 sameRegion(30)+age만점(20)보다 크다.
+    // 기준은 "설문 없음"(가산 0) 동일 후보.
+    const valueGain =
+      scoreCandidate(viewer, aligned) - scoreCandidate(viewer, { ...aligned, survey: undefined });
+    expect(valueGain).toBeGreaterThan(WEIGHTS.sameRegion + AGE_WINDOW * WEIGHTS.ageCloseness);
+  });
+
+  it('인증 많지만 가치관 어긋난 후보 < 인증 없지만 가치관 일치 후보', () => {
+    const viewer: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth'],
+      survey: fill(3),
+    };
+    const richButMisaligned: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth', 'vehicle', 'realestate'],
+      survey: fill(5), // 정반대 가치관
+    };
+    const alignedNoBadge: Candidate = { region: '서울', age: 32, badges: [], survey: fill(3) };
+    const pick = pickTodayCuration(viewer, [richButMisaligned, alignedNoBadge]);
+    expect(pick).toBe(alignedNoBadge);
+    expect(scoreCandidate(viewer, alignedNoBadge)).toBeGreaterThan(
+      scoreCandidate(viewer, richButMisaligned),
+    );
+  });
+
+  it('설문 없는 두 후보는 기존(지역·나이·뱃지) 룰 그대로', () => {
+    const viewer: Candidate = { region: '서울', age: 32, badges: ['education'] };
+    const a: Candidate = { region: '서울', age: 31, badges: ['education', 'wealth'] };
+    const b: Candidate = { region: '경기', age: 35, badges: ['education'] };
+    expect(scoreCandidate(viewer, a)).toBeGreaterThan(scoreCandidate(viewer, b));
   });
 });
 
