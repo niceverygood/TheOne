@@ -45,7 +45,11 @@
       "env": {
         "COREPACK_INTEGRITY_KEYS": "0",
         "EXPO_UNSTABLE_CORE_AUTOLINKING": "1",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "EXPO_PUBLIC_IDENTITY_PROVIDER": "kcb",
+        "EXPO_PUBLIC_API_BASE_URL": "https://the-one-web-virid.vercel.app",
+        "EXPO_PUBLIC_API_BASE": "https://the-one-web-virid.vercel.app",
+        "EXPO_PUBLIC_ENV": "production"
       },
       "ios": {
         "resourceClass": "m-medium",
