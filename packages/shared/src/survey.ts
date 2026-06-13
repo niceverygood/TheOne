@@ -78,6 +78,21 @@ export interface SurveyBreakdown {
 }
 
 /**
+ * 큐레이션 도시에가 보여주는 케미 3축(결혼관·라이프스타일·갈등 해결).
+ * 관계축은 종합(overall)에만 반영하고 화면에는 3축만 노출 — 목업 curation 화면과 동일.
+ */
+export const CHEMISTRY_DISPLAY_AXES: ReadonlyArray<{ key: SurveyCategoryKey; kr: string }> = [
+  { key: 'marriage', kr: '결혼관' },
+  { key: 'lifestyle', kr: '라이프스타일' },
+  { key: 'conflict', kr: '갈등 해결' },
+];
+
+/** 케미 분해 → 도시에 3축 막대용 [{kr, value}]. */
+export function chemistryAxes(b: SurveyBreakdown): { kr: string; value: number }[] {
+  return CHEMISTRY_DISPLAY_AXES.map((a) => ({ kr: a.kr, value: b[a.key] }));
+}
+
+/**
  * 카테고리별 일치도 + 전체 — 큐레이션 도시에의 "결혼관 92 · 라이프 87 · 갈등 79" 표기용.
  * 한쪽이라도 미완료면 null.
  */

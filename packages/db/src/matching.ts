@@ -9,6 +9,7 @@ import {
   pickTodayCuration,
   scoreCandidate,
   surveyAlignment,
+  surveyBreakdown,
   type Candidate,
   type VerificationType,
 } from '@theone/shared';
@@ -56,7 +57,17 @@ export async function getTodayCuration(userId: string) {
       where: { id: existing.candidateId },
       include: { profile: true, badges: true },
     });
-    return { log: existing, candidate: cand };
+    // 케미 분해는 발송 시 score/chemistry 와 함께 결정되지만, 화면 노출용 3축은
+    // 뷰어·상대 설문으로 다시 계산한다(설문 변경이 드물어 비용 무시 가능).
+    const viewerSurvey =
+      (
+        await prisma.profile.findUnique({
+          where: { userId },
+          select: { surveyAnswers: true },
+        })
+      )?.surveyAnswers ?? [];
+    const breakdown = surveyBreakdown(viewerSurvey, cand?.profile?.surveyAnswers ?? []);
+    return { log: existing, candidate: cand, breakdown };
   }
 
   const viewer = await loadUserForMatch(userId);
@@ -115,11 +126,17 @@ export async function getTodayCuration(userId: string) {
   const chosen = candidates.find((c) => c.cand === best)!;
   const score = scoreCandidate(viewerCand, best);
   const chemistry = surveyAlignment(viewerCand.survey, best.survey);
+  const breakdown = surveyBreakdown(viewerCand.survey, best.survey);
 
   const log = await prisma.curationLog.create({
     data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
   });
-  return { log, candidate: chosen.raw };
+  // 기존 분기와 동일한 full include 로 반환해 candidate 모양을 통일한다.
+  const candidate = await prisma.user.findUnique({
+    where: { id: chosen.raw.id },
+    include: { profile: true, badges: true },
+  });
+  return { log, candidate, breakdown };
 }
 
 /** 큐레이션 반응 기록 (viewed/passed/liked/superliked) */

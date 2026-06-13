@@ -276,3 +276,28 @@ export type VerificationSubmitInput = z.infer<typeof verificationSubmitSchema>;
 export type VerificationSubmitResult =
   | { ok: true; applicationId: string; slaDueAt: string }
   | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };
+
+// ============================================================
+// Phase 5-d — 오늘의 큐레이션 (가치관 케미 노출)
+// ============================================================
+
+/** 큐레이션 상대 메타 — 직접식별정보(이름) 제외(privacy-design §2-4). 뱃지·케미만 노출. */
+export interface CurationCandidateMeta {
+  region: string | null;
+  age: number | null;
+  jobCategory: string;
+  /** 인증 뱃지 수(verified dots) */
+  badgeCount: number;
+  /** 자기소개 한 줄(있으면) */
+  quote: string | null;
+}
+
+/** 케미 일치도 — 종합 + 도시에 3축(결혼관·라이프스타일·갈등 해결). 설문 미완료면 null. */
+export interface CurationChemistry {
+  overall: number;
+  axes: { kr: string; value: number }[];
+}
+
+export type CurationTodayResult =
+  | { ok: true; candidate: CurationCandidateMeta | null; chemistry: CurationChemistry | null }
+  | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };

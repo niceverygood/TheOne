@@ -14,6 +14,7 @@ import {
 import {
   surveyAlignment,
   surveyBreakdown,
+  chemistryAxes,
   isCompleteSurvey,
   SURVEY_QUESTION_COUNT,
 } from '../survey';
@@ -111,6 +112,13 @@ describe('가치관 설문(60문항) — 더원의 킥', () => {
     expect(bd!.marriage).toBeLessThan(bd!.lifestyle);
     expect(bd!.lifestyle).toBe(100);
     expect(bd!.relationship).toBe(100);
+  });
+
+  it('도시에 3축(결혼관·라이프스타일·갈등 해결) 매핑', () => {
+    const bd = surveyBreakdown(fill(3), fill(3))!;
+    const axes = chemistryAxes(bd);
+    expect(axes.map((a) => a.kr)).toEqual(['결혼관', '라이프스타일', '갈등 해결']);
+    expect(axes.every((a) => a.value === 100)).toBe(true);
   });
 });
 
