@@ -2,6 +2,18 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## LP SEO 보강 (apps/web)
+
+랜딩 검색 노출 강화. 정책(초안 약관·내부 데이터)은 색인에서 확실히 제외.
+
+- **루트 메타(layout.tsx)**: 제목 템플릿 `%s · THE ONE`, canonical, `robots` 디렉티브(googleBot max-image-preview large 등), `applicationName`·`publisher`/`creator`(주식회사 바틀)·`category`·`formatDetection`, 키워드 확장. 하위 페이지 제목은 템플릿 중복 제거(`· THE ONE` 제거).
+- **구조화 데이터(JSON-LD)**: `components/seo/json-ld.tsx` — Organization(parent: 주식회사 바틀)·WebSite·**FAQPage**(리치결과). FAQ는 `components/landing/faq-data.ts` 단일 출처로 분리(화면·JSON-LD 동기).
+- **robots.ts**: `/verify`(내부 인증 현황 실데이터)·`/legal/terms`·`/legal/privacy`(변호사 검토 전 초안) 색인 제외.
+- **sitemap.ts**: `/legal/child-safety`(Google Play 정책상 공개) 추가. 초안 약관/처리방침은 제외.
+- **/verify**: `robots: noindex` 메타 추가.
+
+**검증**: web `tsc` — 신규/변경 파일 에러 0(기존 JSX 타입 에러 32건은 base 이슈, 무관).
+
 ## Phase 5-d — 가치관 매칭 (더원의 킥) ◐
 
 큐레이션의 차별점을 **말이 아니라 엔진**으로. 인증·신청제는 골드스푼과 겹치므로, 킥을 **"검증은 입장권, 매칭은 가치관"** 으로 재정의하고 코드에 박았다. 기존 매칭은 지역·나이·인증 뱃지로만 정렬해 도시에 UI("케미 87%")와 엔진이 따로 놀았다.

@@ -7,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin'],
+      // /verify 는 내부 인증 현황(실데이터), /legal/terms·privacy 는 변호사 검토 전 초안 → 색인 제외
+      disallow: ['/api/', '/admin', '/verify', '/legal/terms', '/legal/privacy'],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

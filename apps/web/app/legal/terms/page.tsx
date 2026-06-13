@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: '이용약관 (초안) · THE ONE',
+  title: '이용약관 (초안)',
   description: 'THE ONE 서비스 이용약관. 현재 변호사 검토 중인 초안 버전입니다.',
   robots: { index: false, follow: false },
 };
