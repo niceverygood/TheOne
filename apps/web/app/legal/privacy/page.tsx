@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: '개인정보처리방침 (초안) · THE ONE',
+  title: '개인정보처리방침 (초안)',
   description: 'THE ONE 개인정보처리방침. 현재 변호사 검토 중인 초안 버전입니다.',
   robots: { index: false, follow: false },
 };

@@ -3,9 +3,18 @@
  * Phase 1 웨이팅리스트부터 사용하며, Phase 3 이후 도메인 스키마가 확장된다.
  */
 import { z } from 'zod';
+import { SURVEY_QUESTION_COUNT, SURVEY_SCALE_MIN, SURVEY_SCALE_MAX } from './survey';
 
 // Gender 타입의 단일 출처는 job-categories.ts. 여기서는 zod 스키마만 제공.
 export const genderSchema = z.enum(['male', 'female']);
+
+/** 가치관 설문 60문항 응답 (Likert 1~5). 매칭 케미 분석의 입력. */
+export const surveyAnswersSchema = z
+  .array(z.number().int().min(SURVEY_SCALE_MIN).max(SURVEY_SCALE_MAX))
+  .length(
+    SURVEY_QUESTION_COUNT,
+    `가치관 설문은 ${SURVEY_QUESTION_COUNT}문항 모두 응답해야 합니다.`,
+  );
 
 export const verificationTypeSchema = z.enum([
   'education',
@@ -176,6 +185,8 @@ export const signupInputSchema = z.object({
   bodyType: z.string().max(40).optional(),
   /** AI 생성 + 사용자 편집한 자기소개 섹션 */
   introSections: introSectionsSchema.partial().optional(),
+  /** 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력 */
+  surveyAnswers: surveyAnswersSchema.optional(),
   /**
    * 본인인증 봉인 토큰 (선택). KCB 결과 응답이 내려준 불투명 토큰을 그대로 전달하면
    * 서버가 열어 ciHash 를 User 에 저장한다(중복/차단 회원 조회용). 클라이언트는 내용을 못 봄.
@@ -264,4 +275,29 @@ export type VerificationSubmitInput = z.infer<typeof verificationSubmitSchema>;
 
 export type VerificationSubmitResult =
   | { ok: true; applicationId: string; slaDueAt: string }
+  | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };
+
+// ============================================================
+// Phase 5-d — 오늘의 큐레이션 (가치관 케미 노출)
+// ============================================================
+
+/** 큐레이션 상대 메타 — 직접식별정보(이름) 제외(privacy-design §2-4). 뱃지·케미만 노출. */
+export interface CurationCandidateMeta {
+  region: string | null;
+  age: number | null;
+  jobCategory: string;
+  /** 인증 뱃지 수(verified dots) */
+  badgeCount: number;
+  /** 자기소개 한 줄(있으면) */
+  quote: string | null;
+}
+
+/** 케미 일치도 — 종합 + 도시에 3축(결혼관·라이프스타일·갈등 해결). 설문 미완료면 null. */
+export interface CurationChemistry {
+  overall: number;
+  axes: { kr: string; value: number }[];
+}
+
+export type CurationTodayResult =
+  | { ok: true; candidate: CurationCandidateMeta | null; chemistry: CurationChemistry | null }
   | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };

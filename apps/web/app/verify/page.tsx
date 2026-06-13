@@ -1,7 +1,14 @@
+import type { Metadata } from 'next';
 import { prisma, getUserVerifications } from '@theone/db';
 import { VERIFICATION_LABELS, type VerificationType } from '@theone/shared';
 
 export const dynamic = 'force-dynamic';
+
+// 내부 인증 현황(실데이터) 화면 — 색인 금지.
+export const metadata: Metadata = {
+  title: '인증 현황',
+  robots: { index: false, follow: false },
+};
 
 const TYPES: VerificationType[] = ['education', 'wealth', 'vehicle', 'realestate'];
 

@@ -35,6 +35,8 @@ export interface CreateSignupArgs {
   drinkingAmount?: string;
   smoking?: string;
   bodyType?: string;
+  /** 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력 */
+  surveyAnswers?: number[];
   /** AI 생성 + 사용자 편집 자기소개 섹션 */
   introSections?: Record<string, string>;
 }
@@ -66,6 +68,7 @@ export async function createSignupUser(args: CreateSignupArgs): Promise<User> {
             drinkingAmount: args.drinkingAmount ?? null,
             smoking: args.smoking ?? null,
             bodyType: args.bodyType ?? null,
+            surveyAnswers: args.surveyAnswers ?? [],
             introSections: (args.introSections ?? undefined) as Prisma.InputJsonValue | undefined,
           },
         },

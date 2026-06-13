@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
       drinkingAmount: input.drinkingAmount,
       smoking: input.smoking,
       bodyType: input.bodyType,
+      surveyAnswers: input.surveyAnswers,
       introSections: input.introSections as Record<string, string> | undefined,
     });
     return NextResponse.json({ ok: true, userId: user.id, status: user.status });

@@ -2,6 +2,32 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## LP SEO 보강 (apps/web)
+
+랜딩 검색 노출 강화. 정책(초안 약관·내부 데이터)은 색인에서 확실히 제외.
+
+- **루트 메타(layout.tsx)**: 제목 템플릿 `%s · THE ONE`, canonical, `robots` 디렉티브(googleBot max-image-preview large 등), `applicationName`·`publisher`/`creator`(주식회사 바틀)·`category`·`formatDetection`, 키워드 확장. 하위 페이지 제목은 템플릿 중복 제거(`· THE ONE` 제거).
+- **구조화 데이터(JSON-LD)**: `components/seo/json-ld.tsx` — Organization(parent: 주식회사 바틀)·WebSite·**FAQPage**(리치결과). FAQ는 `components/landing/faq-data.ts` 단일 출처로 분리(화면·JSON-LD 동기).
+- **robots.ts**: `/verify`(내부 인증 현황 실데이터)·`/legal/terms`·`/legal/privacy`(변호사 검토 전 초안) 색인 제외.
+- **sitemap.ts**: `/legal/child-safety`(Google Play 정책상 공개) 추가. 초안 약관/처리방침은 제외.
+- **/verify**: `robots: noindex` 메타 추가.
+
+**검증**: web `tsc` — 신규/변경 파일 에러 0(기존 JSX 타입 에러 32건은 base 이슈, 무관).
+
+## Phase 5-d — 가치관 매칭 (더원의 킥) ◐
+
+큐레이션의 차별점을 **말이 아니라 엔진**으로. 인증·신청제는 골드스푼과 겹치므로, 킥을 **"검증은 입장권, 매칭은 가치관"** 으로 재정의하고 코드에 박았다. 기존 매칭은 지역·나이·인증 뱃지로만 정렬해 도시에 UI("케미 87%")와 엔진이 따로 놀았다.
+
+- **packages/shared/survey.ts(신규)**: 60문항(결혼관·라이프·관계·갈등 각 15) Likert 1~5 → 케미 일치도. `surveyAlignment`(문항당 `1-|a-b|/4` 평균, 0~100), `surveyBreakdown`(카테고리별), `isCompleteSurvey`. 한쪽 미완료면 `null`(중립 → 가산 없음).
+- **packages/shared/matching.ts**: `WEIGHTS.valuesAlignment = 100` — **단일 최대 가중치**. `Candidate.survey?` 추가, `scoreCandidate`가 양쪽 설문 완료 시 가치관을 가산. 인증 많아도 가치관 어긋나면 후순위.
+- **packages/shared/schemas.ts**: `surveyAnswersSchema`(60문항·1~5) + `signupInputSchema.surveyAnswers` 옵션.
+- **packages/db**: `Profile.surveyAnswers Int[]`(기본 `[]`), `CurationLog.chemistry Int?`(0~100 스냅샷). 마이그레이션 `20260613000000_curation_values_chemistry`. `matching.ts`가 설문을 후보에 싣고 케미를 로그에 기록, `signup.ts`가 설문 저장.
+- **apps/web `/api/signup`·apps/mobile signup-api**: `surveyAnswers` 전달 경로 연결.
+- **케미 노출**: `chemistryAxes`(도시에 3축 — 결혼관·라이프·갈등), `getTodayCuration` 이 `breakdown` 동반 반환, `GET /api/curation/today`(케미 종합+3축+뱃지·메타, 이름 미포함), 모바일 `curation` 화면이 실데이터로 렌더(API 미설정 시 목업 폴백)·종합 % 표기.
+
+**검증**: shared `vitest` 30/30(가치관 일치도·카테고리 분해·"인증 많은 후보 < 가치관 일치 후보"·도시에 3축) OK · shared/db/mobile `tsc` OK · web 신규 라우트 `tsc` 클린. (이메일·legal·landing의 JSX `tsc` 에러는 base 기존 이슈, 무관.)
+**잔여(사용자)**: ① 마이그레이션 SQL 실행 ② 모바일 step05 설문 UI가 실제 60문항 응답을 수집·제출하도록 연결(현재는 목업) ③ 도시에 상대 이름/사진은 직접식별정보 정책상 미저장 — 표시 정책 결정 필요.
+
 ## Phase 5-c — 회원 추천 보상 (MVP) ◐
 
 지인 추천 → **품질 이벤트(심사 통과·첫 결제)** 에 크레딧 보상. 1단계·셀프차단·클로백으로 어뷰징/다단계 리스크 최소화. (현금·외부 파트너스·"매칭 성공" 보상은 법적 검토 전제로 후속.)

@@ -1,17 +1,39 @@
+import { useEffect, useState } from 'react';
 import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
+import { useSignup } from '../src/store';
+import { fetchTodayCuration } from '../src/signup-api';
 
-const CHEMI: [string, number][] = [
-  ['결혼관', 92],
-  ['라이프스타일', 78],
-  ['갈등 해결', 85],
+/** API 미설정/설문 미완료 시 보여줄 목업 케미 3축. */
+const FALLBACK_CHEMI: { kr: string; value: number }[] = [
+  { kr: '결혼관', value: 92 },
+  { kr: '라이프스타일', value: 78 },
+  { kr: '갈등 해결', value: 85 },
 ];
 
 export default function Curation() {
   const router = useRouter();
+  const userId = useSignup((s) => s.userId);
+  const [axes, setAxes] = useState(FALLBACK_CHEMI);
+  const [overall, setOverall] = useState<number | null>(null);
+
+  // 오늘의 큐레이션 케미를 실데이터로 — 가치관 일치도가 더원의 킥.
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    fetchTodayCuration(userId).then((r) => {
+      if (!alive || !r.ok || !r.chemistry) return;
+      setAxes(r.chemistry.axes);
+      setOverall(r.chemistry.overall);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
   return (
     <Screen dark>
       {/* 풀블리드 인물 */}
@@ -88,23 +110,32 @@ export default function Curation() {
         </Txt>
 
         <View style={{ marginTop: 28 }}>
-          <Txt variant="eyebrow" color={C.graySoft} style={{ marginBottom: 14 }}>
-            Chemistry · 케미 3축
-          </Txt>
-          {CHEMI.map(([k, v]) => (
-            <View key={k} style={{ marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+            <Txt variant="eyebrow" color={C.graySoft}>
+              Chemistry · 가치관 케미
+            </Txt>
+            {overall != null && (
+              <Txt variant="mono" size={11} color={C.champagne}>
+                종합 {overall}%
+              </Txt>
+            )}
+          </View>
+          {axes.map(({ kr, value }) => (
+            <View key={kr} style={{ marginBottom: 14 }}>
               <View
                 style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}
               >
                 <Txt size={12.5} color="rgba(250,247,242,0.85)">
-                  {k}
+                  {kr}
                 </Txt>
                 <Txt variant="mono" size={11} color={C.champagne}>
-                  {v}%
+                  {value}%
                 </Txt>
               </View>
               <View style={{ height: 2, backgroundColor: C.inkSoft }}>
-                <View style={{ width: `${v}%`, height: '100%', backgroundColor: C.champagne }} />
+                <View
+                  style={{ width: `${value}%`, height: '100%', backgroundColor: C.champagne }}
+                />
               </View>
             </View>
           ))}

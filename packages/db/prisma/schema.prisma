@@ -253,6 +253,8 @@ model Profile {
   drinkingAmount   String?  @map("drinking_amount")
   smoking          String?
   bodyType         String?  @map("body_type")
+  /// 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력. 미응답 시 빈 배열.
+  surveyAnswers    Int[]    @default([]) @map("survey_answers")
   /// AI 생성 + 사용자 편집한 자기소개 섹션(about/idealType/...)
   introSections    Json?    @map("intro_sections")
   createdAt DateTime @default(now()) @map("created_at")
@@ -520,6 +522,8 @@ model CurationLog {
   action      CurationAction @default(sent)
   /// 매칭 점수(룰베이스) 스냅샷
   score       Int?
+  /// 가치관 케미 일치도(0~100) 스냅샷 — 도시에 "케미 일치도" 표기용. 설문 미완료 시 null.
+  chemistry   Int?
   sentAt      DateTime       @default(now()) @map("sent_at")
   viewedAt    DateTime?      @map("viewed_at")
 
