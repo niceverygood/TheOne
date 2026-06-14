@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
-import { Field, Txt } from '../../src/ui';
+import { Field, LoadingOverlay, Txt } from '../../src/ui';
 import {
   CARRIERS,
   requestCode,
@@ -123,6 +123,7 @@ export default function Step01() {
   const [err, setErr] = useState<string | null>(null);
   // KCB WebView 상태
   const [popupUrl, setPopupUrl] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false); // 본인인증 시작 네트워크 대기(즉시 인디케이터)
   const txRef = useRef<string | null>(null);
   const doneRef = useRef(false); // onNavigationStateChange 다중 호출 가드
   // Apple App Review 우회(숨김): 하단 안내문 롱프레스로 노출 → 심사 노트의 코드 입력
@@ -151,18 +152,24 @@ export default function Step01() {
 
   // ── KCB 본인확인 시작 → 팝업 URL 수신 ───────────────────────
   async function startKcb() {
+    if (starting) return;
     setErr(null);
     doneRef.current = false;
-    const r = await startKcbIdentity('THE ONE 본인확인');
-    if (r.ok && r.popupUrl && r.txSeqNo) {
-      txRef.current = r.txSeqNo;
-      setPopupUrl(r.popupUrl);
-    } else {
-      setErr(
-        r.reason === 'no_api_base'
-          ? '서버 설정 오류입니다. 잠시 후 다시 시도해 주세요.'
-          : '본인인증을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
-      );
+    setStarting(true); // 탭 즉시 브랜드 인디케이터 — 네트워크 대기 체감 제거
+    try {
+      const r = await startKcbIdentity('THE ONE 본인확인');
+      if (r.ok && r.popupUrl && r.txSeqNo) {
+        txRef.current = r.txSeqNo;
+        setPopupUrl(r.popupUrl);
+      } else {
+        setErr(
+          r.reason === 'no_api_base'
+            ? '서버 설정 오류입니다. 잠시 후 다시 시도해 주세요.'
+            : '본인인증을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        );
+      }
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -481,6 +488,9 @@ export default function Step01() {
           </Txt>
         </Pressable>
       </View>
+
+      {/* 본인인증 시작 — 인증창이 뜨기 전 네트워크 대기 동안 즉시 표시 */}
+      <LoadingOverlay visible={starting} label="본인인증을 준비하고 있어요" />
     </AppShell>
   );
 }

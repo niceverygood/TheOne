@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
-import { Txt } from '../../src/ui';
+import { Dialog, PlusMark, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
 
 const MAX_PHOTOS = 5;
@@ -20,6 +20,8 @@ export default function Step02() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
   const [photos, setPhotos] = useState<string[]>(useSignup.getState().photos ?? []);
+  const [addOpen, setAddOpen] = useState(false); // 사진 추가 방식 선택 다이얼로그
+  const [permOpen, setPermOpen] = useState(false); // 카메라 권한 안내 다이얼로그
 
   const remaining = MAX_PHOTOS - photos.length;
 
@@ -42,7 +44,7 @@ export default function Step02() {
     if (remaining <= 0) return;
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해 주세요.');
+      setPermOpen(true);
       return;
     }
     const res = await ImagePicker.launchCameraAsync({ quality: 0.85 });
@@ -51,23 +53,18 @@ export default function Step02() {
     }
   }
 
-  // "+" 탭 → 앨범/카메라 선택
+  // "+" 탭 → 앨범/카메라 선택 다이얼로그
   function onAdd() {
     if (remaining <= 0) return;
-    Alert.alert('사진 추가', '어떻게 추가할까요?', [
-      { text: '앨범에서 선택', onPress: pickFromLibrary },
-      { text: '카메라로 촬영', onPress: takePhoto },
-      { text: '취소', style: 'cancel' },
-    ]);
+    setAddOpen(true);
   }
 
   function removeAt(i: number) {
     setPhotos((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  // 그리드 슬롯: 선택한 사진들 + (여유 있으면) 추가 슬롯 1개
-  const slots: ('add' | string)[] = [...photos];
-  if (photos.length < MAX_PHOTOS) slots.push('add');
+  // 그리드 슬롯: 항상 MAX_PHOTOS 칸을 노출(목업과 동일) — 채워진 칸은 사진, 나머지는 추가 칸
+  const slots = Array.from({ length: MAX_PHOTOS }, (_, i) => i);
 
   return (
     <AppShell
@@ -89,10 +86,10 @@ export default function Step02() {
       }
     >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {slots.map((slot, i) =>
-          slot === 'add' ? (
+        {slots.map((i) =>
+          i >= photos.length ? (
             <Pressable
-              key="add"
+              key={`add-${i}`}
               onPress={onAdd}
               style={{
                 width: '31.5%',
@@ -105,14 +102,13 @@ export default function Step02() {
                 justifyContent: 'center',
               }}
             >
-              <Txt variant="mono" size={20} color={C.graySoft}>
-                +
-              </Txt>
+              {/* 첫 빈 칸에만 + 마크 노출 — 나머지는 빈 슬롯 */}
+              {i === photos.length ? <PlusMark size={18} color={C.graySoft} /> : null}
             </Pressable>
           ) : (
-            <View key={`${slot}-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
+            <View key={`photo-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
               <Image
-                source={{ uri: slot }}
+                source={{ uri: photos[i] }}
                 resizeMode="cover"
                 style={{ width: '100%', height: '100%', borderRadius: RADIUS }}
               />
@@ -177,6 +173,40 @@ export default function Step02() {
           </View>
         ))}
       </View>
+
+      {/* 사진 추가 방식 — 브랜드 다이얼로그(OS Alert 대체) */}
+      <Dialog
+        visible={addOpen}
+        title="사진 추가"
+        message="어떻게 추가할까요?"
+        onRequestClose={() => setAddOpen(false)}
+        actions={[
+          {
+            label: '앨범에서 선택',
+            onPress: () => {
+              setAddOpen(false);
+              void pickFromLibrary();
+            },
+          },
+          {
+            label: '카메라로 촬영',
+            onPress: () => {
+              setAddOpen(false);
+              void takePhoto();
+            },
+          },
+          { label: '취소', tone: 'cancel', onPress: () => setAddOpen(false) },
+        ]}
+      />
+
+      {/* 카메라 권한 안내 — 브랜드 다이얼로그 */}
+      <Dialog
+        visible={permOpen}
+        title="카메라 권한이 필요해요"
+        message="설정에서 카메라 접근을 허용해 주세요."
+        onRequestClose={() => setPermOpen(false)}
+        actions={[{ label: '확인', onPress: () => setPermOpen(false) }]}
+      />
     </AppShell>
   );
 }

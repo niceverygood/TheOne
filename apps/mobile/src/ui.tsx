@@ -1,8 +1,10 @@
 import { ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ImageSourcePropType,
   ImageStyle,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -131,6 +133,151 @@ export function Screen({
 /* ---- hairline ---- */
 export function Hairline({ dark, style }: { dark?: boolean; style?: ViewStyle }) {
   return <View style={[{ height: 1, backgroundColor: dark ? C.hairDark : C.hairLight }, style]} />;
+}
+
+/* ---- 브랜드 다이얼로그(OS Alert 대체) ----
+   잉크 백드롭 + 아이보리 카드 · radius 2 · hairline · 그림자 없음.
+   serif 제목 + 풀폭 액션 행(hairline 구분). */
+export type DialogAction = {
+  label: string;
+  onPress?: () => void;
+  tone?: 'default' | 'cancel' | 'danger';
+};
+
+export function Dialog({
+  visible,
+  title,
+  message,
+  actions,
+  onRequestClose,
+}: {
+  visible: boolean;
+  title: string;
+  message?: string;
+  actions: DialogAction[];
+  onRequestClose: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onRequestClose}
+    >
+      <Pressable
+        onPress={onRequestClose}
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(15,16,20,0.55)',
+          justifyContent: 'center',
+          paddingHorizontal: 32,
+        }}
+      >
+        {/* 카드 내부 탭은 백드롭으로 전파 안 되게 */}
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: C.ivory,
+            borderRadius: RADIUS,
+            borderWidth: 1,
+            borderColor: C.hairLight,
+            overflow: 'hidden',
+          }}
+        >
+          <View style={{ paddingHorizontal: 24, paddingTop: 22, paddingBottom: message ? 18 : 20 }}>
+            <Txt variant="serifKr" size={19} weight="700" color={C.ink2}>
+              {title}
+            </Txt>
+            {message ? (
+              <Txt size={13} color={C.gray} style={{ marginTop: 8, lineHeight: 20 }}>
+                {message}
+              </Txt>
+            ) : null}
+          </View>
+          {actions.map((a, i) => (
+            <Pressable
+              key={a.label}
+              onPress={a.onPress}
+              style={({ pressed }) => ({
+                paddingVertical: 15,
+                paddingHorizontal: 24,
+                borderTopWidth: 1,
+                borderTopColor: C.hairLight,
+                backgroundColor: pressed ? C.ivory2 : 'transparent',
+              })}
+            >
+              <Txt
+                size={14.5}
+                weight={a.tone === 'cancel' ? '400' : '500'}
+                color={a.tone === 'danger' ? C.terra : a.tone === 'cancel' ? C.gray : C.ink2}
+              >
+                {a.label}
+              </Txt>
+            </Pressable>
+          ))}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/* ---- 브랜드 로딩 오버레이 ----
+   네트워크 대기 동안 즉시 표시. champagne 인디케이터 + 카피. */
+export function LoadingOverlay({ visible, label }: { visible: boolean; label?: string }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(15,16,20,0.55)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: C.ivory,
+            borderRadius: RADIUS,
+            borderWidth: 1,
+            borderColor: C.hairLight,
+            paddingVertical: 26,
+            paddingHorizontal: 38,
+            alignItems: 'center',
+          }}
+        >
+          <ActivityIndicator size="small" color={C.champagne} />
+          {label ? (
+            <Txt size={12.5} color={C.gray} style={{ marginTop: 14, letterSpacing: -0.2 }}>
+              {label}
+            </Txt>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/* ---- 중앙 정렬 + 마크(폰트 베이스라인 어긋남 없이 정확히 가운데) ---- */
+export function PlusMark({
+  size = 18,
+  thickness = 1.5,
+  color = C.graySoft,
+}: {
+  size?: number;
+  thickness?: number;
+  color?: string;
+}) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{ position: 'absolute', width: size, height: thickness, backgroundColor: color }}
+      />
+      <View
+        style={{ position: 'absolute', width: thickness, height: size, backgroundColor: color }}
+      />
+    </View>
+  );
 }
 
 /* ---- 검증 4점 ---- */
