@@ -1,4 +1,5 @@
 import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt } from '../src/ui';
@@ -6,6 +7,7 @@ import { Btn, Screen, Txt } from '../src/ui';
 /** Screen 01 · Splash + Application Gate */
 export default function Splash() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const tick = (pos: 'tl' | 'tr' | 'bl' | 'br') => {
     const base = { position: 'absolute' as const, width: 22, height: 22, borderColor: C.champagne };
     const w = 1;
@@ -54,7 +56,7 @@ export default function Splash() {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: 40, paddingBottom: 24, gap: 10 }}>
+      <View style={{ paddingHorizontal: 40, paddingBottom: Math.max(insets.bottom, 24), gap: 10 }}>
         <Btn
           label="가입 심사 신청하기"
           variant="champ"

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { letterCost } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
@@ -21,6 +22,7 @@ const GUIDES: { label: string; starter: string }[] = [
 /** Screen 12 · 만남 신청서 (Interest Letter) — 골드스푼식 진지한 글쓰기 + 크레딧 차감 */
 export default function Letter() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [body, setBody] = useState(
     '지윤 님, 갤러리를 천천히 도는 걸 좋아한다는 문장에서 멈췄어요. 저도 주말이면 종종 미술관에 가는데, 좋아하는 작가가 겹칠지 궁금합니다. 서로의 일을 존중하면서 함께 성장할 수 있는 관계를 진지하게 찾고 있어요.',
@@ -171,7 +173,13 @@ export default function Letter() {
 
         <View>
           <Hairline />
-          <View style={{ padding: 24 }}>
+          <View
+            style={{
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: Math.max(insets.bottom, 24),
+            }}
+          >
             {short ? (
               <Txt size={11} color={C.terra} style={{ marginBottom: 10, textAlign: 'center' }}>
                 잔액이 {cost - BALANCE}C 부족합니다. 충전 후 보낼 수 있어요.

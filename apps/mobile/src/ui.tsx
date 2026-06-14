@@ -112,8 +112,15 @@ export function Screen({
   const bg = dark ? C.ink : C.ivory;
   // minHeight:'100%' 금지 — RN 0.79(Yoga)부터 SafeAreaView 인셋 패딩 포함 높이로 계산돼
   // 내부 뷰가 화면을 넘치고 푸터가 본문과 겹친다. flex/flexGrow 로만 채운다.
+  //
+  // 하단 인셋: scroll=true 는 ScrollView 가 넘침을 흡수하므로 SafeAreaView 의 bottom 엣지로 충분.
+  // scroll=false 는 하단 고정 콘텐츠가 인셋만큼 화면 밖으로 밀려 잘리므로(App Store 4.0 리젝)
+  // SafeAreaView 에서 bottom 을 빼고, 하단 고정 영역이 useSafeAreaInsets 로 직접 인셋을 먹는다.
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: bg }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: bg }}
+      edges={scroll ? ['top', 'bottom'] : ['top']}
+    >
       {scroll ? (
         <ScrollView
           style={{ backgroundColor: bg }}

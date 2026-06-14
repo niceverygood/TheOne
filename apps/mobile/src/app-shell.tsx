@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { C, S } from './theme';
 import { Btn, Hairline, Screen, StepDots, Txt } from './ui';
@@ -25,6 +26,7 @@ export function AppShell({
   hideBack?: boolean;
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   return (
     <Screen scroll={false}>
       <View style={{ flex: 1 }}>
@@ -78,7 +80,15 @@ export function AppShell({
         {footer ? (
           <View style={{ backgroundColor: C.ivory }}>
             <Hairline />
-            <View style={{ padding: S.gutter }}>{footer}</View>
+            <View
+              style={{
+                paddingHorizontal: S.gutter,
+                paddingTop: S.gutter,
+                paddingBottom: Math.max(insets.bottom, S.gutter),
+              }}
+            >
+              {footer}
+            </View>
           </View>
         ) : null}
       </View>

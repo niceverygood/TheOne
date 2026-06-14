@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MASK_NOTICE, maskExternalContact } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Txt, VerifiedDots, Portrait } from '../src/ui';
@@ -50,6 +50,7 @@ const CURRENT_STAGE = 1; // 0-base: 대화 중
 /** Screen 15 · 채팅 — 매칭 7일째 캡션 + AI 추천 + 외부 연락처 마스킹 */
 export default function Chat() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [msgs, setMsgs] = useState(SEED);
   const [draft, setDraft] = useState('');
   const [safetyOpen, setSafetyOpen] = useState(false);
@@ -64,7 +65,7 @@ export default function Chat() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.ivory }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.ivory }} edges={['top']}>
       {/* 신고/차단 — trust-safety.md 신고 8종 매트릭스 (App Store 1.2) */}
       <SafetySheet
         visible={safetyOpen}
@@ -187,7 +188,7 @@ export default function Chat() {
         style={{
           paddingHorizontal: 24,
           paddingTop: 10,
-          paddingBottom: 12,
+          paddingBottom: Math.max(insets.bottom, 12),
           borderTopWidth: 1,
           borderTopColor: C.hairLight,
         }}
