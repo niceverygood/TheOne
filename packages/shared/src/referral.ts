@@ -37,6 +37,8 @@ export function referralSeqFromCode(code: string): number | null {
 export const REFERRAL_REWARD = {
   /** 피추천인 가입 심사 통과 시 추천인에게 지급 */
   signupApprovedCredits: 30,
+  /** 피추천인(신규) 가입 심사 통과 시 본인에게 지급 — 양방향 보상(파운딩 추천 루프). */
+  welcomeCredits: 30,
   /** 피추천인 첫 결제 시 추천인에게 = 결제 크레딧 × 비율 */
   firstPurchaseRate: 0.1,
   /** 보상 회수(클로백) 유효기간(일) */

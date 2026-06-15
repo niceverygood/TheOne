@@ -53,10 +53,22 @@ export const LETTER_COST = { normal: 20, super: 50 } as const;
 /** 첫 일반 신청서 무료 — 첫 전환 활성화 정책(feature-roadmap P1-9). Super는 제외. */
 export const FIRST_LETTER_FREE = true;
 
+/**
+ * 파운딩 정책: 여성 신청서 무료 (cold-start 여성 풀 확보 — 콜드스타트 플레이북).
+ * 희소한 쪽(여성)에 보조금을 몰아 남녀 밸런스를 맞춘다. 풀이 차면 false 로 종료.
+ */
+export const WOMEN_LETTER_FREE = true;
+
+/** 신청서 비용이 면제되는 회원인지 (현재: 여성 풀 무료 정책). */
+export function isLetterFreeFor(gender?: 'male' | 'female'): boolean {
+  return WOMEN_LETTER_FREE && gender === 'female';
+}
+
 export function letterCost(
   kind: keyof typeof LETTER_COST,
-  opts?: { isFirstLetter?: boolean },
+  opts?: { isFirstLetter?: boolean; gender?: 'male' | 'female' },
 ): number {
+  if (isLetterFreeFor(opts?.gender)) return 0;
   if (FIRST_LETTER_FREE && opts?.isFirstLetter && kind === 'normal') return 0;
   return LETTER_COST[kind];
 }

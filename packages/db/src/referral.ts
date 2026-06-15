@@ -61,11 +61,51 @@ async function grant(
   return credits;
 }
 
-/** 피추천인 가입 심사 통과 시 추천인 보상 (고정 크레딧). */
+/**
+ * 피추천인(신규) 본인 웰컴 크레딧 — 추천으로 가입·심사 통과 시 1회(멱등).
+ * 추천으로 들어온 회원만 대상(referredById 존재). 양방향 보상의 신규 쪽.
+ * reason='referral_reward', refId=본인 id (추천인 보상은 userId=추천인이라 구분됨).
+ */
+export async function grantRefereeWelcome(
+  refereeId: string,
+  tx: Prisma.TransactionClient = prisma,
+): Promise<number> {
+  const credits = REFERRAL_REWARD.welcomeCredits;
+  if (credits <= 0) return 0;
+  const referee = await tx.user.findUnique({
+    where: { id: refereeId },
+    select: { referredById: true },
+  });
+  if (!referee?.referredById) return 0; // 추천으로 들어온 경우만
+
+  const already = await tx.creditTransaction.findFirst({
+    where: { userId: refereeId, reason: 'referral_reward', refId: refereeId },
+    select: { id: true },
+  });
+  if (already) return 0; // 멱등
+
+  await tx.credit.upsert({
+    where: { userId: refereeId },
+    create: { userId: refereeId, balance: credits },
+    update: { balance: { increment: credits } },
+  });
+  await tx.creditTransaction.create({
+    data: { userId: refereeId, delta: credits, reason: 'referral_reward', refId: refereeId },
+  });
+  return credits;
+}
+
+/**
+ * 피추천인 가입 심사 통과 시 보상 (양방향).
+ * - 추천인: 고정 크레딧(signupApprovedCredits)
+ * - 피추천인 본인: 웰컴 크레딧(welcomeCredits) — 추천으로 들어온 경우
+ * @returns 추천인에게 지급한 크레딧(피추천인 웰컴은 별도 적립).
+ */
 export async function grantSignupApprovedReward(
   refereeId: string,
   tx: Prisma.TransactionClient = prisma,
 ): Promise<number> {
+  await grantRefereeWelcome(refereeId, tx); // 신규 본인 웰컴(양방향)
   return grant(refereeId, 'signup_approved', REFERRAL_REWARD.signupApprovedCredits, undefined, tx);
 }
 
