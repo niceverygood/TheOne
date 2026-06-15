@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <!-- 01 · 커버 -->
+  <rect width="1080" height="1080" fill="#0F1014"/>
+  <rect x="48" y="48" width="984" height="984" fill="none" stroke="#1F222B" stroke-width="2"/>
+
+  <!-- eyebrow -->
+  <text x="540" y="372" font-family="Playfair Display" font-style="italic"
+        font-size="42" font-weight="500" letter-spacing="6"
+        fill="#B8956A" text-anchor="middle">Application Only</text>
+
+  <!-- 워드마크 -->
+  <text x="540" y="560" font-family="Noto Serif KR" font-size="148" font-weight="600"
+        letter-spacing="26" fill="#FAF7F2" text-anchor="middle">THE ONE</text>
+  <text x="540" y="648" font-family="Noto Serif KR" font-size="46" font-weight="500"
+        letter-spacing="22" fill="#B8956A" text-anchor="middle">더 원</text>
+
+  <!-- divider -->
+  <line x1="470" y1="736" x2="610" y2="736" stroke="#B8956A" stroke-width="2"/>
+
+  <!-- tagline -->
+  <text x="540" y="828" font-family="Noto Serif KR" font-size="44" font-weight="400"
+        letter-spacing="-1" fill="#FAF7F2" text-anchor="middle">인생에 한 번뿐인 매칭</text>
+
+  <!-- footer -->
+  <text x="80" y="988" font-family="JetBrains Mono" font-size="24" letter-spacing="2"
+        fill="#8B8378">EST. 2026 · SEOUL</text>
+  <text x="1000" y="988" font-family="JetBrains Mono" font-size="24" letter-spacing="2"
+        fill="#8B8378" text-anchor="end">01 / 05</text>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <!-- 05 · 큐레이션 + CTA -->
+  <rect width="1080" height="1080" fill="#0F1014"/>
+  <rect x="48" y="48" width="984" height="984" fill="none" stroke="#1F222B" stroke-width="2"/>
+
+  <text x="540" y="296" font-family="JetBrains Mono" font-size="26" letter-spacing="6"
+        fill="#B8956A" text-anchor="middle">NO ENDLESS SWIPING</text>
+
+  <text font-family="Noto Serif KR" font-size="86" font-weight="600"
+        letter-spacing="-2" fill="#FAF7F2" text-anchor="middle">
+    <tspan x="540" y="448">매일,</tspan>
+    <tspan x="540" y="556">단 한 명.</tspan>
+  </text>
+
+  <text font-family="Pretendard Variable" font-size="34" font-weight="400"
+        letter-spacing="-1" fill="#B5AFA4" text-anchor="middle">
+    <tspan x="540" y="666">무한 스와이프는 없습니다.</tspan>
+    <tspan x="540" y="720">큐레이션된 단 한 사람을 만납니다.</tspan>
+  </text>
+
+  <!-- CTA -->
+  <rect x="330" y="808" width="420" height="92" fill="none" stroke="#B8956A" stroke-width="2"/>
+  <text x="540" y="867" font-family="Noto Serif KR" font-size="38" font-weight="500"
+        letter-spacing="2" fill="#B8956A" text-anchor="middle">웨이팅리스트 오픈</text>
+
+  <text x="540" y="980" font-family="JetBrains Mono" font-size="28" letter-spacing="3"
+        fill="#FAF7F2" text-anchor="middle">@the.one · theone.kr</text>
+</svg>

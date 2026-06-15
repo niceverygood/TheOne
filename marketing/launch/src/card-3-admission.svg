@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <!-- 03 · 가입 심사 -->
+  <rect width="1080" height="1080" fill="#0F1014"/>
+  <rect x="48" y="48" width="984" height="984" fill="none" stroke="#1F222B" stroke-width="2"/>
+
+  <text x="540" y="300" font-family="JetBrains Mono" font-size="28" letter-spacing="8"
+        fill="#B8956A" text-anchor="middle">ADMISSION</text>
+
+  <!-- big number -->
+  <text x="540" y="630" font-family="Noto Serif KR" font-size="300" font-weight="600"
+        letter-spacing="-4" fill="#B8956A" text-anchor="middle">23%</text>
+
+  <text x="540" y="742" font-family="Noto Serif KR" font-size="50" font-weight="500"
+        letter-spacing="-1" fill="#FAF7F2" text-anchor="middle">가입 심사 통과율</text>
+
+  <text font-family="Pretendard Variable" font-size="34" font-weight="400"
+        letter-spacing="-1" fill="#B5AFA4" text-anchor="middle">
+    <tspan x="540" y="836">지원자 네 명 중 한 명만</tspan>
+    <tspan x="540" y="890">더원의 멤버가 됩니다.</tspan>
+  </text>
+
+  <text x="1000" y="988" font-family="JetBrains Mono" font-size="24" letter-spacing="2"
+        fill="#8B8378" text-anchor="end">03 / 05</text>
+</svg>
