@@ -5,14 +5,20 @@
  * 조명·배경·구도·색감만 스튜디오급으로 올린다. 검증 위원은 원본과 대조한다.
  */
 
-/** 모든 스타일 프롬프트 앞에 붙는 공통 규칙 — 동일 인물 보존이 최우선. */
+/** 모든 스타일 프롬프트 앞에 붙는 공통 규칙 — 동일 인물 보존 + 실사 사진 품질이 최우선. */
 export const PHOTO_STUDIO_IDENTITY_RULES =
   'Re-shoot this exact person as a premium matchmaking profile portrait. ' +
   "CRITICAL: preserve the person's identity — keep face shape, eyes, nose, lips, " +
   'skin tone, hairstyle and body proportions exactly as in the source photo. ' +
   'Do not beautify, slim, retouch or alter any facial feature. The result must be ' +
-  'instantly recognizable as the same person. Vertical 3:4 chest-up composition, ' +
-  'photorealistic, natural skin texture, tasteful and understated. No text, no watermark.';
+  'instantly recognizable as the same person. Vertical 3:4 chest-up composition. ' +
+  // 실사 강제 — AI 렌더/일러스트 톤 방지(image-2.0 실사 품질 목적).
+  'PHOTOREALISM IS MANDATORY: this must look like a real photograph shot on a ' +
+  'full-frame DSLR with an 85mm portrait lens, shallow depth of field, true-to-life ' +
+  'lighting, natural skin with visible pores and fine texture, realistic hair strands. ' +
+  'It must NOT look illustrated, painted, 3D-rendered, plasticky, airbrushed or ' +
+  'over-smoothed. No beauty-filter look. High resolution, crisp focus on the eyes. ' +
+  'Tasteful and understated. No text, no watermark.';
 
 export const PHOTO_STUDIO_STYLES = [
   {

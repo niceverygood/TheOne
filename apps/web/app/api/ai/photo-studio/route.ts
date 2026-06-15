@@ -16,7 +16,7 @@ const OPENAI_MODEL = 'gpt-image-2';
 const OPENROUTER_MODEL = 'openai/gpt-5.4-image-2'; // OpenRouter 의 GPT Image 2 노출명
 const OPENAI_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const QUALITY = process.env.OPENAI_IMAGE_QUALITY ?? 'medium';
+const QUALITY = process.env.OPENAI_IMAGE_QUALITY ?? 'high'; // 실사 품질 — 기본 high
 
 function stylePrompt(style: (typeof PHOTO_STUDIO_STYLES)[number]): string {
   return `${PHOTO_STUDIO_IDENTITY_RULES}\n\nScene & style: ${style.prompt}`;
