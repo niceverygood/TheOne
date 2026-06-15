@@ -20,12 +20,22 @@ export function WaitlistForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ seq: number; referralCode: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [refCode, setRefCode] = useState('');
+  const [refFromLink, setRefFromLink] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const startedRef = useRef(false);
 
   useEffect(() => {
     capture(ANALYTICS_EVENTS.formView);
     trackServer('waitlist_view'); // 퍼널: 폼 노출(서버 집계)
+    // 공유 링크(?ref=CODE 또는 ?invite=CODE)로 들어오면 초대코드 자동 입력 — 추천 루프
+    const r = new URLSearchParams(window.location.search).get('ref') ?? '';
+    const invite = new URLSearchParams(window.location.search).get('invite') ?? '';
+    const code = (r || invite).trim().toUpperCase();
+    if (code) {
+      setRefCode(code);
+      setRefFromLink(true);
+    }
   }, []);
 
   // 퍼널: 폼 첫 상호작용(입력/포커스) 1회만 — 가입 의도 신호
@@ -79,7 +89,8 @@ export function WaitlistForm() {
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard?.writeText(success.referralCode);
+              const link = `${window.location.origin}/?ref=${encodeURIComponent(success.referralCode)}`;
+              navigator.clipboard?.writeText(link);
               setCopied(true);
               setTimeout(() => setCopied(false), 1600);
             }}
@@ -88,7 +99,9 @@ export function WaitlistForm() {
             {success.referralCode}
           </button>
           <p className="font-sans-kr mt-2 text-[11px] text-gray">
-            {copied ? '복사되었습니다' : '탭하여 복사 · 친구에게 공유하면 함께 우선 혜택'}
+            {copied
+              ? '초대 링크가 복사되었습니다'
+              : '탭하면 초대 링크 복사 · 친구가 열면 코드 자동 적용'}
           </p>
         </div>
       </div>
@@ -181,7 +194,7 @@ export function WaitlistForm() {
         )}
       </label>
 
-      {/* 초대코드 (선택) */}
+      {/* 초대코드 (선택) — 공유 링크(?ref=)로 들어오면 자동 입력 */}
       <label className="mt-6 block">
         <span className="font-sans-en text-[10px] uppercase tracking-[0.14em] text-gray">
           Invite code · 선택
@@ -189,10 +202,17 @@ export function WaitlistForm() {
         <input
           type="text"
           name="referralCode"
+          value={refCode}
+          onChange={(e) => setRefCode(e.target.value.toUpperCase())}
           autoComplete="off"
           placeholder="THE-0000-00"
           className="mt-2 w-full border-b border-hair-light bg-transparent pb-2 font-mono text-[14px] uppercase text-ink-2 outline-none placeholder:text-gray-soft focus:border-ink-2"
         />
+        {refFromLink && (
+          <span className="mt-1 block text-[11px] text-sage">
+            초대코드가 적용되었습니다 · 함께 우선 혜택
+          </span>
+        )}
       </label>
 
       {/* 약관 동의 */}
