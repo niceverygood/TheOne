@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { PHOTO_STUDIO_STYLES } from '@theone/shared';
+import {
+  PHOTO_STUDIO_STYLES,
+  PHOTO_STUDIO_DEFAULT_STYLE_IDS,
+  PHOTO_STUDIO_MAX_SELECT,
+} from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Txt } from '../../src/ui';
@@ -71,13 +75,27 @@ export default function Step02() {
     setPhotos((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  // AI 스튜디오 — 첫 사진(대표) 기반으로 스타일 4종 생성. 동일 인물 유지가 원칙.
+  // AI 스튜디오 — 첫 사진(대표) 기반으로 선택한 장면을 생성. 동일 인물 유지가 원칙.
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResults, setAiResults] = useState<AiResult[]>([]);
+  // 사용자가 고른 배경/장면 — 기본은 클래식 4종, 최대 5종까지.
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([
+    ...PHOTO_STUDIO_DEFAULT_STYLE_IDS,
+  ]);
+
+  function toggleStyle(id: string) {
+    setSelectedStyles((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : prev.length >= PHOTO_STUDIO_MAX_SELECT
+          ? prev
+          : [...prev, id],
+    );
+  }
 
   async function runAiStudio() {
     const source = photos[0];
-    if (!source || aiBusy) return;
+    if (!source || aiBusy || selectedStyles.length === 0) return;
     setAiBusy(true);
     setAiResults([]);
     try {
@@ -93,6 +111,7 @@ export default function Step02() {
           type: 'image/jpeg',
         } as unknown as Blob);
       }
+      form.append('styles', selectedStyles.join(',')); // 선택한 장면만 생성
       const res = await fetch(`${API_BASE}/api/ai/photo-studio`, { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -244,11 +263,39 @@ export default function Step02() {
             {aiBusy ? <ActivityIndicator size="small" color={C.champagne} /> : null}
           </View>
           <Txt size={13.5} weight="500" color={C.ink2} style={{ marginTop: 6 }}>
-            대표 사진으로 스튜디오 컷 4종을 만들어 드립니다
+            대표 사진으로 원하는 장면의 스튜디오 컷을 만들어 드립니다
           </Txt>
           <Txt size={11.5} color={C.gray} style={{ marginTop: 4, lineHeight: 17 }}>
             같은 사람, 더 좋은 조명과 구도 — 이목구비는 바꾸지 않습니다. 검증 위원이 원본과
             대조합니다.
+          </Txt>
+
+          {/* 장면 선택 — 어떤 배경/환경으로 만들지 (최대 5) */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+            {PHOTO_STUDIO_STYLES.map((s) => {
+              const on = selectedStyles.includes(s.id);
+              return (
+                <Pressable
+                  key={s.id}
+                  onPress={() => toggleStyle(s.id)}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderWidth: 1,
+                    borderColor: on ? C.ink2 : C.hairLight,
+                    backgroundColor: on ? C.ink2 : 'transparent',
+                    borderRadius: RADIUS,
+                  }}
+                >
+                  <Txt size={12} weight={on ? '600' : '400'} color={on ? C.ivory : C.ink2}>
+                    {s.label}
+                  </Txt>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Txt size={11} color={C.gray} style={{ marginTop: 6 }}>
+            {selectedStyles.length}/{PHOTO_STUDIO_MAX_SELECT} 장면 선택 · 탭하여 추가·해제
           </Txt>
 
           {aiResults.length > 0 ? (
@@ -291,7 +338,7 @@ export default function Step02() {
 
           <Pressable
             onPress={runAiStudio}
-            disabled={aiBusy}
+            disabled={aiBusy || selectedStyles.length === 0}
             style={{
               marginTop: 14,
               borderWidth: 1,
@@ -299,7 +346,7 @@ export default function Step02() {
               borderRadius: RADIUS,
               paddingVertical: 11,
               alignItems: 'center',
-              opacity: aiBusy ? 0.4 : 1,
+              opacity: aiBusy || selectedStyles.length === 0 ? 0.4 : 1,
             }}
           >
             <Txt size={13} weight="500" color={C.ink2}>
@@ -307,7 +354,7 @@ export default function Step02() {
                 ? '생성 중 — 1~3분 정도 걸립니다'
                 : aiResults.length > 0
                   ? '다시 생성하기'
-                  : '스튜디오 컷 만들기'}
+                  : `선택한 ${selectedStyles.length}개 장면 만들기`}
             </Txt>
           </Pressable>
           {aiResults.length > 0 ? (

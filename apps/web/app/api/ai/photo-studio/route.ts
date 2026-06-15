@@ -3,6 +3,7 @@ import {
   PHOTO_STUDIO_IDENTITY_RULES,
   PHOTO_STUDIO_MAX_BYTES,
   PHOTO_STUDIO_STYLES,
+  resolvePhotoStudioStyles,
   type PhotoStudioImage,
 } from '@theone/shared';
 
@@ -115,13 +116,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'unsupported_type' }, { status: 415 });
   }
 
+  // 생성할 장면 — styles="cafe,gallery,..." 로 선택(미선택/구버전 앱은 기본 4종).
+  // 유효성·중복제거·상한(PHOTO_STUDIO_MAX_SELECT)은 resolvePhotoStudioStyles 가 처리.
+  const stylesRaw = form?.get('styles');
+  const selectedIds =
+    typeof stylesRaw === 'string'
+      ? stylesRaw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null;
+  const styles = resolvePhotoStudioStyles(selectedIds);
+
   // OpenRouter 경로는 입력 이미지를 data URL 로 전달
   const dataUrl = openaiKey
     ? null
     : `data:${image.type};base64,${Buffer.from(await image.arrayBuffer()).toString('base64')}`;
 
   const results = await Promise.all(
-    PHOTO_STUDIO_STYLES.map(async (style) => {
+    styles.map(async (style) => {
       try {
         return openaiKey
           ? await generateViaOpenAI(openaiKey, image, style)

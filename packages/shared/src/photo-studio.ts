@@ -43,9 +43,76 @@ export const PHOTO_STUDIO_STYLES = [
       '35mm film aesthetic, muted warm palette, soft window light interior, ' +
       'quiet sophisticated atmosphere, analog color grading.',
   },
+  {
+    id: 'cafe',
+    label: '카페 라운지',
+    prompt:
+      'Warm minimalist cafe or hotel lounge, soft window light, a coffee cup nearby, ' +
+      'smart-casual wardrobe, approachable and relaxed mood.',
+  },
+  {
+    id: 'gallery',
+    label: '갤러리',
+    prompt:
+      'Quiet contemporary art gallery, soft diffused lighting, neutral pale walls softly ' +
+      'blurred behind, cultured and composed atmosphere.',
+  },
+  {
+    id: 'travel',
+    label: '여행 · 야외',
+    prompt:
+      'Scenic outdoor travel setting such as a seaside promenade or european-style old town, ' +
+      'bright natural daylight, relaxed lifestyle mood.',
+  },
+  {
+    id: 'evening',
+    label: '와인바 저녁',
+    prompt:
+      'Intimate evening wine bar, warm dim tungsten light, calm and sophisticated, ' +
+      'shallow depth of field with soft background bokeh.',
+  },
+  {
+    id: 'active',
+    label: '골프 · 액티브',
+    prompt:
+      'Bright outdoor sports-club setting such as a golf course or tennis court, tasteful ' +
+      'polo or athleisure, healthy energetic mood, clean natural daylight.',
+  },
+  {
+    id: 'rooftop',
+    label: '루프탑 야경',
+    prompt:
+      'Rooftop terrace at dusk with a soft city-skyline bokeh behind, refined evening ' +
+      'ambience, gentle warm light.',
+  },
 ] as const;
 
 export type PhotoStudioStyleId = (typeof PHOTO_STUDIO_STYLES)[number]['id'];
+
+/** 기본 생성 세트 — 장면 미선택(구버전 앱 호환) 시 이 4종을 생성한다. */
+export const PHOTO_STUDIO_DEFAULT_STYLE_IDS: PhotoStudioStyleId[] = [
+  'studio',
+  'natural',
+  'business',
+  'film',
+];
+
+/** 한 번에 생성 가능한 최대 장면 수 (함수 타임아웃·비용 보호). */
+export const PHOTO_STUDIO_MAX_SELECT = 5;
+
+/** 선택 id 목록을 유효·중복제거·상한 적용해 실제 생성할 스타일로 해석. 빈 입력은 기본 세트. */
+export function resolvePhotoStudioStyles(
+  ids?: readonly string[] | null,
+): (typeof PHOTO_STUDIO_STYLES)[number][] {
+  const wanted = (ids && ids.length ? ids : PHOTO_STUDIO_DEFAULT_STYLE_IDS).filter(
+    (v, i, a) => a.indexOf(v) === i,
+  );
+  const picked = PHOTO_STUDIO_STYLES.filter((s) => wanted.includes(s.id));
+  const resolved = picked.length
+    ? picked
+    : PHOTO_STUDIO_STYLES.filter((s) => PHOTO_STUDIO_DEFAULT_STYLE_IDS.includes(s.id));
+  return resolved.slice(0, PHOTO_STUDIO_MAX_SELECT);
+}
 
 /** 업로드 원본 최대 크기 (서버·클라이언트 공통 검증) */
 export const PHOTO_STUDIO_MAX_BYTES = 8 * 1024 * 1024;
