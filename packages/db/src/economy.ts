@@ -145,20 +145,29 @@ export async function awardVerificationReward(
  * 신청서 발송 시 크레딧 차감 (일반 20C / 슈퍼 50C).
  * 파운딩 정책: 여성은 무료 — 차감·잔액검사 없이 통과(콜드스타트 여성 풀 확보, credits.ts WOMEN_LETTER_FREE).
  */
-export async function spendForLetter(userId: string, isSuper: boolean, refId?: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { gender: true } });
+export async function spendForLetter(
+  userId: string,
+  isSuper: boolean,
+  refId?: string,
+  tx?: Prisma.TransactionClient,
+): Promise<{ spent: number; free: boolean }> {
+  const db = tx ?? prisma;
+  const user = await db.user.findUnique({ where: { id: userId }, select: { gender: true } });
   if (isLetterFreeFor(user?.gender)) {
     return { spent: 0, free: true }; // 무료 회원: 차감 없음(별도 원장 기록 불필요)
   }
 
   const cost = isSuper ? LETTER_COST.super : LETTER_COST.normal;
-  const credit = await prisma.credit.findUnique({ where: { userId } });
+  const credit = await db.credit.findUnique({ where: { userId } });
   if (!credit || credit.balance < cost) throw new InsufficientCreditError();
-  await prisma.$transaction([
-    prisma.credit.update({ where: { userId }, data: { balance: { decrement: cost } } }),
-    prisma.creditTransaction.create({
+
+  const apply = async (c: Prisma.TransactionClient) => {
+    await c.credit.update({ where: { userId }, data: { balance: { decrement: cost } } });
+    await c.creditTransaction.create({
       data: { userId, delta: -cost, reason: isSuper ? 'super_letter' : 'letter', refId },
-    }),
-  ]);
+    });
+  };
+  if (tx) await apply(tx);
+  else await prisma.$transaction((c) => apply(c));
   return { spent: cost, free: false };
 }

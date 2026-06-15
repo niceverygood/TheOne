@@ -13,6 +13,46 @@ import {
   type Candidate,
   type VerificationType,
 } from '@theone/shared';
+import { spendForLetter } from './economy';
+import { listBlockedIds } from './safety';
+
+/** 만남 신청서 최소 분량 (모바일 UI 정책과 일치). */
+const LETTER_MIN_LEN = 80;
+
+/**
+ * 만남 신청서 발송 — 검증 → 크레딧 차감(여성 무료) → Match(pending) 생성, 원자적.
+ * 차감 실패(잔액 부족)면 트랜잭션 롤백으로 Match 도 생성되지 않는다.
+ */
+export async function sendLetter(args: {
+  fromId: string;
+  toId: string;
+  letter: string;
+  isSuper?: boolean;
+}): Promise<{ matchId: string; spent: number; free: boolean }> {
+  const { fromId, toId, isSuper = false } = args;
+  const letter = (args.letter ?? '').trim();
+  if (fromId === toId) throw new Error('cannot_letter_self');
+  if (letter.length < LETTER_MIN_LEN) throw new Error('letter_too_short');
+
+  // 차단 관계(양방향)면 발송 불가
+  const blocked = await listBlockedIds(fromId);
+  if (blocked.includes(toId)) throw new Error('blocked');
+
+  // 같은 상대에게 이미 대기중 신청서가 있으면 중복 발송 차단
+  const dup = await prisma.match.findFirst({
+    where: { fromId, toId, status: 'pending' },
+    select: { id: true },
+  });
+  if (dup) throw new Error('already_sent');
+
+  return prisma.$transaction(async (tx) => {
+    const match = await tx.match.create({
+      data: { fromId, toId, letter, isSuper, status: 'pending' },
+    });
+    const spend = await spendForLetter(fromId, isSuper, match.id, tx);
+    return { matchId: match.id, spent: spend.spent, free: spend.free };
+  });
+}
 
 interface UserForMatch {
   id: string;
