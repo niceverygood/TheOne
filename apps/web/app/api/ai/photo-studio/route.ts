@@ -90,7 +90,7 @@ async function generateViaOpenRouter(
 
 /**
  * POST /api/ai/photo-studio
- * multipart/form-data: image(파일 1장, jpeg/png/webp, ≤8MB)
+ * multipart/form-data: image(파일 1장, jpeg/png/webp, ≤4MB — 함수 페이로드 한도)
  *
  * GPT Image 2 로 동일 인물 스타일 4종을 병렬 생성한다 (모델 고정).
  * 키 우선순위: OPENAI_API_KEY(직통) → OPENROUTER_API_KEY(경유). 둘 다 없으면 503.

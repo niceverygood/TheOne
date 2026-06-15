@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import {
   PHOTO_STUDIO_STYLES,
   PHOTO_STUDIO_DEFAULT_STYLE_IDS,
@@ -99,14 +100,27 @@ export default function Step02() {
     setAiBusy(true);
     setAiResults([]);
     try {
+      // 업로드 전 1280px JPEG 로 다운스케일 — 고화질 폰 사진(수 MB)이 그대로 올라가면
+      // 서버 함수 페이로드 한도(~4.5MB)를 넘겨 실패하므로, 항상 줄여서 보낸다.
+      // 결과는 1024x1536 로 생성되므로 입력이 1280px 보다 클 필요가 없다.
+      let uploadUri = source;
+      try {
+        const resized = await manipulateAsync(source, [{ resize: { width: 1280 } }], {
+          compress: 0.8,
+          format: SaveFormat.JPEG,
+        });
+        uploadUri = resized.uri;
+      } catch {
+        // 리사이즈 실패 시 원본으로 시도(최악의 경우만)
+      }
       const form = new FormData();
       if (Platform.OS === 'web') {
-        const blob = await fetch(source).then((r) => r.blob());
+        const blob = await fetch(uploadUri).then((r) => r.blob());
         form.append('image', blob, 'photo.jpg');
       } else {
         // RN FormData 파일 파트 — 타입 정의에 없어 캐스팅
         form.append('image', {
-          uri: source,
+          uri: uploadUri,
           name: 'photo.jpg',
           type: 'image/jpeg',
         } as unknown as Blob);

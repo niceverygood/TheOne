@@ -120,8 +120,13 @@ export function resolvePhotoStudioStyles(
   return resolved.slice(0, PHOTO_STUDIO_MAX_SELECT);
 }
 
-/** 업로드 원본 최대 크기 (서버·클라이언트 공통 검증) */
-export const PHOTO_STUDIO_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * 업로드 원본 최대 크기 (서버·클라이언트 공통 검증).
+ * 서버 함수 페이로드 한도(~4.5MB)보다 낮게 잡는다 — 초과분은 플랫폼이 함수 진입 전
+ * 막아 불투명한 413 을 내므로, 그 전에 우리 라우트가 깔끔한 too_large 로 거른다.
+ * 클라이언트는 업로드 전 1280px 로 다운스케일하므로 실제로는 1MB 미만이다.
+ */
+export const PHOTO_STUDIO_MAX_BYTES = 4 * 1024 * 1024;
 
 /** 생성 결과 한 장 — OpenAI 직통은 jpeg, OpenRouter 경유는 모델 반환 mime 그대로 */
 export interface PhotoStudioImage {
