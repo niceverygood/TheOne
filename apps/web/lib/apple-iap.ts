@@ -61,6 +61,10 @@ export async function verifyAppleReceipt(args: {
 }): Promise<AppleVerifyResult> {
   const secret = process.env.APPLE_IAP_SHARED_SECRET;
   if (!secret) {
+    // 프로덕션에서 secret 미설정이면 mock 통과 금지 — 환경변수 누락이 무한 크레딧이 되지 않도록.
+    if (process.env.NODE_ENV === 'production') {
+      return { ok: false, status: -1, mock: false, reason: 'not_configured' };
+    }
     return {
       ok: true,
       status: -1,

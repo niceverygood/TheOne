@@ -98,6 +98,10 @@ export async function verifyGooglePurchase(args: {
 }): Promise<GoogleVerifyResult> {
   const sa = getServiceAccount();
   if (!sa) {
+    // 프로덕션에서 서비스계정 미설정이면 mock 통과 금지 — 환경변수 누락이 무한 크레딧이 되지 않도록.
+    if (process.env.NODE_ENV === 'production') {
+      return { ok: false, mock: false, reason: 'not_configured' };
+    }
     return {
       ok: true,
       transactionId: `mock-g-${Date.now()}`,

@@ -73,32 +73,54 @@ export async function POST(req: NextRequest) {
     environment = v.environment;
   }
 
-  // 멱등: 동일 transactionId의 주문이 이미 있으면 그대로 반환
-  const existing = await prisma.order.findFirst({
-    where: { paymentId: transactionId, provider },
-  });
-  if (existing) {
+  // 프로덕션에서 mock 검증분은 절대 적립 금지(라이브러리 가드의 2차 방어선).
+  if (mock && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ ok: false, reason: 'not_configured' }, { status: 503 });
+  }
+
+  // 멱등 처리:
+  //  - paymentId(transactionId)를 생성 시점에 박고 (provider, paymentId) unique 로 경쟁을 DB가 차단.
+  //  - 이미 있으면(빠른 경로 or 동시요청 P2002) 기존 주문에 대해 markOrderPaid 를 멱등 재호출해
+  //    적립이 한 번은 반드시 완료되게 한다(이전 시도가 적립 직전 죽어도 복구).
+  const respondDuplicate = async (orderId: string) => {
+    await markOrderPaid(orderId, transactionId!); // 멱등(status=paid면 no-op)
+    const o = await prisma.order.findUnique({ where: { id: orderId } });
     return NextResponse.json({
       ok: true,
-      orderId: existing.id,
-      credited: existing.credits,
+      orderId,
+      credited: o?.credits ?? pkg.credits,
       duplicate: true,
       mock,
     });
-  }
+  };
 
-  // 신규 주문 + 적립
-  const order = await prisma.order.create({
-    data: {
-      userId,
-      packageId: pkg.id,
-      amountWon: pkg.won,
-      credits: pkg.credits,
-      baseCredits: pkg.baseCredits,
-      provider,
-      status: 'pending',
-    },
+  const existing = await prisma.order.findFirst({
+    where: { paymentId: transactionId, provider },
   });
+  if (existing) return respondDuplicate(existing.id);
+
+  let order;
+  try {
+    order = await prisma.order.create({
+      data: {
+        userId,
+        packageId: pkg.id,
+        amountWon: pkg.won,
+        credits: pkg.credits,
+        baseCredits: pkg.baseCredits,
+        provider,
+        paymentId: transactionId, // 멱등 키를 생성 시점에 고정
+        status: 'pending',
+      },
+    });
+  } catch (e) {
+    // 동시요청이 같은 (provider, paymentId)로 먼저 만든 경우 → 기존 주문으로 멱등 응답
+    if (typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002') {
+      const dup = await prisma.order.findFirst({ where: { paymentId: transactionId, provider } });
+      if (dup) return respondDuplicate(dup.id);
+    }
+    throw e;
+  }
   await markOrderPaid(order.id, transactionId);
 
   return NextResponse.json({

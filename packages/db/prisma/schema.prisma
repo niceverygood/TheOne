@@ -191,43 +191,43 @@ model AnalyticsEvent {
 // ============================================================
 
 model User {
-  id          String     @id @default(cuid())
-  seq         Int        @unique @default(autoincrement()) // 추천 코드 파생용 순번
-  phone       String?    @unique // 본인인증 후 (암호화 대상)
-  email       String?    @unique
-  gender      Gender
-  birth       DateTime?
-  jobCategory String     @map("job_category")
-  status      UserStatus @default(pending)
+  id           String     @id @default(cuid())
+  seq          Int        @unique @default(autoincrement()) // 추천 코드 파생용 순번
+  phone        String?    @unique // 본인인증 후 (암호화 대상)
+  email        String?    @unique
+  gender       Gender
+  birth        DateTime?
+  jobCategory  String     @map("job_category")
+  status       UserStatus @default(pending)
   /// 본인인증 고유식별 (암호화 컬럼 — privacy-design §2-4)
-  ciHash      String?    @unique @map("ci_hash")
+  ciHash       String?    @unique @map("ci_hash")
   /// 추천인(가입 시 추천코드로 연결). 자기참조.
-  referredById String?   @map("referred_by_id")
-  referredBy   User?     @relation("referral", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals    User[]    @relation("referral")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  withdrawnAt DateTime?  @map("withdrawn_at")
+  referredById String?    @map("referred_by_id")
+  referredBy   User?      @relation("referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    User[]     @relation("referral")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  withdrawnAt  DateTime?  @map("withdrawn_at")
 
-  profile      Profile?
-  applications VerificationApplication[]
-  badges       VerificationBadge[]
-  credit       Credit?
-  creditTxns   CreditTransaction[]
-  sentMatches  Match[]                   @relation("matchFrom")
-  recvMatches  Match[]                   @relation("matchTo")
-  messages     Message[]
-  reportsMade  ReportLog[]               @relation("reporter")
-  reportsRecv  ReportLog[]               @relation("reported")
-  blocksMade   BlockList[]               @relation("blocker")
-  blocksRecv   BlockList[]               @relation("blocked")
-  curationsFor CurationLog[]             @relation("curationViewer")
-  curationsAs  CurationLog[]             @relation("curationCandidate")
-  orders       Order[]
-  rewardsAsReferrer ReferralReward[]     @relation("rewardReferrer")
-  rewardsAsReferee  ReferralReward[]     @relation("rewardReferee")
+  profile           Profile?
+  applications      VerificationApplication[]
+  badges            VerificationBadge[]
+  credit            Credit?
+  creditTxns        CreditTransaction[]
+  sentMatches       Match[]                   @relation("matchFrom")
+  recvMatches       Match[]                   @relation("matchTo")
+  messages          Message[]
+  reportsMade       ReportLog[]               @relation("reporter")
+  reportsRecv       ReportLog[]               @relation("reported")
+  blocksMade        BlockList[]               @relation("blocker")
+  blocksRecv        BlockList[]               @relation("blocked")
+  curationsFor      CurationLog[]             @relation("curationViewer")
+  curationsAs       CurationLog[]             @relation("curationCandidate")
+  orders            Order[]
+  rewardsAsReferrer ReferralReward[]          @relation("rewardReferrer")
+  rewardsAsReferee  ReferralReward[]          @relation("rewardReferee")
   /// 누적 정지 횟수 (신고 3회 자동 일시정지 — trust-safety §3-2)
-  suspendCount Int                       @default(0) @map("suspend_count")
+  suspendCount      Int                       @default(0) @map("suspend_count")
 
   @@index([status])
   @@index([referredById])
@@ -235,30 +235,30 @@ model User {
 }
 
 model Profile {
-  id        String   @id @default(cuid())
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  photos    String[] // S3 key 목록
-  bio       String?  @db.Text
-  jobDetail String?  @map("job_detail")
-  region    String?
-  mbti      String?
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos            String[] // S3 key 목록
+  bio               String?  @db.Text
+  jobDetail         String?  @map("job_detail")
+  region            String?
+  mbti              String?
   // ── 가입 설문(Phase 4) ─────────────────────────────
-  height           Int?     @map("height") // cm
-  residenceRegion  String?  @map("residence_region") // 사는지역
-  activityRegion   String?  @map("activity_region") // 활동지역
-  school           String?
-  hobbies          String[] // 취미(다중)
-  drinkingFrequency String? @map("drinking_frequency")
-  drinkingAmount   String?  @map("drinking_amount")
-  smoking          String?
-  bodyType         String?  @map("body_type")
+  height            Int?     @map("height") // cm
+  residenceRegion   String?  @map("residence_region") // 사는지역
+  activityRegion    String?  @map("activity_region") // 활동지역
+  school            String?
+  hobbies           String[] // 취미(다중)
+  drinkingFrequency String?  @map("drinking_frequency")
+  drinkingAmount    String?  @map("drinking_amount")
+  smoking           String?
+  bodyType          String?  @map("body_type")
   /// 가치관 설문 60문항 응답(Likert 1~5) — 매칭 케미 분석 입력. 미응답 시 빈 배열.
-  surveyAnswers    Int[]    @default([]) @map("survey_answers")
+  surveyAnswers     Int[]    @default([]) @map("survey_answers")
   /// AI 생성 + 사용자 편집한 자기소개 섹션(about/idealType/...)
-  introSections    Json?    @map("intro_sections")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  introSections     Json?    @map("intro_sections")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("profiles")
 }
@@ -268,15 +268,15 @@ model Profile {
 // ============================================================
 
 model Operator {
-  id           String       @id @default(cuid())
-  username     String       @unique
-  name         String
-  role         OperatorRole @default(viewer)
-  active       Boolean      @default(true)
-  createdAt    DateTime     @default(now()) @map("created_at")
-  reviewedApps VerificationApplication[] @relation("reviewer")
-  accessLogs   AccessLog[]
-  manualIdReviews ManualIdentityRequest[] @relation("manualIdReviewer")
+  id              String                    @id @default(cuid())
+  username        String                    @unique
+  name            String
+  role            OperatorRole              @default(viewer)
+  active          Boolean                   @default(true)
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  reviewedApps    VerificationApplication[] @relation("reviewer")
+  accessLogs      AccessLog[]
+  manualIdReviews ManualIdentityRequest[]   @relation("manualIdReviewer")
 
   @@map("operators")
 }
@@ -284,20 +284,20 @@ model Operator {
 /// 본인 명의 아님 — 운영자 수동 본인인증 요청 큐 (privacy-design: 고유식별정보=신분증).
 /// 신분증 사진은 S3 키만 보관(KMS 암호화). 검토 완료 후 30일 자동 파기(purgeAt).
 model ManualIdentityRequest {
-  id          String               @id @default(cuid())
-  name        String
-  phone       String
+  id           String               @id @default(cuid())
+  name         String
+  phone        String
   /// 신분증 사진 S3 객체 키 (평문 URL 보관 금지)
-  idCardS3Key String               @map("id_card_s3_key")
-  note        String?              @db.Text
-  status      ManualIdReviewStatus @default(pending)
-  reviewerId  String?              @map("reviewer_id")
-  reviewer    Operator?            @relation("manualIdReviewer", fields: [reviewerId], references: [id])
-  rejectReason String?             @map("reject_reason")
-  createdAt   DateTime             @default(now()) @map("created_at")
-  reviewedAt  DateTime?            @map("reviewed_at")
+  idCardS3Key  String               @map("id_card_s3_key")
+  note         String?              @db.Text
+  status       ManualIdReviewStatus @default(pending)
+  reviewerId   String?              @map("reviewer_id")
+  reviewer     Operator?            @relation("manualIdReviewer", fields: [reviewerId], references: [id])
+  rejectReason String?              @map("reject_reason")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  reviewedAt   DateTime?            @map("reviewed_at")
   /// 검토 완료 후 30일 자동 파기 시각
-  purgeAt     DateTime?            @map("purge_at")
+  purgeAt      DateTime?            @map("purge_at")
 
   @@index([status, createdAt])
   @@map("manual_identity_requests")
@@ -361,15 +361,15 @@ model VerificationBadge {
 
 /// 모든 서류 열람·처리 기록 (privacy-design §2-4, 1년 보관)
 model AccessLog {
-  id           String       @id @default(cuid())
-  operatorId   String       @map("operator_id")
-  operator     Operator     @relation(fields: [operatorId], references: [id])
-  targetUserId String?      @map("target_user_id")
-  documentId   String?      @map("document_id")
-  applicationId String?     @map("application_id")
-  action       AccessAction
-  ip           String?
-  at           DateTime     @default(now())
+  id            String       @id @default(cuid())
+  operatorId    String       @map("operator_id")
+  operator      Operator     @relation(fields: [operatorId], references: [id])
+  targetUserId  String?      @map("target_user_id")
+  documentId    String?      @map("document_id")
+  applicationId String?      @map("application_id")
+  action        AccessAction
+  ip            String?
+  at            DateTime     @default(now())
 
   @@index([at])
   @@index([operatorId])
@@ -451,18 +451,18 @@ model CreditTransaction {
 
 /// 회원 추천 보상 원장 — 추천인이 받은 보상 1건. 피추천인×타입 1회(멱등).
 model ReferralReward {
-  id         String               @id @default(cuid())
-  referrerId String               @map("referrer_id")
-  refereeId  String               @map("referee_id")
-  referrer   User                 @relation("rewardReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
-  referee    User                 @relation("rewardReferee", fields: [refereeId], references: [id], onDelete: Cascade)
-  type       ReferralRewardType
-  credits    Int
-  status     ReferralRewardStatus @default(granted)
+  id           String               @id @default(cuid())
+  referrerId   String               @map("referrer_id")
+  refereeId    String               @map("referee_id")
+  referrer     User                 @relation("rewardReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee      User                 @relation("rewardReferee", fields: [refereeId], references: [id], onDelete: Cascade)
+  type         ReferralRewardType
+  credits      Int
+  status       ReferralRewardStatus @default(granted)
   /// 결제 보상의 경우 참조 주문
-  refId      String?              @map("ref_id")
-  createdAt  DateTime             @default(now()) @map("created_at")
-  clawedBackAt DateTime?          @map("clawed_back_at")
+  refId        String?              @map("ref_id")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  clawedBackAt DateTime?            @map("clawed_back_at")
 
   @@unique([refereeId, type])
   @@index([referrerId])
@@ -543,22 +543,24 @@ enum PaymentStatus {
 
 /// 크레딧 충전 주문 (PortOne v2)
 model Order {
-  id            String        @id @default(cuid())
-  userId        String        @map("user_id")
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  packageId     String        @map("package_id")
-  amountWon     Int           @map("amount_won")
-  credits       Int // 보너스 포함 지급 크레딧
-  baseCredits   Int           @map("base_credits") // 환불 단가 계산용(보너스 제외)
-  status        PaymentStatus @default(pending)
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId   String        @map("package_id")
+  amountWon   Int           @map("amount_won")
+  credits     Int // 보너스 포함 지급 크레딧
+  baseCredits Int           @map("base_credits") // 환불 단가 계산용(보너스 제외)
+  status      PaymentStatus @default(pending)
   /// 결제 식별자 — IAP transactionId(Apple/Google) 또는 PortOne paymentId
-  paymentId     String?       @map("payment_id")
+  paymentId   String?       @map("payment_id")
   /// 결제 제공자 — 'iap_apple' | 'iap_google' (v1.0) | 'portone' (v1.1)
-  provider      String        @default("iap_apple")
-  refundedWon   Int           @default(0) @map("refunded_won")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  paidAt        DateTime?     @map("paid_at")
+  provider    String        @default("iap_apple")
+  refundedWon Int           @default(0) @map("refunded_won")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  paidAt      DateTime?     @map("paid_at")
 
+  /// IAP 멱등 — 동일 영수증(provider+transactionId) 2배 적립 차단. payment_id NULL(미결제)은 Postgres에서 서로 distinct.
+  @@unique([provider, paymentId], map: "orders_provider_payment_id_key")
   @@index([userId, createdAt])
   @@index([status])
   @@map("orders")
