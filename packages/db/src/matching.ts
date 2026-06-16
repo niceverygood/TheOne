@@ -35,6 +35,13 @@ export async function sendLetter(args: {
   if (fromId === toId) throw new Error('cannot_letter_self');
   if (letter.length < LETTER_MIN_LEN) throw new Error('letter_too_short');
 
+  // 발신자가 정지/강퇴/탈퇴 상태면 발송 불가(활동 회원만 신청 가능).
+  const sender = await prisma.user.findUnique({
+    where: { id: fromId },
+    select: { status: true },
+  });
+  if (!sender || sender.status !== 'active') throw new Error('sender_inactive');
+
   // 차단 관계(양방향)면 발송 불가
   const blocked = await listBlockedIds(fromId);
   if (blocked.includes(toId)) throw new Error('blocked');

@@ -5,23 +5,44 @@
 import { prisma } from './index';
 import type { ReportCategory } from '@prisma/client';
 
+/** 자동 일시정지 임계값 — '서로 다른 신고자' 수 기준(1명의 반복 신고로는 트리거되지 않음). */
 export const AUTO_SUSPEND_THRESHOLD = 3;
 
-/** 신고 접수 → 누적 3회면 자동 일시정지 */
+/**
+ * 신고 접수 → 서로 다른 신고자 3명 이상이면 자동 일시정지.
+ * 보복 무기화 방지: (1) 같은 신고자의 같은 대상 미처리 신고는 중복 생성하지 않고 갱신,
+ * (2) 자동정지는 신고 '건수'가 아니라 '서로 다른 신고자 수'로만 판단.
+ */
 export async function createReport(args: {
   reporterId: string;
   reportedId: string;
   category: ReportCategory;
   detail?: string;
 }) {
-  const report = await prisma.reportLog.create({ data: args });
+  if (args.reporterId === args.reportedId) throw new Error('cannot_report_self');
 
-  const openCount = await prisma.reportLog.count({
-    where: { reportedId: args.reportedId, handledAt: null },
+  // 같은 신고자가 같은 대상에 미처리 신고를 이미 했으면 중복 생성 금지(보복성 다중신고 차단).
+  const existing = await prisma.reportLog.findFirst({
+    where: { reporterId: args.reporterId, reportedId: args.reportedId, handledAt: null },
+    select: { id: true },
   });
+  const report = existing
+    ? await prisma.reportLog.update({
+        where: { id: existing.id },
+        data: { category: args.category, detail: args.detail },
+      })
+    : await prisma.reportLog.create({ data: args });
+
+  // 미처리 신고를 올린 '서로 다른 신고자' 수
+  const distinct = await prisma.reportLog.findMany({
+    where: { reportedId: args.reportedId, handledAt: null },
+    distinct: ['reporterId'],
+    select: { reporterId: true },
+  });
+  const reporterCount = distinct.length;
 
   let autoSuspended = false;
-  if (openCount >= AUTO_SUSPEND_THRESHOLD) {
+  if (reporterCount >= AUTO_SUSPEND_THRESHOLD) {
     const target = await prisma.user.findUnique({ where: { id: args.reportedId } });
     if (target && target.status === 'active') {
       await prisma.user.update({
@@ -31,7 +52,7 @@ export async function createReport(args: {
       autoSuspended = true;
     }
   }
-  return { report, openCount, autoSuspended };
+  return { report, openCount: reporterCount, autoSuspended };
 }
 
 /** 사용자 간 차단 — 차단자는 피차단자를 큐레이션·매칭·채팅에서 더 이상 보지 않는다(중복은 무시). */

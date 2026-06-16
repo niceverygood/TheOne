@@ -4,7 +4,13 @@ import { sendLetter, InsufficientCreditError } from '@theone/db';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const KNOWN = ['cannot_letter_self', 'letter_too_short', 'blocked', 'already_sent'];
+const KNOWN = [
+  'cannot_letter_self',
+  'letter_too_short',
+  'blocked',
+  'already_sent',
+  'sender_inactive',
+];
 
 /**
  * POST /api/letter/send
