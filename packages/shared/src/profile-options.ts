@@ -189,6 +189,17 @@ export function regionLabel(value?: string | null): string | undefined {
   return value;
 }
 
+/**
+ * 지역 저장값(영문 슬러그 `시도` 또는 `시도.세부`) → 매칭 인접그래프 키(한글 시도).
+ * 예: `seoul.gangnam` → `서울`, `seoul` → `서울`. 이미 한글이면 그대로.
+ * 매칭(REGION_ADJACENCY)은 한글 시도 키를 쓰므로, 후보 region 주입 전 반드시 정규화한다.
+ */
+export function toAdjacencyKey(region?: string | null): string {
+  if (!region) return '';
+  const sido = region.split('.')[0];
+  return REGIONS.find((r) => r.value === sido)?.label ?? region;
+}
+
 /** 취미 (다중선택). '기타'는 자유 입력으로 보강(value=etc). */
 export const HOBBIES: Option[] = [
   { value: 'travel', label: '여행' },

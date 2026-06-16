@@ -10,6 +10,7 @@ import {
   scoreCandidate,
   surveyAlignment,
   surveyBreakdown,
+  toAdjacencyKey,
   type Candidate,
   type VerificationType,
 } from '@theone/shared';
@@ -67,13 +68,15 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
     where: { id: userId },
     include: {
       profile: { select: { region: true, surveyAnswers: true } },
-      badges: { select: { type: true } },
+      // 만료된 인증 뱃지는 매칭 점수에서 제외(유효기간 1년).
+      badges: { where: { expiresAt: { gt: new Date() } }, select: { type: true } },
     },
   });
   if (!u || !u.birth) return null;
   return {
     id: u.id,
-    region: u.profile?.region ?? '서울',
+    // 저장값(영문 슬러그)을 인접그래프 키(한글 시도)로 정규화 — 안 하면 지역필터/가산이 죽는다.
+    region: toAdjacencyKey(u.profile?.region) || '서울',
     age: ageFromBirth(u.birth),
     badges: u.badges.map((b) => b.type),
     survey: u.profile?.surveyAnswers ?? [],
@@ -125,16 +128,19 @@ export async function getTodayCuration(userId: string) {
       ? 'female'
       : 'male';
 
+  // 차단 관계(양방향)는 후보 풀에서 제외 — 차단한/당한 상대가 오늘의 1명으로 추천되지 않도록.
+  const blockedIds = await listBlockedIds(userId);
+
   const pool = await prisma.user.findMany({
     where: {
       status: 'active',
       gender: oppGender,
-      id: { notIn: [userId, ...seenIds] },
+      id: { notIn: [userId, ...seenIds, ...blockedIds] },
       birth: { not: null },
     },
     include: {
       profile: { select: { region: true, surveyAnswers: true } },
-      badges: { select: { type: true } },
+      badges: { where: { expiresAt: { gt: new Date() } }, select: { type: true } },
     },
     take: 500,
   });
@@ -144,7 +150,7 @@ export async function getTodayCuration(userId: string) {
     .map((p) => ({
       raw: p,
       cand: {
-        region: p.profile?.region ?? '서울',
+        region: toAdjacencyKey(p.profile?.region) || '서울',
         age: ageFromBirth(p.birth!),
         badges: p.badges.map((b) => b.type) as VerificationType[],
         survey: p.profile?.surveyAnswers ?? [],
@@ -157,10 +163,22 @@ export async function getTodayCuration(userId: string) {
     badges: viewer.badges,
     survey: viewer.survey,
   };
-  const best = pickTodayCuration(
+  let best = pickTodayCuration(
     viewerCand,
     candidates.map((c) => c.cand),
   );
+  // 콜드스타트 폴백 — 지역/나이 하드필터로 적격자가 없으면 필터를 풀고 점수 최고를 고른다.
+  // (풀 자체가 비어 있지 않은 한, 신규 회원이 데드엔드 화면을 보지 않게 한다.)
+  if (!best && candidates.length > 0) {
+    let bestScore = -Infinity;
+    for (const c of candidates) {
+      const sc = scoreCandidate(viewerCand, c.cand);
+      if (sc > bestScore) {
+        bestScore = sc;
+        best = c.cand;
+      }
+    }
+  }
   if (!best) return null;
 
   const chosen = candidates.find((c) => c.cand === best)!;
