@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   PHOTO_STUDIO_IDENTITY_RULES,
@@ -6,6 +7,17 @@ import {
   resolvePhotoStudioStyles,
   type PhotoStudioImage,
 } from '@theone/shared';
+import { rateLimit } from '@/lib/rate-limit';
+
+// 공개 엔드포인트 비용 방어 — IP당 시간당 생성 횟수 상한(1회=장면 N장 모델 호출).
+const STUDIO_RATE_MAX = 6;
+const STUDIO_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+function clientIpHash(req: NextRequest): string {
+  const xff = req.headers.get('x-forwarded-for') ?? '';
+  const ip = xff.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown';
+  return createHash('sha256').update(ip).digest('hex').slice(0, 24);
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -102,6 +114,10 @@ export async function POST(req: NextRequest) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (!openaiKey && !openrouterKey) {
     return NextResponse.json({ ok: false, reason: 'not_configured' }, { status: 503 });
+  }
+
+  if (!rateLimit(`aistudio:${clientIpHash(req)}`, STUDIO_RATE_MAX, STUDIO_RATE_WINDOW_MS)) {
+    return NextResponse.json({ ok: false, reason: 'rate_limit' }, { status: 429 });
   }
 
   const form = await req.formData().catch(() => null);

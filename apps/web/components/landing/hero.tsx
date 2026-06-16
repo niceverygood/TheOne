@@ -28,12 +28,17 @@ export function Hero() {
       </div>
 
       <Link
-        href="#waitlist"
-        className="mt-14 inline-flex items-center justify-center border border-champagne px-9 py-4 text-sm text-champagne transition-opacity hover:opacity-80"
+        href="/preview"
+        className="mt-14 inline-flex items-center justify-center bg-champagne px-9 py-4 text-sm text-ink transition-opacity hover:opacity-90"
       >
-        사전등록 신청하기
+        사진 한 장으로 매칭 프로필 미리보기
       </Link>
-      <p className="font-sans-kr mt-4 text-xs text-gray">출시 알림 · 초대코드 우선 발급</p>
+      <Link
+        href="#waitlist"
+        className="font-sans-kr mt-4 text-xs text-gray underline-offset-4 transition-colors hover:text-ivory-3"
+      >
+        바로 사전등록만 하기 →
+      </Link>
     </section>
   );
 }
