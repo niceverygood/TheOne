@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -31,10 +31,14 @@ export default function Step02() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
   const [photos, setPhotos] = useState<string[]>(useSignup.getState().photos ?? []);
+  // 사진 추가 방식 선택 시트(앨범/카메라) — 안드 시스템 팝업 대신 브랜드 모달
+  const [addOpen, setAddOpen] = useState(false);
 
   const remaining = MAX_PHOTOS - photos.length;
 
-  // 앨범에서 선택 (안드로이드 시스템 포토피커 — 별도 권한 불필요)
+  // 앨범에서 선택
+  // Android 는 legacy 피커(ACTION_GET_CONTENT)로 열어 즐겨찾기 등 전체 앨범·폴더를 탐색하게 한다.
+  // (시스템 포토피커는 일부 기기에서 즐겨찾기/사용자 폴더가 안 보임)
   async function pickFromLibrary() {
     if (remaining <= 0) return;
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -42,6 +46,7 @@ export default function Step02() {
       allowsMultipleSelection: true,
       selectionLimit: remaining,
       quality: 0.85,
+      legacy: Platform.OS === 'android',
     });
     if (!res.canceled) {
       setPhotos((prev) => [...prev, ...res.assets.map((a) => a.uri)].slice(0, MAX_PHOTOS));
@@ -62,14 +67,10 @@ export default function Step02() {
     }
   }
 
-  // "+" 탭 → 앨범/카메라 선택
+  // "+" 탭 → 브랜드 시트 오픈(앨범/카메라)
   function onAdd() {
     if (remaining <= 0) return;
-    Alert.alert('사진 추가', '어떻게 추가할까요?', [
-      { text: '앨범에서 선택', onPress: pickFromLibrary },
-      { text: '카메라로 촬영', onPress: takePhoto },
-      { text: '취소', style: 'cancel' },
-    ]);
+    setAddOpen(true);
   }
 
   function removeAt(i: number) {
@@ -198,7 +199,9 @@ export default function Step02() {
                 borderWidth: 1,
                 borderStyle: 'dashed',
                 borderColor: C.graySoft,
-                borderRadius: RADIUS,
+                // Android 는 dashed + borderRadius 조합에서 하단/모서리가 잘려 보이는 렌더 버그가 있어
+                // 점선 박스만 각지게(radius 0) 둔다. (사진 카드는 radius 유지)
+                borderRadius: 0,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -395,6 +398,105 @@ export default function Step02() {
           </View>
         ))}
       </View>
+
+      {/* 사진 추가 방식 — 더원 톤 바텀시트 (안드 시스템 팝업 대체) */}
+      <Modal
+        visible={addOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddOpen(false)}
+      >
+        <Pressable
+          onPress={() => setAddOpen(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(15,16,20,0.55)', justifyContent: 'flex-end' }}
+        >
+          {/* 시트 본문 — 탭이 오버레이로 전파되지 않게 별도 Pressable */}
+          <Pressable
+            onPress={() => {}}
+            style={{
+              backgroundColor: C.ivory,
+              borderTopLeftRadius: RADIUS,
+              borderTopRightRadius: RADIUS,
+              borderTopWidth: 1,
+              borderColor: C.hairLight,
+              paddingTop: 22,
+              paddingBottom: 34,
+              paddingHorizontal: 24,
+            }}
+          >
+            <Txt variant="serifEn" size={13} color={C.champagne}>
+              Add Photo
+            </Txt>
+            <Txt variant="serifKr" size={20} weight="700" color={C.ink2} style={{ marginTop: 3 }}>
+              사진 추가
+            </Txt>
+            <Txt size={13} color={C.gray} style={{ marginTop: 4 }}>
+              어떻게 추가할까요?
+            </Txt>
+
+            <View style={{ marginTop: 16 }}>
+              <Pressable
+                onPress={() => {
+                  setAddOpen(false);
+                  setTimeout(pickFromLibrary, Platform.OS === 'android' ? 250 : 0);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 16,
+                  borderTopWidth: 1,
+                  borderColor: C.hairLight,
+                }}
+              >
+                <Txt size={15} color={C.ink2}>
+                  앨범에서 선택
+                </Txt>
+                <Txt variant="mono" size={14} color={C.graySoft}>
+                  ›
+                </Txt>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setAddOpen(false);
+                  setTimeout(takePhoto, Platform.OS === 'android' ? 250 : 0);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 16,
+                  borderTopWidth: 1,
+                  borderColor: C.hairLight,
+                }}
+              >
+                <Txt size={15} color={C.ink2}>
+                  카메라로 촬영
+                </Txt>
+                <Txt variant="mono" size={14} color={C.graySoft}>
+                  ›
+                </Txt>
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => setAddOpen(false)}
+              style={{
+                marginTop: 14,
+                paddingVertical: 14,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: C.hairLight,
+                borderRadius: RADIUS,
+              }}
+            >
+              <Txt size={14} color={C.gray}>
+                취소
+              </Txt>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </AppShell>
   );
 }
