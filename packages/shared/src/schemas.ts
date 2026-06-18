@@ -286,6 +286,10 @@ export interface CurationCandidateMeta {
   region: string | null;
   age: number | null;
   jobCategory: string;
+  /** 직업 상세(예: 약사) — 식별정보 아님, 노출 허용 */
+  jobDetail: string | null;
+  /** 프로필 사진(data URI 또는 URL). 첫 장이 대표. */
+  photos: string[];
   /** 인증 뱃지 수(verified dots) */
   badgeCount: number;
   /** 자기소개 한 줄(있으면) */

@@ -10,16 +10,19 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
-# 폰 셀카 사실감 — DSLR/스튜디오/보정/보케 금지(= AI 티 제거).
+# 폰 캐주얼 스냅 사실감 — DSLR/스튜디오/보정/보케 금지(= AI 티 제거). 셀카 강제 안 함.
 REAL = (
-    " . Make it look like a REAL ordinary smartphone photo: natural phone-camera quality, "
+    " . Make it look like a REAL ordinary casual phone snapshot: natural phone-camera quality, "
     "soft natural light, candid and unposed, real skin texture with subtle pores and minor "
     "imperfections, slightly imperfect framing. NOT a professional photoshoot, NOT studio "
     "lighting, NO shallow depth-of-field bokeh, NO editorial retouching, no glamour, no DSLR "
     "look, no beauty filter. Photorealistic, vertical 3:4. No text, no watermark."
 )
+# 동일인물 유지 + 각도/포즈는 확실히 바꿈(정면 복제 금지).
 EDIT_LOCK = (
-    "This is the same person — keep their exact face, hair, and features identical. "
+    "Keep the EXACT same person and identity (same face, hair, features), but clearly CHANGE "
+    "the camera angle, head direction and pose as described below — do NOT reproduce the same "
+    "frontal face. "
 )
 personas = json.load(open(os.path.join(HERE, "personas.json")))
 

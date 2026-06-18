@@ -3,56 +3,56 @@
     "id": "m1",
     "gender": "male",
     "name": "전공의 · 30",
-    "base": "A casual everyday selfie of a young Korean man around 30, youthful clean face, soft short black hair, light friendly smile, wearing a plain grey sweatshirt, at home with soft daylight from a window",
-    "var1": "the same young man taking a casual mirror selfie in a hallway, wearing a casual jacket, holding his phone",
-    "var2": "the same young man outdoors on a sunny street, candid half-body photo taken by a friend, casual hoodie, relaxed laugh"
+    "base": "A casual front-facing selfie of a Korean man, age 30, soft rounded friendly face, warm approachable look, short neat clean-cut black hair, no glasses, average healthy build, light easy smile, wearing a plain grey sweatshirt, at home with soft daylight",
+    "var1": "a candid photo of the same man taken by a friend from the SIDE, three-quarter profile, he is looking away to the side and laughing, NOT facing the camera, upper body, outdoors on a street in daylight, casual hoodie",
+    "var2": "a wide casual photo of the same man taken from a few steps away by a friend, full upper body, he is walking and looking off to the side, in a park on a clear day, casual jacket"
   },
   {
     "id": "m2",
     "gender": "male",
-    "name": "금융/컨설팅 · 31",
-    "base": "A casual everyday selfie of a young Korean man around 31, neat short hair, clean youthful look, slight smile, wearing a simple navy crewneck, soft indoor light",
-    "var1": "the same young man sitting at a cafe, casual selfie holding a coffee, daytime window light",
-    "var2": "the same young man outdoors in a park on a clear day, candid photo taken by a friend, light knit, natural daylight"
+    "name": "금융/컨설팅 · 33",
+    "base": "A casual front-facing selfie of a Korean man, age 33, longer angular sharp face with defined jaw, mature confident look, slightly longer styled dark hair pushed back, thin metal glasses, slim tall build, calm slight smile, wearing a simple navy crewneck, soft indoor light",
+    "var1": "a candid photo of the same man taken by a friend at a slight angle, he is glancing to the side, three-quarter view, holding a coffee, seated at a cafe by a window in daytime, NOT looking at the camera",
+    "var2": "a casual photo of the same man taken from a low angle by a friend, standing relaxed and looking into the distance, upper body, on a city street with buildings behind, light knit, daytime"
   },
   {
     "id": "f1",
     "gender": "female",
     "name": "약사 · 25",
-    "base": "A casual everyday front-facing selfie of a young Korean woman around 25, fresh youthful face, long soft dark-brown hair, gentle natural smile, minimal makeup, wearing a cream knit, soft window light at home",
-    "var1": "the same young woman taking a mirror selfie in casual clothes, daytime indoor light, holding her phone",
-    "var2": "the same young woman at a cafe by the window, candid photo holding a drink, casual outfit, soft daylight"
+    "base": "A casual front-facing selfie of a Korean woman, age 25, round soft baby-faced youthful look, fair bright skin, short chin-length rounded bob with NO bangs, almost bare fresh makeup, cute innocent vibe, gentle small smile, wearing a cream knit, soft window light at home",
+    "var1": "a candid photo of the same woman taken by a friend from the side, three-quarter profile, she is looking away and smiling softly, NOT facing the camera, upper body, at a bright cafe by a window in daytime",
+    "var2": "a wider casual photo of the same woman taken a few steps away by a friend, half to full body, she is standing relaxed looking off to the side, on a sunny tree-lined street, casual cardigan"
   },
   {
     "id": "f2",
     "gender": "female",
     "name": "방송 아나운서 · 26",
-    "base": "A casual everyday selfie of a young Korean woman around 26, bright lively youthful face, long straight dark hair, light open smile, fresh natural makeup, wearing a pastel top, soft daylight",
-    "var1": "the same young woman outdoors on a sunny day, candid half-body photo taken by a friend, casual blouse, natural daylight",
-    "var2": "the same young woman taking a selfie in a car passenger seat, daytime, casual look, relaxed smile"
+    "base": "A casual front-facing selfie of a Korean woman, age 26, long slim oval face, very long straight light-brown dyed hair with see-through bangs, bright lively energetic vibe, fresh dewy fuller makeup, wide open happy smile, wearing a pastel blouse, soft daylight",
+    "var1": "a candid photo of the same woman taken by a friend from a side angle, she is turning her head and laughing, three-quarter view looking away, outdoors on a sunny day, NOT facing the camera",
+    "var2": "a casual photo of the same woman taken from a slightly high angle by a friend, she is sitting and looking up and to the side, upper body, at an outdoor terrace cafe in bright daylight"
   },
   {
     "id": "f3",
     "gender": "female",
-    "name": "디자이너 · 24",
-    "base": "A casual everyday front-facing selfie of a young Korean woman around 24, small youthful face, trendy wavy shoulder-length hair with curtain bangs, soft smile, light modern makeup, wearing a casual tee, soft indoor light",
-    "var1": "the same young woman taking a mirror selfie in a casual oversized shirt, daytime, holding her phone",
-    "var2": "the same young woman outdoors at a quiet street cafe, candid photo taken by a friend, casual chic outfit, natural daylight"
+    "name": "프로덕트 디자이너 · 24",
+    "base": "A casual front-facing selfie of a Korean woman, age 24, small sharp V-line face, jet-black short wavy shoulder-length hair with wispy curtain bangs, chic trendy cool vibe, defined modern makeup with bold brows, calm subtle smirk, wearing a casual black tee, soft indoor light",
+    "var1": "a candid photo of the same woman taken by a friend from the side, near profile, she is looking down and away from the camera, upper body, at a minimalist cafe in daytime, chic outfit",
+    "var2": "a casual full-body street-style photo of the same woman taken from a distance by a friend, she is walking and looking to the side, on an urban street, oversized blazer, daytime"
   },
   {
     "id": "f4",
     "gender": "female",
     "name": "변호사(주니어) · 27",
-    "base": "A casual everyday selfie of a young Korean woman around 27, refined youthful face, shoulder-length layered dark hair, calm gentle smile, understated natural makeup, wearing a simple white tee, soft window light",
-    "var1": "the same young woman at a cafe, casual selfie holding a drink, daytime light, relaxed expression",
-    "var2": "the same young woman walking outdoors on a leafy street, candid photo taken by a friend, casual beige cardigan, soft daylight"
+    "base": "A casual front-facing selfie of a Korean woman, age 27, slim elongated elegant face, dark hair pulled back into a neat low ponytail showing the forehead, thin round glasses, calm intelligent refined vibe, understated natural makeup, composed gentle smile, wearing a simple white shirt, soft window light",
+    "var1": "a candid photo of the same woman taken by a friend from a three-quarter side angle, she is looking off to the side thoughtfully, NOT facing the camera, upper body, walking a leafy street at daytime",
+    "var2": "a casual photo of the same woman taken from a few steps away by a friend, half body, seated and turned to the side looking out a window, at a quiet cafe, beige cardigan, daytime"
   },
   {
     "id": "f5",
     "gender": "female",
-    "name": "마케터 · 28",
-    "base": "A casual everyday front-facing selfie of a young Korean woman around 28, elegant but youthful face, soft wavy medium hair, warm natural smile, soft makeup, wearing a light beige blouse, soft indoor daylight",
-    "var1": "the same young woman taking a mirror selfie in casual weekend clothes, daytime, holding her phone",
-    "var2": "the same young woman outdoors near a city street on a clear day, candid half-body photo taken by a friend, casual coat, natural daylight"
+    "name": "마케터 · 29",
+    "base": "A casual front-facing selfie of a Korean woman, age 29, mature defined attractive features with high cheekbones, long dark-brown wavy hair with a deep side part, sophisticated glamorous vibe, fuller polished makeup with defined lips, warm confident smile, wearing a light beige blouse, soft indoor daylight",
+    "var1": "a candid photo of the same woman taken by a friend from the side, three-quarter profile, she is looking away into the distance, NOT facing the camera, upper body, on a city street in the late afternoon",
+    "var2": "a casual photo of the same woman taken from a slightly low angle by a friend, standing and glancing to the side, upper body, near a stylish building in daytime, casual coat"
   }
 ]

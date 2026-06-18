@@ -35,6 +35,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<CurationTodayR
       region: c.profile?.region ?? null,
       age: c.birth ? ageFromBirth(c.birth) : null,
       jobCategory: c.jobCategory,
+      jobDetail: c.profile?.jobDetail?.trim() ? c.profile.jobDetail.trim() : null,
+      photos: c.profile?.photos ?? [],
       badgeCount: c.badges?.length ?? 0,
       quote: intro?.about?.trim() ? intro.about.trim() : null,
     };

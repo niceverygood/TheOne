@@ -8,6 +8,7 @@ import { Btn, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 import { useSignup } from '../src/store';
 import { fetchTodayCuration } from '../src/signup-api';
+import type { CurationCandidateMeta } from '@theone/shared';
 
 /** API 미설정/설문 미완료 시 보여줄 목업 케미 3축. */
 const FALLBACK_CHEMI: { kr: string; value: number }[] = [
@@ -31,22 +32,38 @@ export default function Curation() {
   const blocked = useSignup((s) => s.blocked);
   const [axes, setAxes] = useState(FALLBACK_CHEMI);
   const [overall, setOverall] = useState<number | null>(null);
+  const [candidate, setCandidate] = useState<CurationCandidateMeta | null>(null);
   const [passed, setPassed] = useState(false);
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
 
-  // 오늘의 큐레이션 케미를 실데이터로 — 가치관 일치도가 더원의 킥.
+  // 오늘의 큐레이션을 실데이터로 — 후보(사진·프로필) + 케미(가치관 일치도)가 더원의 킥.
   useEffect(() => {
     if (!userId) return;
     let alive = true;
     fetchTodayCuration(userId).then((r) => {
-      if (!alive || !r.ok || !r.chemistry) return;
-      setAxes(r.chemistry.axes);
-      setOverall(r.chemistry.overall);
+      if (!alive || !r.ok) return;
+      if (r.candidate) setCandidate(r.candidate);
+      if (r.chemistry) {
+        setAxes(r.chemistry.axes);
+        setOverall(r.chemistry.overall);
+      }
     });
     return () => {
       alive = false;
     };
   }, [userId]);
+
+  // 실후보가 있으면 그 사진·프로필을, 없으면 프리뷰(앱 심사/데이터 미연동)로 폴백.
+  const heroPhoto = candidate?.photos?.[0];
+  const heroSource = heroPhoto ? { uri: heroPhoto } : previewPortraits.jiyoon;
+  const titleText = candidate ? (candidate.jobDetail ?? candidate.jobCategory) : '김지윤';
+  const subText = candidate
+    ? [candidate.age ? `${candidate.age}` : null, candidate.region].filter(Boolean).join(' · ')
+    : '32 · 변호사 · 서초';
+  const quoteText = candidate?.quote
+    ? `“${candidate.quote}”`
+    : '“주말엔 한남동 작은 갤러리들을 천천히 도는 걸 좋아해요.”';
+  const dots = candidate ? Math.max(1, Math.min(4, candidate.badgeCount)) : 4;
 
   // Pass — 확인 후 오늘의 큐레이션을 접고 자정 갱신 안내 상태로 전환
   function onPass() {
@@ -93,11 +110,7 @@ export default function Curation() {
     <Screen dark>
       {/* 풀블리드 인물 */}
       <View style={{ height: 520, position: 'relative' }}>
-        <Image
-          source={previewPortraits.jiyoon}
-          resizeMode="cover"
-          style={{ width: '100%', height: '100%' }}
-        />
+        <Image source={heroSource} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
         <View
           pointerEvents="none"
           style={{
@@ -164,12 +177,12 @@ export default function Curation() {
             backgroundColor: 'rgba(15,16,20,0.55)',
           }}
         >
-          <VerifiedDots marks={4} dark />
+          <VerifiedDots marks={dots} dark />
           <Txt variant="serifKr" size={32} weight="700" color={C.ivory} style={{ marginTop: 10 }}>
-            김지윤
+            {titleText}
           </Txt>
           <Txt size={14} color="rgba(250,247,242,0.78)" style={{ marginTop: 4 }}>
-            32 · 변호사 · 서초
+            {subText}
           </Txt>
         </View>
       </View>
@@ -177,7 +190,7 @@ export default function Curation() {
       {/* 본문 */}
       <View style={{ padding: 24 }}>
         <Txt variant="serifEn" size={17} color={C.champagne} style={{ lineHeight: 26 }}>
-          “주말엔 한남동 작은 갤러리들을 천천히 도는 걸 좋아해요.”
+          {quoteText}
         </Txt>
 
         {/* 추천 이유 — 문장형 근거(점수 비노출 정책) */}
