@@ -4,7 +4,7 @@
  * (DocUpload 가 데모라 실제 S3 키 대신 데모 키를 보낸다 — 운영 단계에서 업로드 키로 교체.)
  */
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { showAlert } from './brand-alert';
 import { useRouter } from 'expo-router';
 import type { VerificationType } from '@theone/shared';
 import { useSignup } from './store';
@@ -22,7 +22,7 @@ export function useVerifySubmit(opts: {
   const onSubmit = async () => {
     if (submitting) return;
     if (!userId) {
-      Alert.alert('가입이 필요해요', '4종 인증은 가입 완료 후 신청할 수 있습니다.');
+      showAlert('가입이 필요해요', '4종 인증은 가입 완료 후 신청할 수 있습니다.');
       return;
     }
     setSubmitting(true);
@@ -37,7 +37,7 @@ export function useVerifySubmit(opts: {
       router.push('/verify/reviewing');
       return;
     }
-    Alert.alert('신청에 실패했어요', res.message);
+    showAlert('신청에 실패했어요', res.message);
   };
 
   return { submitting, onSubmit };

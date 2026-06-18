@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, TextInput, View } from 'react-native';
+import { Linking, Modal, Pressable, TextInput, View } from 'react-native';
+import { showAlert } from './brand-alert';
 import { C, RADIUS } from './theme';
 import { Btn, Hairline, Txt } from './ui';
 import { useSignup } from './store';
@@ -33,10 +34,7 @@ const LEGAL_LABEL: Record<LegalDoc, string> = {
 /** 법무 문서를 외부 브라우저(웹)로 연다. */
 export function openLegal(doc: LegalDoc) {
   Linking.openURL(`${WEB_BASE}/legal/${doc}`).catch(() =>
-    Alert.alert(
-      LEGAL_LABEL[doc],
-      '문서를 여는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-    ),
+    showAlert(LEGAL_LABEL[doc], '문서를 여는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.'),
   );
 }
 
@@ -118,14 +116,14 @@ export function SafetySheet({
     });
     setBusy(false);
     close();
-    Alert.alert(
+    showAlert(
       '신고가 접수되었습니다',
       '운영진이 24시간 내 검토하며, 결과는 알림으로 알려드립니다. 누적 신고 시 상대 계정은 자동 정지됩니다.',
     );
   }
 
   function confirmBlock() {
-    Alert.alert(
+    showAlert(
       `${reportedName} 님을 차단할까요?`,
       '차단하면 서로의 큐레이션·매칭·대화에서 더 이상 노출되지 않습니다.',
       [
@@ -138,7 +136,7 @@ export function SafetySheet({
             await submitBlock({ blockerId: userId, blockedId: reportedId });
             close();
             onBlocked?.();
-            Alert.alert('차단 완료', `${reportedName} 님이 차단되었습니다.`);
+            showAlert('차단 완료', `${reportedName} 님이 차단되었습니다.`);
           },
         },
       ],

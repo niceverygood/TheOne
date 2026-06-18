@@ -9,6 +9,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { C } from '../src/theme';
 import { initSentry, Sentry } from '../src/sentry';
 import { ensureDailyCurationReminder } from '../src/notifications';
+import { BrandAlertHost } from '../src/brand-alert';
 
 // Sentry 초기화 — DSN 없으면 no-op
 initSentry();
@@ -48,6 +49,8 @@ function RootLayout() {
           animation: 'slide_from_right',
         }}
       />
+      {/* 브랜드 알림 호스트 — 앱 전역 showAlert() 렌더 (안드 시스템 팝업 대체) */}
+      <BrandAlertHost />
     </SafeAreaProvider>
   );
 }

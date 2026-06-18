@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { showAlert } from '../../src/brand-alert';
 import { useRouter } from 'expo-router';
 import { INTRO_SECTIONS, type IntroSections } from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
@@ -48,7 +49,7 @@ export default function Step08() {
       setSections(res.sections);
       setSource(res.source);
     } else {
-      Alert.alert('생성에 실패했어요', res.message);
+      showAlert('생성에 실패했어요', res.message);
     }
   };
 
@@ -61,7 +62,7 @@ export default function Step08() {
   const onSubmit = async () => {
     if (submitting) return;
     if (!signup.jobCategory) {
-      Alert.alert('직업을 선택해 주세요', '이전 단계에서 직업 카테고리를 먼저 선택해 주세요.');
+      showAlert('직업을 선택해 주세요', '이전 단계에서 직업 카테고리를 먼저 선택해 주세요.');
       return;
     }
     setSubmitting(true);
@@ -91,7 +92,7 @@ export default function Step08() {
       router.replace('/signup/complete');
       return;
     }
-    Alert.alert(
+    showAlert(
       res.reason === 'duplicate' ? '이미 가입된 정보예요' : '제출에 실패했어요',
       res.message,
     );

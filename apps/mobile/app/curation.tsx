@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
+import { showAlert } from '../src/brand-alert';
 import { useRouter } from 'expo-router';
 import { matchReasons } from '@theone/shared';
 import { C } from '../src/theme';
@@ -49,7 +50,7 @@ export default function Curation() {
 
   // Pass — 확인 후 오늘의 큐레이션을 접고 자정 갱신 안내 상태로 전환
   function onPass() {
-    Alert.alert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
+    showAlert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '넘기기', style: 'destructive', onPress: () => setPassed(true) },
     ]);

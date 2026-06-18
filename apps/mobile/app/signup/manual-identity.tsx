@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { showAlert } from '../../src/brand-alert';
 import { useRouter } from 'expo-router';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
@@ -65,14 +66,14 @@ export default function ManualIdentity() {
     });
     setSubmitting(false);
     if (res.ok) {
-      Alert.alert(
+      showAlert(
         '접수되었습니다',
         '운영자가 신분증을 확인한 뒤 입력하신 연락처로 안내드립니다. 보통 24시간 이내 처리됩니다.',
         [{ text: '확인', onPress: () => router.back() }],
       );
       return;
     }
-    Alert.alert('접수에 실패했어요', res.message);
+    showAlert('접수에 실패했어요', res.message);
   };
 
   return (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
+import { showAlert } from '../src/brand-alert';
 import { useRouter } from 'expo-router';
 import { CREDIT_PACKAGES } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
@@ -57,7 +58,7 @@ export default function Credits() {
     const pkg = CREDIT_PACKAGES[sel];
     if (!pkg) return;
     if (!userId) {
-      Alert.alert('가입 후 이용 가능', '크레딧 충전은 가입을 완료한 뒤 이용할 수 있습니다.');
+      showAlert('가입 후 이용 가능', '크레딧 충전은 가입을 완료한 뒤 이용할 수 있습니다.');
       return;
     }
     setBusy(true);
@@ -71,7 +72,7 @@ export default function Credits() {
       if (demoMode) {
         await iap.finish(purchase);
         setBalance((b) => (b ?? 0) + pkg.credits);
-        Alert.alert('충전 완료', `${pkg.credits} 크레딧이 적립되었습니다.`, [
+        showAlert('충전 완료', `${pkg.credits} 크레딧이 적립되었습니다.`, [
           { text: '확인', onPress: () => router.back() },
         ]);
         return;
@@ -92,12 +93,12 @@ export default function Credits() {
 
       await iap.finish(purchase);
       await loadBalance();
-      Alert.alert('충전 완료', `${data.credited} 크레딧이 적립되었습니다.`, [
+      showAlert('충전 완료', `${data.credited} 크레딧이 적립되었습니다.`, [
         { text: '확인', onPress: () => router.back() },
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'unknown';
-      Alert.alert('결제 실패', msg);
+      showAlert('결제 실패', msg);
     } finally {
       setBusy(false);
     }

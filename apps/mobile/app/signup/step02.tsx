@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, View } from 'react-native';
+import { showAlert } from '../../src/brand-alert';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -58,7 +59,7 @@ export default function Step02() {
     if (remaining <= 0) return;
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해 주세요.');
+      showAlert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해 주세요.');
       return;
     }
     const res = await ImagePicker.launchCameraAsync({ quality: 0.85 });
@@ -134,7 +135,7 @@ export default function Step02() {
           data.reason === 'not_configured'
             ? 'AI 스튜디오가 아직 준비 중입니다. 잠시 후 다시 시도해 주세요.'
             : '생성에 실패했습니다. 다른 사진으로 다시 시도해 주세요.';
-        Alert.alert('AI 스튜디오', msg);
+        showAlert('AI 스튜디오', msg);
         return;
       }
       const byId = new Map(PHOTO_STUDIO_STYLES.map((s) => [s.id as string, s.label]));
@@ -147,7 +148,7 @@ export default function Step02() {
         })),
       );
     } catch {
-      Alert.alert('AI 스튜디오', '네트워크 오류로 생성하지 못했습니다.');
+      showAlert('AI 스튜디오', '네트워크 오류로 생성하지 못했습니다.');
     } finally {
       setAiBusy(false);
     }
@@ -157,7 +158,7 @@ export default function Step02() {
     const r = aiResults[idx];
     if (!r || r.added) return;
     if (photos.length >= MAX_PHOTOS) {
-      Alert.alert('사진이 가득 찼어요', `최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`);
+      showAlert('사진이 가득 찼어요', `최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`);
       return;
     }
     setPhotos((prev) => [...prev, r.uri].slice(0, MAX_PHOTOS));
