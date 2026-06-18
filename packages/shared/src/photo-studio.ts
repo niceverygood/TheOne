@@ -1,5 +1,5 @@
 /**
- * AI 스튜디오 보정 — 사진 1장으로 스타일 4종 프로필 사진 생성 (gpt-image-2).
+ * AI 스튜디오 보정 — 사진 1장으로 선택한 장면(기본 2종)의 프로필 사진 생성 (gpt-image-2).
  *
  * 절대 원칙(trust-safety): 동일 인물 유지. 이목구비·골격·피부톤을 바꾸지 않는다.
  * 조명·배경·구도·색감만 스튜디오급으로 올린다. 검증 위원은 원본과 대조한다.
@@ -95,13 +95,12 @@ export const PHOTO_STUDIO_STYLES = [
 
 export type PhotoStudioStyleId = (typeof PHOTO_STUDIO_STYLES)[number]['id'];
 
-/** 기본 생성 세트 — 장면 미선택(구버전 앱 호환) 시 이 4종을 생성한다. */
-export const PHOTO_STUDIO_DEFAULT_STYLE_IDS: PhotoStudioStyleId[] = [
-  'studio',
-  'natural',
-  'business',
-  'film',
-];
+/**
+ * 기본 생성 세트 — 장면 미선택(구버전 앱 호환) 시, 그리고 모바일 가입화면의
+ * 초기 선택값으로 사용한다. 한 장당 생성이 오래 걸려(1~3분) 기본은 2종만 만든다.
+ * 더 원하면 사용자가 직접 장면을 추가 선택(최대 PHOTO_STUDIO_MAX_SELECT)할 수 있다.
+ */
+export const PHOTO_STUDIO_DEFAULT_STYLE_IDS: PhotoStudioStyleId[] = ['studio', 'natural'];
 
 /** 한 번에 생성 가능한 최대 장면 수 (함수 타임아웃·비용 보호). */
 export const PHOTO_STUDIO_MAX_SELECT = 5;

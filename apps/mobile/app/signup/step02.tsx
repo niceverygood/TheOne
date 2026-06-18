@@ -80,7 +80,7 @@ export default function Step02() {
   // AI 스튜디오 — 첫 사진(대표) 기반으로 선택한 장면을 생성. 동일 인물 유지가 원칙.
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResults, setAiResults] = useState<AiResult[]>([]);
-  // 사용자가 고른 배경/장면 — 기본은 클래식 4종, 최대 5종까지.
+  // 사용자가 고른 배경/장면 — 기본 2종(생성 시간 절약), 최대 5종까지.
   const [selectedStyles, setSelectedStyles] = useState<string[]>([
     ...PHOTO_STUDIO_DEFAULT_STYLE_IDS,
   ]);
@@ -190,26 +190,30 @@ export default function Step02() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {slots.map((slot, i) =>
           slot === 'add' ? (
-            <Pressable
-              key="add"
-              onPress={onAdd}
-              style={{
-                width: '31.5%',
-                aspectRatio: 3 / 4,
-                borderWidth: 1,
-                borderStyle: 'dashed',
-                borderColor: C.graySoft,
-                // Android 는 dashed + borderRadius 조합에서 하단/모서리가 잘려 보이는 렌더 버그가 있어
-                // 점선 박스만 각지게(radius 0) 둔다. (사진 카드는 radius 유지)
-                borderRadius: 0,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Txt variant="mono" size={20} color={C.graySoft}>
-                +
-              </Txt>
-            </Pressable>
+            // 비율 유지: aspectRatio 는 사진 슬롯과 동일하게 바깥 View 에 두고,
+            // 점선 Pressable 은 100% 채움 — in-flow 자식(+)이 있을 때 Pressable 에 직접
+            // aspectRatio 를 주면 일부 렌더러에서 세로가 무너져(가로>세로) 비율이 깨진다.
+            <View key="add" style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
+              <Pressable
+                onPress={onAdd}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: C.graySoft,
+                  // Android 는 dashed + borderRadius 조합에서 하단/모서리가 잘려 보이는 렌더 버그가 있어
+                  // 점선 박스만 각지게(radius 0) 둔다. (사진 카드는 radius 유지)
+                  borderRadius: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Txt variant="mono" size={20} color={C.graySoft}>
+                  +
+                </Txt>
+              </Pressable>
+            </View>
           ) : (
             <View key={`${slot}-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
               <Image

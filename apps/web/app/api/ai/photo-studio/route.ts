@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'unsupported_type' }, { status: 415 });
   }
 
-  // 생성할 장면 — styles="cafe,gallery,..." 로 선택(미선택/구버전 앱은 기본 4종).
+  // 생성할 장면 — styles="cafe,gallery,..." 로 선택(미선택/구버전 앱은 기본 2종).
   // 유효성·중복제거·상한(PHOTO_STUDIO_MAX_SELECT)은 resolvePhotoStudioStyles 가 처리.
   const stylesRaw = form?.get('styles');
   const selectedIds =
