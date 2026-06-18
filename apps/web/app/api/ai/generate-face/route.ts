@@ -15,6 +15,7 @@ export const maxDuration = 300;
 
 const OPENAI_MODEL = 'gpt-image-2';
 const OPENAI_GEN_URL = 'https://api.openai.com/v1/images/generations';
+const OPENAI_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const QUALITY = process.env.OPENAI_IMAGE_QUALITY ?? 'high';
 
 export async function POST(req: NextRequest) {
@@ -31,24 +32,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'not_configured' }, { status: 503 });
   }
 
-  const body = (await req.json().catch(() => null)) as { prompt?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { prompt?: unknown; image?: unknown } | null;
   const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
+  // image: 있으면 동일인물 편집(images/edits) — 없으면 신규 생성(images/generations).
+  // 프롬프트는 전적으로 호출자가 제어(에디토리얼 스튜디오 규칙을 거치지 않음).
+  const imageB64 = typeof body?.image === 'string' ? body.image : '';
   if (!prompt) {
     return NextResponse.json({ ok: false, reason: 'invalid' }, { status: 400 });
   }
 
-  const res = await fetch(OPENAI_GEN_URL, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${openaiKey}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      prompt,
-      size: '1024x1536', // 앱 사진 슬롯과 동일한 3:4 세로
-      quality: QUALITY,
-      output_format: 'jpeg',
-      n: 1,
-    }),
-  });
+  let res: Response;
+  if (imageB64) {
+    const fd = new FormData();
+    fd.append('model', OPENAI_MODEL);
+    fd.append(
+      'image',
+      new Blob([Buffer.from(imageB64, 'base64')], { type: 'image/jpeg' }),
+      'photo.jpg',
+    );
+    fd.append('prompt', prompt);
+    fd.append('size', '1024x1536');
+    fd.append('quality', QUALITY);
+    fd.append('output_format', 'jpeg');
+    fd.append('n', '1');
+    res = await fetch(OPENAI_EDITS_URL, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${openaiKey}` },
+      body: fd,
+    });
+  } else {
+    res = await fetch(OPENAI_GEN_URL, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${openaiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        prompt,
+        size: '1024x1536', // 앱 사진 슬롯과 동일한 3:4 세로
+        quality: QUALITY,
+        output_format: 'jpeg',
+        n: 1,
+      }),
+    });
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     console.error(`[generate-face] ${res.status}: ${text.slice(0, 400)}`);
