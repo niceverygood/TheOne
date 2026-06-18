@@ -5,13 +5,18 @@
  * 조명·배경·구도·색감만 스튜디오급으로 올린다. 검증 위원은 원본과 대조한다.
  */
 
-/** 모든 스타일 프롬프트 앞에 붙는 공통 규칙 — 동일 인물 보존 + 실사 사진 품질이 최우선. */
+/** 모든 스타일 프롬프트 앞에 붙는 공통 규칙 — 동일 인물 보존 + 실사 품질 + 샷 다양성. */
 export const PHOTO_STUDIO_IDENTITY_RULES =
-  'Re-shoot this exact person as a premium matchmaking profile portrait. ' +
-  "CRITICAL: preserve the person's identity — keep face shape, eyes, nose, lips, " +
-  'skin tone, hairstyle and body proportions exactly as in the source photo. ' +
-  'Do not beautify, slim, retouch or alter any facial feature. The result must be ' +
-  'instantly recognizable as the same person. Vertical 3:4 chest-up composition. ' +
+  'Re-photograph this exact person for a premium matchmaking profile. ' +
+  "CRITICAL — IDENTITY LOCK: keep the person's face shape, eyes, nose, lips, jawline, " +
+  'skin tone, hairstyle and body proportions exactly as in the source photo. Do not ' +
+  'beautify, slim, de-age, retouch or alter any facial feature — the result must be ' +
+  'instantly recognizable as the same person. ' +
+  // 핵심: 포즈/구도/표정/시선/앵글은 장면 지시를 그대로 따른다 — 동일 포즈 복제 금지.
+  'COMPOSITION & VARIETY: do NOT copy the source pose. Follow the exact pose, camera ' +
+  'angle, crop, gaze direction and expression described in the scene below, so a set of ' +
+  'these photos reads like a real, varied photoshoot — never the same frontal chest-up ' +
+  'pose merely recolored. Natural relaxed body language; hands may be visible. Vertical 3:4 frame. ' +
   // 실사 강제 — AI 렌더/일러스트 톤 방지(image-2.0 실사 품질 목적).
   'PHOTOREALISM IS MANDATORY: this must look like a real photograph shot on a ' +
   'full-frame DSLR with an 85mm portrait lens, shallow depth of field, true-to-life ' +
@@ -20,76 +25,87 @@ export const PHOTO_STUDIO_IDENTITY_RULES =
   'over-smoothed. No beauty-filter look. High resolution, crisp focus on the eyes. ' +
   'Tasteful and understated. No text, no watermark.';
 
+// 각 스타일 = 장면 + "고유한 샷(포즈·앵글·크롭·시선·표정)". 세트로 찍으면 서로 확연히 다르게.
 export const PHOTO_STUDIO_STYLES = [
   {
     id: 'studio',
     label: '클래식 스튜디오',
     prompt:
-      'Clean studio backdrop in warm ivory, soft key light with gentle fill, ' +
-      'medium-format camera look, subtle fine grain, quiet confidence.',
+      'SHOT: seated upright facing the camera, relaxed shoulders, calm closed-mouth ' +
+      'confident smile, eye-level, waist-up centered. SCENE: clean warm-ivory studio ' +
+      'backdrop, soft key light with gentle fill, medium-format look, subtle fine grain.',
   },
   {
     id: 'natural',
     label: '내추럴 데일리',
     prompt:
-      'Outdoor daylight on a calm tree-lined street, golden hour, shallow depth of field, ' +
-      'relaxed candid posture, effortless natural mood.',
+      'SHOT: three-quarter turn, walking casually and glancing back toward the camera ' +
+      'mid-stride, light natural laugh, looser half-body crop with headroom. SCENE: ' +
+      'tree-lined street at golden hour, strong shallow depth of field, effortless mood.',
   },
   {
     id: 'business',
     label: '비즈니스 포트레이트',
     prompt:
-      'Modern office or hotel lobby softly blurred in the background, attire kept from ' +
-      'the source photo or a neutral dark knit, editorial corporate portrait lighting.',
+      'SHOT: standing tall at a slight angle, one hand in pocket, assured direct gaze, ' +
+      'slightly low camera angle, head-and-shoulders. SCENE: modern office or hotel ' +
+      'lobby softly blurred, neutral dark knit or crisp shirt, editorial corporate light.',
   },
   {
     id: 'film',
     label: '필름 무드',
     prompt:
-      '35mm film aesthetic, muted warm palette, soft window light interior, ' +
-      'quiet sophisticated atmosphere, analog color grading.',
+      'SHOT: seated by a window in near profile, gaze drifting outside, contemplative ' +
+      'unsmiling, off-center tight crop with negative space. SCENE: 35mm film aesthetic, ' +
+      'muted warm palette, soft directional window light, analog color grading.',
   },
   {
     id: 'cafe',
     label: '카페 라운지',
     prompt:
-      'Warm minimalist cafe or hotel lounge, soft window light, a coffee cup nearby, ' +
-      'smart-casual wardrobe, approachable and relaxed mood.',
+      'SHOT: leaning forward on a cafe table with both forearms, hands near a coffee cup, ' +
+      'caught mid-laugh looking slightly off-camera, close candid crop. SCENE: warm ' +
+      'minimalist cafe, soft window light, smart-casual wardrobe, approachable mood.',
   },
   {
     id: 'gallery',
     label: '갤러리',
     prompt:
-      'Quiet contemporary art gallery, soft diffused lighting, neutral pale walls softly ' +
-      'blurred behind, cultured and composed atmosphere.',
+      'SHOT: standing side-on viewing artwork, head turned back over the shoulder toward ' +
+      'the camera, composed faint smile, three-quarter body. SCENE: quiet contemporary ' +
+      'gallery, soft diffused light, pale walls blurred behind, cultured atmosphere.',
   },
   {
     id: 'travel',
     label: '여행 · 야외',
     prompt:
-      'Scenic outdoor travel setting such as a seaside promenade or european-style old town, ' +
-      'bright natural daylight, relaxed lifestyle mood.',
+      'SHOT: outdoors looking into the distance away from the camera, chin slightly up, ' +
+      'wind lightly in the hair, wide relaxed upper-body framing. SCENE: seaside ' +
+      'promenade or old-town street, bright natural daylight, lifestyle travel mood.',
   },
   {
     id: 'evening',
     label: '와인바 저녁',
     prompt:
-      'Intimate evening wine bar, warm dim tungsten light, calm and sophisticated, ' +
-      'shallow depth of field with soft background bokeh.',
+      'SHOT: seated at a bar in three-quarter turn toward the camera, one hand resting ' +
+      'near a wine glass, soft warm intimate smile, close crop. SCENE: dim tungsten ' +
+      'light, sophisticated evening ambience, soft background bokeh.',
   },
   {
     id: 'active',
     label: '골프 · 액티브',
     prompt:
-      'Bright outdoor sports-club setting such as a golf course or tennis court, tasteful ' +
-      'polo or athleisure, healthy energetic mood, clean natural daylight.',
+      'SHOT: dynamic outdoor moment, mid-motion with hand on hip and weight shifted, ' +
+      'bright energetic open smile, eye-level half-body. SCENE: golf course or tennis ' +
+      'court, tasteful polo or athleisure, healthy mood, clean natural daylight.',
   },
   {
     id: 'rooftop',
     label: '루프탑 야경',
     prompt:
-      'Rooftop terrace at dusk with a soft city-skyline bokeh behind, refined evening ' +
-      'ambience, gentle warm light.',
+      'SHOT: leaning forearms on a rooftop railing, upper body turned back toward the ' +
+      'camera, relaxed evening calm, waist-up with the skyline behind. SCENE: rooftop ' +
+      'terrace at dusk, soft city-skyline bokeh, gentle warm light.',
   },
 ] as const;
 
