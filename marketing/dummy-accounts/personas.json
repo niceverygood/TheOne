@@ -1,0 +1,58 @@
+[
+  {
+    "id": "m1",
+    "gender": "male",
+    "name": "전공의 · 30",
+    "base": "A casual everyday selfie of a young Korean man around 30, youthful clean face, soft short black hair, light friendly smile, wearing a plain grey sweatshirt, at home with soft daylight from a window",
+    "var1": "the same young man taking a casual mirror selfie in a hallway, wearing a casual jacket, holding his phone",
+    "var2": "the same young man outdoors on a sunny street, candid half-body photo taken by a friend, casual hoodie, relaxed laugh"
+  },
+  {
+    "id": "m2",
+    "gender": "male",
+    "name": "금융/컨설팅 · 31",
+    "base": "A casual everyday selfie of a young Korean man around 31, neat short hair, clean youthful look, slight smile, wearing a simple navy crewneck, soft indoor light",
+    "var1": "the same young man sitting at a cafe, casual selfie holding a coffee, daytime window light",
+    "var2": "the same young man outdoors in a park on a clear day, candid photo taken by a friend, light knit, natural daylight"
+  },
+  {
+    "id": "f1",
+    "gender": "female",
+    "name": "약사 · 25",
+    "base": "A casual everyday front-facing selfie of a young Korean woman around 25, fresh youthful face, long soft dark-brown hair, gentle natural smile, minimal makeup, wearing a cream knit, soft window light at home",
+    "var1": "the same young woman taking a mirror selfie in casual clothes, daytime indoor light, holding her phone",
+    "var2": "the same young woman at a cafe by the window, candid photo holding a drink, casual outfit, soft daylight"
+  },
+  {
+    "id": "f2",
+    "gender": "female",
+    "name": "방송 아나운서 · 26",
+    "base": "A casual everyday selfie of a young Korean woman around 26, bright lively youthful face, long straight dark hair, light open smile, fresh natural makeup, wearing a pastel top, soft daylight",
+    "var1": "the same young woman outdoors on a sunny day, candid half-body photo taken by a friend, casual blouse, natural daylight",
+    "var2": "the same young woman taking a selfie in a car passenger seat, daytime, casual look, relaxed smile"
+  },
+  {
+    "id": "f3",
+    "gender": "female",
+    "name": "디자이너 · 24",
+    "base": "A casual everyday front-facing selfie of a young Korean woman around 24, small youthful face, trendy wavy shoulder-length hair with curtain bangs, soft smile, light modern makeup, wearing a casual tee, soft indoor light",
+    "var1": "the same young woman taking a mirror selfie in a casual oversized shirt, daytime, holding her phone",
+    "var2": "the same young woman outdoors at a quiet street cafe, candid photo taken by a friend, casual chic outfit, natural daylight"
+  },
+  {
+    "id": "f4",
+    "gender": "female",
+    "name": "변호사(주니어) · 27",
+    "base": "A casual everyday selfie of a young Korean woman around 27, refined youthful face, shoulder-length layered dark hair, calm gentle smile, understated natural makeup, wearing a simple white tee, soft window light",
+    "var1": "the same young woman at a cafe, casual selfie holding a drink, daytime light, relaxed expression",
+    "var2": "the same young woman walking outdoors on a leafy street, candid photo taken by a friend, casual beige cardigan, soft daylight"
+  },
+  {
+    "id": "f5",
+    "gender": "female",
+    "name": "마케터 · 28",
+    "base": "A casual everyday front-facing selfie of a young Korean woman around 28, elegant but youthful face, soft wavy medium hair, warm natural smile, soft makeup, wearing a light beige blouse, soft indoor daylight",
+    "var1": "the same young woman taking a mirror selfie in casual weekend clothes, daytime, holding her phone",
+    "var2": "the same young woman outdoors near a city street on a clear day, candid half-body photo taken by a friend, casual coat, natural daylight"
+  }
+]
