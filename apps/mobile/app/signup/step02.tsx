@@ -80,7 +80,7 @@ export default function Step02() {
   // AI 스튜디오 — 첫 사진(대표) 기반으로 선택한 장면을 생성. 동일 인물 유지가 원칙.
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResults, setAiResults] = useState<AiResult[]>([]);
-  // 사용자가 고른 배경/장면 — 기본은 클래식 4종, 최대 5종까지.
+  // 사용자가 고른 배경/장면 — 기본 2종(생성 시간 절약), 최대 5종까지.
   const [selectedStyles, setSelectedStyles] = useState<string[]>([
     ...PHOTO_STUDIO_DEFAULT_STYLE_IDS,
   ]);
