@@ -10,7 +10,8 @@ import {
 import { rateLimit } from '@/lib/rate-limit';
 
 // 공개 엔드포인트 비용 방어 — IP당 시간당 생성 횟수 상한(1회=장면 N장 모델 호출).
-const STUDIO_RATE_MAX = 6;
+// 기본 6. 시드/더미 배치 작업 시 STUDIO_RATE_MAX env 로 일시 상향 가능(작업 후 원복).
+const STUDIO_RATE_MAX = Number(process.env.STUDIO_RATE_MAX) || 6;
 const STUDIO_RATE_WINDOW_MS = 60 * 60 * 1000;
 
 function clientIpHash(req: NextRequest): string {
