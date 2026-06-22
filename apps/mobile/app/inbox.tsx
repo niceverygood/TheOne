@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ImageSourcePropType, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 import { useSignup } from '../src/store';
+import { fetchReceivedMatches, respondToMatch } from '../src/signup-api';
 
 interface Letter {
   id: string;
@@ -56,13 +57,62 @@ const SEED: Letter[] = [
 
 export default function Inbox() {
   const router = useRouter();
+  const userId = useSignup((s) => s.userId);
   const blocked = useSignup((s) => s.blocked);
-  const [letters, setLetters] = useState(SEED);
+  const [letters, setLetters] = useState<Letter[]>(SEED);
+  const [live, setLive] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  // 로그인 회원이면 실제 받은 신청서로 교체(없으면 프리뷰 유지 — 앱 심사/콜드스타트)
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    fetchReceivedMatches(userId).then((ms) => {
+      if (!alive || ms.length === 0) return;
+      setLive(true);
+      setLetters(
+        ms.map((m) => ({
+          id: m.matchId,
+          senderId: m.matchId,
+          name: m.from.jobDetail ?? m.from.jobCategory,
+          meta: [m.from.age ? `${m.from.age}` : null, m.from.region].filter(Boolean).join(' · '),
+          marks: Math.max(0, Math.min(4, m.from.badgeCount)),
+          image: m.from.photos?.[0] ? { uri: m.from.photos[0] } : previewPortraits.minjun,
+          sup: m.isSuper,
+          time: '',
+          preview: m.letter ?? '만남 신청이 도착했습니다.',
+        })),
+      );
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
   // 차단한 발신자는 받은 신청서에서도 제외 (App Store 1.2 차단 일관성)
   const visibleLetters = letters.filter((l) => !blocked.includes(l.senderId));
 
-  function decline(id: string) {
+  async function decline(id: string) {
+    if (live && userId) {
+      setBusy(id);
+      await respondToMatch(id, userId, 'decline');
+      setBusy(null);
+    }
     setLetters((l) => l.filter((x) => x.id !== id));
+  }
+
+  async function accept(id: string) {
+    if (live && userId) {
+      setBusy(id);
+      const r = await respondToMatch(id, userId, 'accept');
+      setBusy(null);
+      if (r.ok) {
+        setLetters((l) => l.filter((x) => x.id !== id));
+        router.push(r.conversationId ? `/chat?cid=${r.conversationId}` : '/chat');
+        return;
+      }
+    }
+    router.push('/chat');
   }
 
   return (
@@ -191,10 +241,10 @@ export default function Inbox() {
                       onPress={() => decline(l.id)}
                     />
                     <Btn
-                      label="수락하고 채팅"
+                      label={busy === l.id ? '처리 중…' : '수락하고 채팅'}
                       variant="solid"
                       style={{ paddingVertical: 8, paddingHorizontal: 14 }}
-                      onPress={() => router.push('/chat')}
+                      onPress={() => accept(l.id)}
                     />
                   </View>
                 </View>

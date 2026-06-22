@@ -10,6 +10,8 @@ import {
   getTodayCuration,
   recordCurationAction,
   sendLetter,
+  respondToMatch,
+  sendMessage,
   surveyFor,
 } from '../src/index';
 import { ageFromBirth } from '@theone/shared';
@@ -114,6 +116,22 @@ async function runViewer(opts: {
   console.log(
     `   → Match 생성 확인: status=${match?.status} (${match?.fromId === user.id ? '내가 발신' : '?'} → 상대)`,
   );
+
+  // 6) 상대가 수락 → 대화 개설 (수신자 = 후보 c.id 본인만 가능)
+  const resp = await respondToMatch(sent.matchId, c.id, 'accept');
+  console.log(
+    `6) 상대 수락 ✓  status=${resp.status} · conversationId=${resp.conversationId?.slice(0, 8)}…`,
+  );
+
+  // 7) 첫 메시지 전송(대화 성사 후)
+  if (resp.conversationId) {
+    const msg = await sendMessage({
+      conversationId: resp.conversationId,
+      senderId: c.id,
+      body: '안녕하세요! 편지 잘 읽었어요. 반갑습니다 :)',
+    });
+    console.log(`7) 첫 메시지 전송 ✓  messageId=${msg.id.slice(0, 8)}… → 핵심 루프 완결`);
+  }
 }
 
 async function main() {

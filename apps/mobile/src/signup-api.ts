@@ -121,6 +121,56 @@ export async function fetchTodayCuration(userId: string): Promise<CurationTodayR
   }
 }
 
+export interface ReceivedMatch {
+  matchId: string;
+  letter: string | null;
+  isSuper: boolean;
+  conversationId: string | null;
+  from: {
+    jobCategory: string;
+    jobDetail: string | null;
+    age: number | null;
+    region: string | null;
+    photos: string[];
+    badgeCount: number;
+  };
+}
+
+/** 받은 만남 신청 목록(대기중) — 인박스. */
+export async function fetchReceivedMatches(userId: string): Promise<ReceivedMatch[]> {
+  if (!API_BASE) return [];
+  try {
+    const res = await fetch(`${API_BASE}/api/match/received?userId=${encodeURIComponent(userId)}`);
+    const d = (await res.json()) as { ok: boolean; matches?: ReceivedMatch[] };
+    return d.ok && d.matches ? d.matches : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 받은 신청 수락/거절 — 수락 시 conversationId 반환. */
+export async function respondToMatch(
+  matchId: string,
+  userId: string,
+  action: 'accept' | 'decline',
+): Promise<{ ok: boolean; status?: 'accepted' | 'declined'; conversationId?: string | null }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/match/respond`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matchId, userId, action }),
+    });
+    return (await res.json()) as {
+      ok: boolean;
+      status?: 'accepted' | 'declined';
+      conversationId?: string | null;
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export interface SubmitVerificationArgs {
   userId: string;
   type: VerificationType;

@@ -34,3 +34,62 @@ export async function openConversation(matchId: string) {
     update: {},
   });
 }
+
+/** 받은 만남 신청 목록 — 수신자(toId) 기준. 발신자 프로필(사진·직업·지역·뱃지) 포함. */
+export async function listReceivedMatches(
+  userId: string,
+  status: 'pending' | 'accepted' | 'declined' = 'pending',
+) {
+  return prisma.match.findMany({
+    where: { toId: userId, status },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      letter: true,
+      isSuper: true,
+      createdAt: true,
+      conversation: { select: { id: true } },
+      from: {
+        select: {
+          id: true,
+          jobCategory: true,
+          birth: true,
+          profile: { select: { region: true, jobDetail: true, photos: true } },
+          badges: { where: { expiresAt: { gt: new Date() } }, select: { type: true } },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * 받은 신청 응답 — 수락 시 status=accepted + 대화 개설(원자적), 거절 시 status=declined.
+ * 수신자(toId) 본인만 응답 가능. 이미 처리된 신청은 거부.
+ */
+export async function respondToMatch(
+  matchId: string,
+  actorId: string,
+  action: 'accept' | 'decline',
+): Promise<{ status: 'accepted' | 'declined'; conversationId: string | null }> {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { toId: true, status: true },
+  });
+  if (!match) throw new Error('match_not_found');
+  if (match.toId !== actorId) throw new Error('forbidden'); // 수신자만 응답 가능
+  if (match.status !== 'pending') throw new Error(`already_${match.status}`);
+
+  if (action === 'decline') {
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { status: 'declined', endedAt: new Date() },
+    });
+    return { status: 'declined', conversationId: null };
+  }
+
+  const conv = await prisma.$transaction(async (tx) => {
+    await tx.match.update({ where: { id: matchId }, data: { status: 'accepted' } });
+    return tx.conversation.upsert({ where: { matchId }, create: { matchId }, update: {} });
+  });
+  return { status: 'accepted', conversationId: conv.id };
+}
