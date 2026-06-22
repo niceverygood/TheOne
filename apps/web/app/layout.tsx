@@ -4,7 +4,8 @@ import { notoSerifKr, inter, pretendard } from './fonts';
 import { AnalyticsProvider } from '@/components/analytics-provider';
 import { PageTracker } from '@/components/analytics/page-tracker';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one.kr';
+// the-one.kr 은 타사(더원금융서비스) 도메인 — 절대 사용 금지. 라이브 도메인을 기본값으로.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one-web-virid.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

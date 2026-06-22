@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one.kr';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://the-one-web-virid.vercel.app';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
