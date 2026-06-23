@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Platform, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Image, Modal, Platform, Pressable, View } from 'react-native';
 import { showAlert } from '../../src/brand-alert';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,11 +13,10 @@ import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
+import { registerForPushToken } from '../../src/notifications';
+import { startPhotoStudio, pollPhotoStudio, type StudioImage } from '../../src/photo-studio-api';
 
 const MAX_PHOTOS = 5;
-
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_BASE ?? (typeof window !== 'undefined' ? window.location.origin : '');
 
 type AiResult = { style: string; label: string; uri: string; added: boolean };
 
@@ -27,6 +26,9 @@ const GUIDE = [
   '단체 사진·과도한 보정·선글라스 불가',
   '검증 위원이 본인 여부를 확인합니다',
 ];
+
+// 장면 id → 한글 라벨
+const STYLE_LABEL = new Map(PHOTO_STUDIO_STYLES.map((s) => [s.id as string, s.label]));
 
 export default function Step02() {
   const router = useRouter();
@@ -79,12 +81,15 @@ export default function Step02() {
   }
 
   // AI 스튜디오 — 첫 사진(대표) 기반으로 선택한 장면을 생성. 동일 인물 유지가 원칙.
+  // 비동기: start 로 잡 생성 → 서버가 백그라운드 생성(앱 닫아도 진행) → 폴링/푸시로 수신.
   const [aiBusy, setAiBusy] = useState(false);
   const [aiResults, setAiResults] = useState<AiResult[]>([]);
   // 사용자가 고른 배경/장면 — 기본 2종(생성 시간 절약), 최대 5종까지.
   const [selectedStyles, setSelectedStyles] = useState<string[]>([
     ...PHOTO_STUDIO_DEFAULT_STYLE_IDS,
   ]);
+  const jobIdRef = useRef<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function toggleStyle(id: string) {
     setSelectedStyles((prev) =>
@@ -96,62 +101,97 @@ export default function Step02() {
     );
   }
 
+  function mapResults(images: StudioImage[]): AiResult[] {
+    return images.map((img) => ({
+      style: img.style,
+      label: STYLE_LABEL.get(img.style) ?? img.style,
+      uri: `data:${img.mime ?? 'image/jpeg'};base64,${img.b64}`,
+      added: false,
+    }));
+  }
+
+  function stopPolling() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
+    jobIdRef.current = null;
+  }
+
+  // 진행 중인 잡 결과 확인 — 폴링 인터벌·앱 복귀·푸시 탭에서 공통 호출.
+  const checkResult = useCallback(async () => {
+    const jobId = jobIdRef.current;
+    if (!jobId) return;
+    const r = await pollPhotoStudio(jobId);
+    if (r.status === 'done') {
+      stopPolling();
+      setAiResults(mapResults(r.images));
+      setAiBusy(false);
+    } else if (r.status === 'failed' || r.status === 'not_found') {
+      stopPolling();
+      setAiBusy(false);
+      showAlert('AI 스튜디오', '생성에 실패했어요. 다른 사진으로 다시 시도해 주세요.');
+    }
+    // pending → 다음 폴링에 재확인
+  }, []);
+
+  // 앱 복귀(백그라운드 동안 완료됐을 수 있음)·완료 푸시 탭 시 즉시 결과 확인
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void checkResult();
+    });
+    let notifSub: { remove: () => void } | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const N = require('expo-notifications') as typeof import('expo-notifications');
+      notifSub = N.addNotificationResponseReceivedListener(() => void checkResult());
+    } catch {
+      // 모듈 미설치 환경 — 폴링만으로 동작
+    }
+    return () => {
+      sub.remove();
+      notifSub?.remove();
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [checkResult]);
+
   async function runAiStudio() {
     const source = photos[0];
     if (!source || aiBusy || selectedStyles.length === 0) return;
     setAiBusy(true);
     setAiResults([]);
+
+    // 업로드 전 1280px JPEG 로 다운스케일 — 고화질 폰 사진이 그대로 올라가면 함수
+    // 페이로드 한도(~4.5MB)를 넘겨 실패하므로 항상 줄여 보낸다(결과는 1024x1536).
+    let uploadUri = source;
     try {
-      // 업로드 전 1280px JPEG 로 다운스케일 — 고화질 폰 사진(수 MB)이 그대로 올라가면
-      // 서버 함수 페이로드 한도(~4.5MB)를 넘겨 실패하므로, 항상 줄여서 보낸다.
-      // 결과는 1024x1536 로 생성되므로 입력이 1280px 보다 클 필요가 없다.
-      let uploadUri = source;
-      try {
-        const resized = await manipulateAsync(source, [{ resize: { width: 1280 } }], {
-          compress: 0.8,
-          format: SaveFormat.JPEG,
-        });
-        uploadUri = resized.uri;
-      } catch {
-        // 리사이즈 실패 시 원본으로 시도(최악의 경우만)
-      }
-      const form = new FormData();
-      if (Platform.OS === 'web') {
-        const blob = await fetch(uploadUri).then((r) => r.blob());
-        form.append('image', blob, 'photo.jpg');
-      } else {
-        // RN FormData 파일 파트 — 타입 정의에 없어 캐스팅
-        form.append('image', {
-          uri: uploadUri,
-          name: 'photo.jpg',
-          type: 'image/jpeg',
-        } as unknown as Blob);
-      }
-      form.append('styles', selectedStyles.join(',')); // 선택한 장면만 생성
-      const res = await fetch(`${API_BASE}/api/ai/photo-studio`, { method: 'POST', body: form });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        const msg =
-          data.reason === 'not_configured'
-            ? 'AI 스튜디오가 아직 준비 중입니다. 잠시 후 다시 시도해 주세요.'
-            : '생성에 실패했습니다. 다른 사진으로 다시 시도해 주세요.';
-        showAlert('AI 스튜디오', msg);
-        return;
-      }
-      const byId = new Map(PHOTO_STUDIO_STYLES.map((s) => [s.id as string, s.label]));
-      setAiResults(
-        (data.images as { style: string; b64: string; mime?: string }[]).map((img) => ({
-          style: img.style,
-          label: byId.get(img.style) ?? img.style,
-          uri: `data:${img.mime ?? 'image/jpeg'};base64,${img.b64}`,
-          added: false,
-        })),
-      );
+      const resized = await manipulateAsync(source, [{ resize: { width: 1280 } }], {
+        compress: 0.8,
+        format: SaveFormat.JPEG,
+      });
+      uploadUri = resized.uri;
     } catch {
-      showAlert('AI 스튜디오', '네트워크 오류로 생성하지 못했습니다.');
-    } finally {
-      setAiBusy(false);
+      // 리사이즈 실패 시 원본으로 시도(최악의 경우만)
     }
+
+    // 완료 알림용 푸시 토큰(권한 요청 포함) — 실패해도 폴링으로 수신하므로 무시 가능.
+    const pushToken = await registerForPushToken().catch(() => null);
+
+    const res = await startPhotoStudio(uploadUri, selectedStyles, pushToken);
+    if (!res.ok) {
+      setAiBusy(false);
+      const msg =
+        res.reason === 'not_configured'
+          ? 'AI 스튜디오가 아직 준비 중입니다. 잠시 후 다시 시도해 주세요.'
+          : res.reason === 'rate_limit'
+            ? '시간당 생성 횟수를 초과했어요. 잠시 후 다시 시도해 주세요.'
+            : '생성을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.';
+      showAlert('AI 스튜디오', msg);
+      return;
+    }
+
+    // 백그라운드 생성 시작 — 4초 간격 폴링(앱을 닫아도 서버가 끝까지 생성).
+    jobIdRef.current = res.jobId;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => void checkResult(), 4000);
   }
 
   function addAiResult(idx: number) {
@@ -373,13 +413,22 @@ export default function Step02() {
           >
             <Txt size={13} weight="500" color={C.ink2}>
               {aiBusy
-                ? '생성 중 — 1~3분 정도 걸립니다'
+                ? '생성 중 — 다른 앱을 써도 됩니다'
                 : aiResults.length > 0
                   ? '다시 생성하기'
                   : `선택한 ${selectedStyles.length}개 장면 만들기`}
             </Txt>
           </Pressable>
-          {aiResults.length > 0 ? (
+          {aiBusy ? (
+            <Txt
+              size={11}
+              color={C.gray}
+              style={{ marginTop: 8, textAlign: 'center', lineHeight: 16 }}
+            >
+              백그라운드에서 계속 만들어요. 1~3분 뒤 완료되면 알림으로 알려드립니다 — 앱을 닫아도
+              괜찮아요.
+            </Txt>
+          ) : aiResults.length > 0 ? (
             <Txt size={11} color={C.gray} style={{ marginTop: 8, textAlign: 'center' }}>
               마음에 드는 컷을 탭하면 사진 목록에 추가됩니다.
             </Txt>
@@ -454,9 +503,16 @@ export default function Step02() {
                   borderColor: C.hairLight,
                 }}
               >
-                <Txt size={15} color={C.ink2}>
-                  앨범에서 선택
-                </Txt>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Txt size={15} color={C.ink2}>
+                    앨범에서 선택
+                  </Txt>
+                  <Txt size={11.5} color={C.gray} style={{ marginTop: 3, lineHeight: 16 }}>
+                    {Platform.OS === 'ios'
+                      ? '‘앨범’ 탭에서 즐겨찾기 등 원하는 앨범을 고를 수 있어요'
+                      : '왼쪽 메뉴(≡)에서 즐겨찾기 등 앨범을 고를 수 있어요'}
+                  </Txt>
+                </View>
                 <Txt variant="mono" size={14} color={C.graySoft}>
                   ›
                 </Txt>

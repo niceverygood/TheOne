@@ -584,3 +584,31 @@ model Order {
   @@index([status])
   @@map("orders")
 }
+
+/// AI 스튜디오 비동기 잡 — 백그라운드 생성 + 완료 시 푸시.
+/// 모바일이 /api/ai/photo-studio/start 로 잡 생성 → 서버가 waitUntil 로 생성 →
+/// 결과(base64)를 여기 저장 → /result 로 클라이언트가 받아가면 즉시 삭제(+TTL 청소).
+/// 임시 보관소 — 사진은 받아가는 즉시 삭제하고, 미수령분도 1시간 후 파기한다.
+model PhotoStudioJob {
+  id        String               @id @default(cuid())
+  status    PhotoStudioJobStatus @default(pending)
+  /// 요청한 장면 id 목록(cafe,gallery,...)
+  styles    String[]
+  /// 완료 시 결과 [{ style, b64, mime }] — 수령 즉시 삭제
+  images    Json?
+  /// 실패 사유(디버그용)
+  error     String?
+  /// 완료 알림 보낼 Expo 푸시 토큰(없으면 폴링으로만 수신)
+  pushToken String?              @map("push_token")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("photo_studio_jobs")
+}
+
+enum PhotoStudioJobStatus {
+  pending
+  done
+  failed
+}
