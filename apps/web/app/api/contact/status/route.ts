@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getContactStatus } from '@theone/db';
+import { authUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,9 +8,11 @@ export const dynamic = 'force-dynamic';
  * GET /api/contact/status?matchId=&userId= — 연락처 오픈 상태(상대 번호는 공개 완료 시).
  */
 export async function GET(req: NextRequest) {
+  const userId = authUserId(req);
+  if (!userId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+
   const matchId = req.nextUrl.searchParams.get('matchId')?.trim();
-  const userId = req.nextUrl.searchParams.get('userId')?.trim();
-  if (!matchId || !userId) {
+  if (!matchId) {
     return NextResponse.json({ ok: false, reason: 'validation' }, { status: 400 });
   }
   try {

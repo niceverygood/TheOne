@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendLetter, InsufficientCreditError } from '@theone/db';
+import { authUserId } from '@/lib/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,15 +20,18 @@ const KNOWN = [
  * 모바일 신청서 화면의 '신청서 보내기' 진입점.
  */
 export async function POST(req: NextRequest) {
-  let body: { fromId?: string; toId?: string; letter?: string; isSuper?: boolean };
+  const fromId = authUserId(req);
+  if (!fromId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+
+  let body: { toId?: string; letter?: string; isSuper?: boolean };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, reason: 'bad_json' }, { status: 400 });
   }
 
-  const { fromId, toId, letter, isSuper } = body;
-  if (!fromId || !toId || !letter) {
+  const { toId, letter, isSuper } = body;
+  if (!toId || !letter) {
     return NextResponse.json({ ok: false, reason: 'missing' }, { status: 400 });
   }
 

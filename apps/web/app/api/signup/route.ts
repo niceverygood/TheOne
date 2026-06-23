@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { signupInputSchema } from '@theone/shared';
 import { createSignupUser, DuplicateUserError, resolveReferrer } from '@theone/db';
 import { openIdentity } from '@/lib/identity-token';
+import { issueSession } from '@/lib/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,8 @@ export async function POST(req: NextRequest) {
       surveyAnswers: input.surveyAnswers,
       introSections: input.introSections as Record<string, string> | undefined,
     });
-    return NextResponse.json({ ok: true, userId: user.id, status: user.status });
+    const token = issueSession(user.id);
+    return NextResponse.json({ ok: true, userId: user.id, status: user.status, token });
   } catch (e) {
     if (e instanceof DuplicateUserError) {
       return NextResponse.json(

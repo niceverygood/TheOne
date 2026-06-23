@@ -44,6 +44,8 @@ export interface SignupState {
   idToken?: string;
   // 가입 제출 후 서버가 발급한 회원 ID (추가 인증 신청 시 사용)
   userId?: string;
+  // 가입 시 서버가 발급한 세션 토큰 (Authorization: Bearer 헤더로 보호 API 호출에 사용)
+  sessionToken?: string;
   /**
    * 데모(심사) 모드 — App Review 가이드라인 2.1(a) demonstration mode.
    * 데모 계정 로그인 시 true: 전 기능 열람 + 크레딧 구매는 서버 검증 없이
@@ -101,6 +103,7 @@ export const useSignup = create<SignupState>((set, get) => ({
       referralCode: undefined,
       idToken: undefined,
       userId: undefined,
+      sessionToken: undefined,
       demoMode: false,
       acceptedTerms: false,
       blocked: [],

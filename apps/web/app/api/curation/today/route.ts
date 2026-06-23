@@ -6,6 +6,7 @@ import {
   type CurationTodayResult,
   type IntroSections,
 } from '@theone/shared';
+import { authUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,12 +14,12 @@ export const dynamic = 'force-dynamic';
  * 오늘의 큐레이션 1명 조회 — 모바일 도시에가 케미(가치관 일치도)를 노출하는 데 사용.
  * 이름 등 직접식별정보는 반환하지 않는다(privacy-design §2-4). 뱃지·케미만 노출.
  */
-export async function GET(req: NextRequest): Promise<NextResponse<CurationTodayResult>> {
-  const userId = req.nextUrl.searchParams.get('userId')?.trim();
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const userId = authUserId(req);
   if (!userId) {
     return NextResponse.json(
-      { ok: false, reason: 'validation', message: '회원 식별자가 필요합니다.' },
-      { status: 400 },
+      { ok: false, reason: 'unauthorized', message: '인증이 필요합니다.' },
+      { status: 401 },
     );
   }
 

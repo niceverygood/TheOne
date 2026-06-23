@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listReceivedMatches } from '@theone/db';
 import { ageFromBirth } from '@theone/shared';
+import { authUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/match/received?userId= — 받은 만남 신청 목록(대기중).
+ * GET /api/match/received — 받은 만남 신청 목록(대기중).
  * 식별정보(이름) 제외, 발신자 직업·나이·지역·사진·뱃지수만 노출.
  */
 export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get('userId')?.trim();
+  const userId = authUserId(req);
   if (!userId) {
-    return NextResponse.json({ ok: false, reason: 'validation' }, { status: 400 });
+    return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
   }
   try {
     const rows = await listReceivedMatches(userId);

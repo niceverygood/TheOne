@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verificationSubmitSchema } from '@theone/shared';
 import { createApplication, prisma } from '@theone/db';
+import { authUserId } from '@/lib/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,14 @@ export const dynamic = 'force-dynamic';
  * 서류는 S3 키만 보관(평문 URL 금지, privacy-design §2-4).
  */
 export async function POST(req: NextRequest) {
+  const actorId = authUserId(req);
+  if (!actorId) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized', message: '인증이 필요합니다.' },
+      { status: 401 },
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = verificationSubmitSchema.safeParse(body);
   if (!parsed.success) {
@@ -25,8 +34,8 @@ export async function POST(req: NextRequest) {
 
   const input = parsed.data;
 
-  // 회원 존재 확인 (잘못된 userId 로 고아 신청 생성 방지)
-  const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { id: true } });
+  // 회원 존재 확인 — 토큰의 userId 를 신뢰(body.userId 무시)
+  const user = await prisma.user.findUnique({ where: { id: actorId }, select: { id: true } });
   if (!user) {
     return NextResponse.json(
       {
@@ -40,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const application = await createApplication({
-      userId: input.userId,
+      userId: actorId,
       type: input.type,
       valueTier: input.valueTier,
       documents: input.documents,

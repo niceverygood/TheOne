@@ -88,7 +88,7 @@ export default function Step08() {
     });
     setSubmitting(false);
     if (res.ok) {
-      set({ userId: res.userId });
+      set({ userId: res.userId, sessionToken: res.token });
       router.replace('/signup/complete');
       return;
     }

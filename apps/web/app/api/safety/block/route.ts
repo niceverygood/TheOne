@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { blockUser, unblockUser } from '@theone/db';
+import { authUserId } from '@/lib/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/safety/block
- * body: { blockerId, blockedId, unblock? }
+ * body: { blockedId, unblock? }
  * 사용자 간 차단/해제. 차단 시 양방향으로 큐레이션·매칭·채팅 노출에서 제외된다.
- * 모바일 채팅·프로필 안전 메뉴의 '차단하기' 진입점.
  */
 export async function POST(req: NextRequest) {
-  let body: { blockerId?: string; blockedId?: string; unblock?: boolean };
+  const blockerId = authUserId(req);
+  if (!blockerId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+
+  let body: { blockedId?: string; unblock?: boolean };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, reason: 'bad_json' }, { status: 400 });
   }
 
-  const { blockerId, blockedId, unblock } = body;
-  if (!blockerId || !blockedId) {
+  const { blockedId, unblock } = body;
+  if (!blockedId) {
     return NextResponse.json({ ok: false, reason: 'missing_ids' }, { status: 400 });
   }
 

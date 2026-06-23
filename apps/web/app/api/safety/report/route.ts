@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createReport } from '@theone/db';
 import type { ReportCategory } from '@prisma/client';
+import { authUserId } from '@/lib/session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,8 +24,10 @@ const CATEGORIES: ReportCategory[] = [
  * 모바일 채팅·프로필 안전 메뉴의 '신고하기' 진입점.
  */
 export async function POST(req: NextRequest) {
+  const reporterId = authUserId(req);
+  if (!reporterId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+
   let body: {
-    reporterId?: string;
     reportedId?: string;
     category?: string;
     detail?: string;
@@ -35,8 +38,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'bad_json' }, { status: 400 });
   }
 
-  const { reporterId, reportedId, category, detail } = body;
-  if (!reporterId || !reportedId) {
+  const { reportedId, category, detail } = body;
+  if (!reportedId) {
     return NextResponse.json({ ok: false, reason: 'missing_ids' }, { status: 400 });
   }
   if (!category || !CATEGORIES.includes(category as ReportCategory)) {

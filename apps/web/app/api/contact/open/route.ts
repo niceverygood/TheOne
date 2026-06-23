@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requestContactOpen, InsufficientCreditError } from '@theone/db';
+import { authUserId } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,15 +13,15 @@ const KNOWN = ['match_not_found', 'forbidden', 'match_not_accepted'];
  * 양측 동의 시 공개(state=opened, otherPhone 반환). 매칭 당사자만 가능.
  */
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as {
-    matchId?: string;
-    userId?: string;
-  } | null;
-  if (!body?.matchId || !body?.userId) {
+  const userId = authUserId(req);
+  if (!userId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 });
+
+  const body = (await req.json().catch(() => null)) as { matchId?: string } | null;
+  if (!body?.matchId) {
     return NextResponse.json({ ok: false, reason: 'missing' }, { status: 400 });
   }
   try {
-    const status = await requestContactOpen(body.matchId, body.userId);
+    const status = await requestContactOpen(body.matchId, userId);
     return NextResponse.json({ ok: true, ...status });
   } catch (e) {
     if (e instanceof InsufficientCreditError) {

@@ -11,8 +11,15 @@ import type {
   VerificationSubmitResult,
   VerificationType,
 } from '@theone/shared';
+import { useSignup } from './store';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
+
+/** 보호 API 호출용 Authorization 헤더. 세션 토큰 없으면 빈 객체. */
+function authHeader(): Record<string, string> {
+  const token = useSignup.getState().sessionToken;
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
 
 export interface SubmitSignupArgs {
   gender: 'male' | 'female';
@@ -111,10 +118,10 @@ export async function submitSignup(args: SubmitSignupArgs): Promise<SignupSubmit
 }
 
 /** 오늘의 큐레이션 1명 + 케미(가치관 일치도) 조회. API 미설정 시 server reason. */
-export async function fetchTodayCuration(userId: string): Promise<CurationTodayResult> {
+export async function fetchTodayCuration(_userId: string): Promise<CurationTodayResult> {
   if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
   try {
-    const res = await fetch(`${API_BASE}/api/curation/today?userId=${encodeURIComponent(userId)}`);
+    const res = await fetch(`${API_BASE}/api/curation/today`, { headers: authHeader() });
     return (await res.json()) as CurationTodayResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
@@ -137,10 +144,10 @@ export interface ReceivedMatch {
 }
 
 /** 받은 만남 신청 목록(대기중) — 인박스. */
-export async function fetchReceivedMatches(userId: string): Promise<ReceivedMatch[]> {
+export async function fetchReceivedMatches(_userId: string): Promise<ReceivedMatch[]> {
   if (!API_BASE) return [];
   try {
-    const res = await fetch(`${API_BASE}/api/match/received?userId=${encodeURIComponent(userId)}`);
+    const res = await fetch(`${API_BASE}/api/match/received`, { headers: authHeader() });
     const d = (await res.json()) as { ok: boolean; matches?: ReceivedMatch[] };
     return d.ok && d.matches ? d.matches : [];
   } catch {
@@ -151,15 +158,15 @@ export async function fetchReceivedMatches(userId: string): Promise<ReceivedMatc
 /** 받은 신청 수락/거절 — 수락 시 conversationId 반환. */
 export async function respondToMatch(
   matchId: string,
-  userId: string,
+  _userId: string,
   action: 'accept' | 'decline',
 ): Promise<{ ok: boolean; status?: 'accepted' | 'declined'; conversationId?: string | null }> {
   if (!API_BASE) return { ok: false };
   try {
     const res = await fetch(`${API_BASE}/api/match/respond`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ matchId, userId, action }),
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ matchId, action }),
     });
     return (await res.json()) as {
       ok: boolean;
@@ -180,11 +187,12 @@ export interface ContactStatus {
 }
 
 /** 연락처 오픈 상태 조회. */
-export async function fetchContactStatus(matchId: string, userId: string): Promise<ContactStatus> {
+export async function fetchContactStatus(matchId: string, _userId: string): Promise<ContactStatus> {
   if (!API_BASE) return { ok: false };
   try {
     const res = await fetch(
-      `${API_BASE}/api/contact/status?matchId=${encodeURIComponent(matchId)}&userId=${encodeURIComponent(userId)}`,
+      `${API_BASE}/api/contact/status?matchId=${encodeURIComponent(matchId)}`,
+      { headers: authHeader() },
     );
     return (await res.json()) as ContactStatus;
   } catch {
@@ -193,13 +201,13 @@ export async function fetchContactStatus(matchId: string, userId: string): Promi
 }
 
 /** 연락처 오픈 동의(요청) — 양측 동의 시 상대 번호 공개. */
-export async function openContact(matchId: string, userId: string): Promise<ContactStatus> {
+export async function openContact(matchId: string, _userId: string): Promise<ContactStatus> {
   if (!API_BASE) return { ok: false };
   try {
     const res = await fetch(`${API_BASE}/api/contact/open`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ matchId, userId }),
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ matchId }),
     });
     return (await res.json()) as ContactStatus;
   } catch {
@@ -222,7 +230,7 @@ export async function submitVerification(
   try {
     const res = await fetch(`${API_BASE}/api/verification`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify(args),
     });
     return (await res.json()) as VerificationSubmitResult;

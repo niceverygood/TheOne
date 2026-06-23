@@ -243,7 +243,7 @@ export type ManualIdentitySubmitResult =
   | { ok: false; reason: 'validation' | 'server'; message: string };
 
 export type SignupSubmitResult =
-  | { ok: true; userId: string; status: UserStatus }
+  | { ok: true; userId: string; status: UserStatus; token: string }
   | {
       ok: false;
       reason: 'validation' | 'duplicate' | 'server';

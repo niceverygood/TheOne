@@ -88,11 +88,19 @@ export default function Chat() {
   async function onOpenContact() {
     if (!matchId || !userId) return;
     const cost = contact?.cost ?? 0;
+    const creditNote = cost ? `\n크레딧 ${cost}점이 차감됩니다.` : '\n여성 회원은 무료입니다.';
+    const pipaNotice =
+      '\n\n[개인정보 제3자 제공 동의]\n' +
+      '제공 항목: 휴대폰 번호\n' +
+      '제공 대상: 매칭 상대방\n' +
+      '제공 목적: 상호 연락\n' +
+      '보유기간: 매칭 종료 후 즉시 파기\n' +
+      '거부 시 번호오픈 이용이 제한됩니다.';
     showAlert(
-      '연락처를 오픈할까요?',
-      `양쪽 모두 동의하면 서로의 번호가 공개됩니다.${cost ? ` (크레딧 ${cost} 차감)` : ' (무료)'}`,
+      '연락처 오픈 동의',
+      `양측 모두 동의하면 서로의 번호가 공개됩니다.${creditNote}${pipaNotice}`,
       [
-        { text: '취소', style: 'cancel' },
+        { text: '거부', style: 'cancel' },
         {
           text: '동의하고 오픈',
           onPress: async () => {
