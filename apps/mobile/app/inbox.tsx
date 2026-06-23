@@ -108,7 +108,10 @@ export default function Inbox() {
       setBusy(null);
       if (r.ok) {
         setLetters((l) => l.filter((x) => x.id !== id));
-        router.push(r.conversationId ? `/chat?cid=${r.conversationId}` : '/chat');
+        const q = [r.conversationId ? `cid=${r.conversationId}` : null, `mid=${id}`]
+          .filter(Boolean)
+          .join('&');
+        router.push(`/chat?${q}`);
         return;
       }
     }

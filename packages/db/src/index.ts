@@ -30,3 +30,4 @@ export * from './safety';
 export * from './kpi';
 export * from './analytics';
 export * from './seed-data';
+export * from './contact';

@@ -7,6 +7,7 @@ import {
   getPackage,
   refundableAmount,
   LETTER_COST,
+  CONTACT_OPEN_COST,
   isLetterFreeFor,
   VERIFY_REWARD_CREDITS,
   type VerificationType,
@@ -170,4 +171,34 @@ export async function spendForLetter(
   if (tx) await apply(tx);
   else await prisma.$transaction((c) => apply(c));
   return { spent: cost, free: false };
+}
+
+/**
+ * 연락처 오픈 차감 — 요청한 측이 부담(여성은 무료 정책). 1매칭당 최초 동의 시 1회.
+ * 잔액 부족 시 InsufficientCreditError.
+ */
+export async function spendForContact(
+  userId: string,
+  refId: string,
+  tx?: Prisma.TransactionClient,
+): Promise<{ spent: number; free: boolean }> {
+  const db = tx ?? prisma;
+  const user = await db.user.findUnique({ where: { id: userId }, select: { gender: true } });
+  if (isLetterFreeFor(user?.gender)) return { spent: 0, free: true };
+
+  const credit = await db.credit.findUnique({ where: { userId } });
+  if (!credit || credit.balance < CONTACT_OPEN_COST) throw new InsufficientCreditError();
+
+  const apply = async (c: Prisma.TransactionClient) => {
+    await c.credit.update({
+      where: { userId },
+      data: { balance: { decrement: CONTACT_OPEN_COST } },
+    });
+    await c.creditTransaction.create({
+      data: { userId, delta: -CONTACT_OPEN_COST, reason: 'contact_open', refId },
+    });
+  };
+  if (tx) await apply(tx);
+  else await prisma.$transaction((c) => apply(c));
+  return { spent: CONTACT_OPEN_COST, free: false };
 }

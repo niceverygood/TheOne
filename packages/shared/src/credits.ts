@@ -74,6 +74,16 @@ export function letterCost(
 }
 
 /**
+ * 연락처 오픈 비용 — 매칭 성사(수락) 후, 양측 동의 시 연락처 공개.
+ * 요청한 측이 차감(여성은 신청서와 동일하게 무료 정책). 1매칭당 1회.
+ */
+export const CONTACT_OPEN_COST = 30;
+
+export function contactOpenCost(gender?: 'male' | 'female'): number {
+  return isLetterFreeFor(gender) ? 0 : CONTACT_OPEN_COST;
+}
+
+/**
  * 환불 가능액 산정 (전자상거래법 7일 청약철회 + 디지털콘텐츠 일부사용 차감).
  * IAP(provider='iap_apple'|'iap_google') 주문은 스토어 정책으로 위임 — 이 함수는 외부 PG 전용.
  */

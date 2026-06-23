@@ -171,6 +171,42 @@ export async function respondToMatch(
   }
 }
 
+export interface ContactStatus {
+  ok: boolean;
+  state?: 'none' | 'requested_by_me' | 'requested_by_them' | 'opened';
+  otherPhone?: string | null;
+  cost?: number;
+  reason?: string;
+}
+
+/** 연락처 오픈 상태 조회. */
+export async function fetchContactStatus(matchId: string, userId: string): Promise<ContactStatus> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/contact/status?matchId=${encodeURIComponent(matchId)}&userId=${encodeURIComponent(userId)}`,
+    );
+    return (await res.json()) as ContactStatus;
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** 연락처 오픈 동의(요청) — 양측 동의 시 상대 번호 공개. */
+export async function openContact(matchId: string, userId: string): Promise<ContactStatus> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/contact/open`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ matchId, userId }),
+    });
+    return (await res.json()) as ContactStatus;
+  } catch {
+    return { ok: false };
+  }
+}
+
 export interface SubmitVerificationArgs {
   userId: string;
   type: VerificationType;

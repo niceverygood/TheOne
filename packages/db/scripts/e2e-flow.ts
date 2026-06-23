@@ -12,6 +12,8 @@ import {
   sendLetter,
   respondToMatch,
   sendMessage,
+  requestContactOpen,
+  getContactStatus,
   surveyFor,
 } from '../src/index';
 import { ageFromBirth } from '@theone/shared';
@@ -132,6 +134,26 @@ async function runViewer(opts: {
     });
     console.log(`7) 첫 메시지 전송 ✓  messageId=${msg.id.slice(0, 8)}… → 핵심 루프 완결`);
   }
+
+  // 8~9) 번호오픈 — 양측 동의 시 서로 번호 공개 (테스트용 번호/크레딧 세팅)
+  const vPhone = `0101111${opts.tag === 'f' ? '0001' : '0002'}`;
+  const cPhone = `0103333${opts.tag === 'f' ? '0001' : '0002'}`;
+  await prisma.user.update({ where: { id: user.id }, data: { phone: vPhone } });
+  await prisma.user.update({ where: { id: c.id }, data: { phone: cPhone } });
+  await prisma.credit.upsert({
+    where: { userId: c.id },
+    create: { userId: c.id, balance: 100 },
+    update: { balance: 100 },
+  });
+
+  const s1 = await requestContactOpen(sent.matchId, user.id);
+  console.log(`8) 내 연락처 오픈 동의 ✓  state=${s1.state} (차감 ${s1.cost} 크레딧)`);
+  const s2 = await requestContactOpen(sent.matchId, c.id);
+  const mine = await getContactStatus(sent.matchId, user.id);
+  console.log(
+    `9) 상대 동의 → state=${s2.state}  · 내가 보는 상대 번호=${mine.otherPhone} · 상대가 보는 내 번호=${s2.otherPhone}`,
+  );
+  console.log(s2.state === 'opened' ? '   ✔ 번호오픈 완결 (양측 동의 → 공개)' : '   ✗ 미공개');
 }
 
 async function main() {
