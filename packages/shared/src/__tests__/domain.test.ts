@@ -193,6 +193,40 @@ describe('킥: 가치관이 단일 최대 가중치', () => {
     );
   });
 
+  it('뱃지 가산은 상한(badgeScoreCap) 이하 — 인증 풀스택도 가치관을 못 넘는다 (H1)', () => {
+    expect(WEIGHTS.badgeScoreCap).toBeLessThan(WEIGHTS.valuesAlignment);
+    const viewer: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth', 'vehicle', 'realestate', 'job', 'income'],
+    };
+    const full: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth', 'vehicle', 'realestate', 'job', 'income'],
+    };
+    const none: Candidate = { region: '서울', age: 32, badges: [] };
+    // 동일 후보의 뱃지 유무 점수차 = 뱃지 기여분 → 상한 이하여야 한다.
+    expect(scoreCandidate(viewer, full) - scoreCandidate(viewer, none)).toBeLessThanOrEqual(
+      WEIGHTS.badgeScoreCap,
+    );
+    // 인증 풀스택 but 가치관 정반대 후보 < 인증 0 but 가치관 만점 후보.
+    const v2: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth', 'vehicle', 'realestate', 'job', 'income'],
+      survey: fill(3),
+    };
+    const fullBadgeOpp: Candidate = {
+      region: '서울',
+      age: 32,
+      badges: ['education', 'wealth', 'vehicle', 'realestate', 'job', 'income'],
+      survey: fill(5),
+    };
+    const perfectValues: Candidate = { region: '서울', age: 32, badges: [], survey: fill(3) };
+    expect(scoreCandidate(v2, perfectValues)).toBeGreaterThan(scoreCandidate(v2, fullBadgeOpp));
+  });
+
   it('설문 없는 두 후보는 기존(지역·나이·뱃지) 룰 그대로', () => {
     const viewer: Candidate = { region: '서울', age: 32, badges: ['education'] };
     const a: Candidate = { region: '서울', age: 31, badges: ['education', 'wealth'] };

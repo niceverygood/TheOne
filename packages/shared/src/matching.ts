@@ -68,6 +68,9 @@ export const WEIGHTS = {
   ageCloseness: 4, // (window - |diff|) * 4
   badgePerOverlap: 8,
   badgeCount: 3, // 상대 뱃지 총수 * 3 (검증도 높을수록 가산)
+  // 뱃지 총 가산 상한 — 인증 종수(최대 8~12종)가 많아도 가치관(최대 100)을 추월하지
+  // 못하게 막는다. "검증은 입장권, 매칭은 가치관" 철학 보장. (H1)
+  badgeScoreCap: 40,
 } as const;
 
 /** 후보 적합 여부 (하드 필터) */
@@ -84,8 +87,11 @@ export function scoreCandidate(viewer: Candidate, c: Candidate): number {
   if (viewer.region === c.region) s += WEIGHTS.sameRegion;
   else if (regionEligible(viewer.region, c.region)) s += WEIGHTS.adjacentRegion;
   s += (AGE_WINDOW - Math.abs(viewer.age - c.age)) * WEIGHTS.ageCloseness;
-  s += badgeOverlap(viewer.badges, c.badges) * WEIGHTS.badgePerOverlap;
-  s += c.badges.length * WEIGHTS.badgeCount;
+  // 뱃지 가산은 상한(badgeScoreCap)을 둬 가치관(최대 100)을 절대 추월하지 못하게 한다(H1).
+  const badgeScore =
+    badgeOverlap(viewer.badges, c.badges) * WEIGHTS.badgePerOverlap +
+    c.badges.length * WEIGHTS.badgeCount;
+  s += Math.min(badgeScore, WEIGHTS.badgeScoreCap);
   return s;
 }
 

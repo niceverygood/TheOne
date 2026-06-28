@@ -38,28 +38,46 @@ export async function sendLetter(args: {
   // 발신자가 정지/강퇴/탈퇴 상태면 발송 불가(활동 회원만 신청 가능).
   const sender = await prisma.user.findUnique({
     where: { id: fromId },
-    select: { status: true },
+    select: { status: true, gender: true },
   });
   if (!sender || sender.status !== 'active') throw new Error('sender_inactive');
+
+  // 수신자 유효성(M2) — body 의 toId 를 신뢰하지 않는다. 실재·활동·이성 회원만 대상.
+  // (비활성·탈퇴·동성·존재안함 회원에게 편지가 꽂히는 것을 차단)
+  const recipient = await prisma.user.findUnique({
+    where: { id: toId },
+    select: { status: true, gender: true },
+  });
+  if (!recipient || recipient.status !== 'active') throw new Error('recipient_unavailable');
+  if (recipient.gender === sender.gender) throw new Error('recipient_unavailable');
 
   // 차단 관계(양방향)면 발송 불가
   const blocked = await listBlockedIds(fromId);
   if (blocked.includes(toId)) throw new Error('blocked');
 
-  // 같은 상대에게 이미 대기중 신청서가 있으면 중복 발송 차단
+  // 같은 상대에게 이미 대기중 신청서가 있으면 중복 발송 차단(빠른 경로).
+  // 동시성 보증은 부분 unique 인덱스(matches_from_to_pending_uniq) — 레이스 시 P2002.
   const dup = await prisma.match.findFirst({
     where: { fromId, toId, status: 'pending' },
     select: { id: true },
   });
   if (dup) throw new Error('already_sent');
 
-  return prisma.$transaction(async (tx) => {
-    const match = await tx.match.create({
-      data: { fromId, toId, letter, isSuper, status: 'pending' },
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const match = await tx.match.create({
+        data: { fromId, toId, letter, isSuper, status: 'pending' },
+      });
+      const spend = await spendForLetter(fromId, isSuper, match.id, tx);
+      return { matchId: match.id, spent: spend.spent, free: spend.free };
     });
-    const spend = await spendForLetter(fromId, isSuper, match.id, tx);
-    return { matchId: match.id, spent: spend.spent, free: spend.free };
-  });
+  } catch (e) {
+    // 동시 중복발송(부분 unique 충돌) → 멱등하게 already_sent 로 변환(트랜잭션 롤백 → 크레딧 미차감).
+    if (typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002') {
+      throw new Error('already_sent');
+    }
+    throw e;
+  }
 }
 
 interface UserForMatch {
