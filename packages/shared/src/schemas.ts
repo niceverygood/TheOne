@@ -302,6 +302,19 @@ export interface CurationChemistry {
   axes: { kr: string; value: number }[];
 }
 
+/** 큐레이션 1건 — 후보 + 케미. 하루 N건(CURATION_PER_DAY)일 때 items[] 로 묶인다. */
+export interface CurationEntry {
+  candidate: CurationCandidateMeta;
+  chemistry: CurationChemistry | null;
+}
+
 export type CurationTodayResult =
-  | { ok: true; candidate: CurationCandidateMeta | null; chemistry: CurationChemistry | null }
+  | {
+      ok: true;
+      /** 하위호환: 첫 후보(items[0]). */
+      candidate: CurationCandidateMeta | null;
+      chemistry: CurationChemistry | null;
+      /** 오늘의 큐레이션 목록(최대 CURATION_PER_DAY). 구버전 응답엔 없을 수 있음. */
+      items?: CurationEntry[];
+    }
   | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };

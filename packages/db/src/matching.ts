@@ -6,7 +6,7 @@
 import { prisma } from './index';
 import {
   ageFromBirth,
-  pickTodayCuration,
+  isEligible,
   scoreCandidate,
   surveyAlignment,
   surveyBreakdown,
@@ -108,118 +108,118 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
   };
 }
 
+/** 하루 큐레이션 수 — env CURATION_PER_DAY(기본 1, 1~5). 풀 부족 시 자동 축소(안전). */
+const CURATION_PER_DAY = Math.max(1, Math.min(5, Number(process.env.CURATION_PER_DAY) || 1));
+
+/** 후보 1명을 화면용(profile·badges 포함)으로 로드 + 케미 3축 계산. */
+async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
+  const candidate = await prisma.user.findUnique({
+    where: { id: candidateId },
+    include: { profile: true, badges: true },
+  });
+  const breakdown = surveyBreakdown(viewerSurvey, candidate?.profile?.surveyAnswers ?? []);
+  return { candidate, breakdown };
+}
+
 /**
- * 오늘의 큐레이션 후보 선정. 이미 오늘 발송됐으면 그 후보를 반환.
- * 활동 회원 중 이성 + 미발송(과거 제외) 대상에서 룰 점수 최고를 고른다.
+ * 오늘의 큐레이션 목록 — 하루 최대 CURATION_PER_DAY 명. 이미 오늘 만든 건 그대로 두고,
+ * 모자라면 점수순으로 새 후보를 골라 CurationLog 에 스냅샷한다(본인·과거·차단·동성 제외).
+ * 풀이 부족하면 만들 수 있는 만큼만 — 데드엔드 대신 자연 축소. 점수 동점은 입력 순서.
  */
-export async function getTodayCuration(userId: string) {
+export async function getTodayCurations(userId: string) {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const existing = await prisma.curationLog.findFirst({
+  const viewer = await loadUserForMatch(userId);
+  const viewerSurvey = viewer?.survey ?? [];
+
+  // 오늘 이미 만들어진 큐레이션부터 복원
+  const todayLogs = await prisma.curationLog.findMany({
     where: { userId, sentAt: { gte: startOfToday } },
-    orderBy: { sentAt: 'desc' },
+    orderBy: { sentAt: 'asc' },
   });
-  if (existing) {
-    const cand = await prisma.user.findUnique({
-      where: { id: existing.candidateId },
-      include: { profile: true, badges: true },
-    });
-    // 케미 분해는 발송 시 score/chemistry 와 함께 결정되지만, 화면 노출용 3축은
-    // 뷰어·상대 설문으로 다시 계산한다(설문 변경이 드물어 비용 무시 가능).
-    const viewerSurvey =
-      (
-        await prisma.profile.findUnique({
-          where: { userId },
-          select: { surveyAnswers: true },
-        })
-      )?.surveyAnswers ?? [];
-    const breakdown = surveyBreakdown(viewerSurvey, cand?.profile?.surveyAnswers ?? []);
-    return { log: existing, candidate: cand, breakdown };
+  const items: {
+    log: (typeof todayLogs)[number];
+    candidate: Awaited<ReturnType<typeof hydrateCandidate>>['candidate'];
+    breakdown: ReturnType<typeof surveyBreakdown>;
+  }[] = [];
+  for (const log of todayLogs) {
+    const { candidate, breakdown } = await hydrateCandidate(log.candidateId, viewerSurvey);
+    items.push({ log, candidate, breakdown });
   }
 
-  const viewer = await loadUserForMatch(userId);
-  if (!viewer) return null;
+  // 부족분을 점수순으로 채움
+  if (viewer && items.length < CURATION_PER_DAY) {
+    const seen = await prisma.curationLog.findMany({
+      where: { userId },
+      select: { candidateId: true },
+    });
+    const seenIds = new Set(seen.map((s) => s.candidateId));
+    const self = await prisma.user.findUnique({ where: { id: userId }, select: { gender: true } });
+    const oppGender = self?.gender === 'male' ? 'female' : 'male';
+    // 차단 관계(양방향)는 후보 풀에서 제외.
+    const blockedIds = await listBlockedIds(userId);
 
-  // 과거 노출한 후보 제외
-  const seen = await prisma.curationLog.findMany({
-    where: { userId },
-    select: { candidateId: true },
-  });
-  const seenIds = new Set(seen.map((s) => s.candidateId));
+    const pool = await prisma.user.findMany({
+      where: {
+        status: 'active',
+        gender: oppGender,
+        id: { notIn: [userId, ...seenIds, ...blockedIds] },
+        birth: { not: null },
+      },
+      include: {
+        profile: { select: { region: true, surveyAnswers: true } },
+        badges: { where: { expiresAt: { gt: new Date() } }, select: { type: true } },
+      },
+      take: 500,
+    });
 
-  const oppGender =
-    (await prisma.user.findUnique({ where: { id: userId } }))?.gender === 'male'
-      ? 'female'
-      : 'male';
+    const viewerCand: Candidate = {
+      region: viewer.region,
+      age: viewer.age,
+      badges: viewer.badges,
+      survey: viewer.survey,
+    };
+    const candidates = pool
+      .filter((p) => p.birth)
+      .map((p) => ({
+        raw: p,
+        cand: {
+          region: toAdjacencyKey(p.profile?.region) || '서울',
+          age: ageFromBirth(p.birth!),
+          badges: p.badges.map((b) => b.type) as VerificationType[],
+          survey: p.profile?.surveyAnswers ?? [],
+        } as Candidate,
+      }));
 
-  // 차단 관계(양방향)는 후보 풀에서 제외 — 차단한/당한 상대가 오늘의 1명으로 추천되지 않도록.
-  const blockedIds = await listBlockedIds(userId);
+    // 적격(지역·나이) 우선, 적격자 없으면 콜드스타트 폴백으로 전체 — 둘 다 점수 내림차순.
+    const eligible = candidates.filter((c) => isEligible(viewerCand, c.cand));
+    const ranked = (eligible.length ? eligible : candidates)
+      .map((c) => ({ c, s: scoreCandidate(viewerCand, c.cand) }))
+      .sort((a, b) => b.s - a.s)
+      .map((x) => x.c);
 
-  const pool = await prisma.user.findMany({
-    where: {
-      status: 'active',
-      gender: oppGender,
-      id: { notIn: [userId, ...seenIds, ...blockedIds] },
-      birth: { not: null },
-    },
-    include: {
-      profile: { select: { region: true, surveyAnswers: true } },
-      badges: { where: { expiresAt: { gt: new Date() } }, select: { type: true } },
-    },
-    take: 500,
-  });
-
-  const candidates = pool
-    .filter((p) => p.birth)
-    .map((p) => ({
-      raw: p,
-      cand: {
-        region: toAdjacencyKey(p.profile?.region) || '서울',
-        age: ageFromBirth(p.birth!),
-        badges: p.badges.map((b) => b.type) as VerificationType[],
-        survey: p.profile?.surveyAnswers ?? [],
-      } as Candidate,
-    }));
-
-  const viewerCand: Candidate = {
-    region: viewer.region,
-    age: viewer.age,
-    badges: viewer.badges,
-    survey: viewer.survey,
-  };
-  let best = pickTodayCuration(
-    viewerCand,
-    candidates.map((c) => c.cand),
-  );
-  // 콜드스타트 폴백 — 지역/나이 하드필터로 적격자가 없으면 필터를 풀고 점수 최고를 고른다.
-  // (풀 자체가 비어 있지 않은 한, 신규 회원이 데드엔드 화면을 보지 않게 한다.)
-  if (!best && candidates.length > 0) {
-    let bestScore = -Infinity;
-    for (const c of candidates) {
-      const sc = scoreCandidate(viewerCand, c.cand);
-      if (sc > bestScore) {
-        bestScore = sc;
-        best = c.cand;
-      }
+    for (const chosen of ranked.slice(0, CURATION_PER_DAY - items.length)) {
+      const score = scoreCandidate(viewerCand, chosen.cand);
+      const chemistry = surveyAlignment(viewerCand.survey, chosen.cand.survey);
+      const log = await prisma.curationLog.create({
+        data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
+      });
+      const { candidate, breakdown } = await hydrateCandidate(chosen.raw.id, viewerSurvey);
+      items.push({ log, candidate, breakdown });
     }
   }
-  if (!best) return null;
 
-  const chosen = candidates.find((c) => c.cand === best)!;
-  const score = scoreCandidate(viewerCand, best);
-  const chemistry = surveyAlignment(viewerCand.survey, best.survey);
-  const breakdown = surveyBreakdown(viewerCand.survey, best.survey);
+  return items;
+}
 
-  const log = await prisma.curationLog.create({
-    data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
-  });
-  // 기존 분기와 동일한 full include 로 반환해 candidate 모양을 통일한다.
-  const candidate = await prisma.user.findUnique({
-    where: { id: chosen.raw.id },
-    include: { profile: true, badges: true },
-  });
-  return { log, candidate, breakdown };
+/**
+ * 오늘의 큐레이션 1명(히어로) — 하위호환. 목록의 첫 후보.
+ * 활동 회원 중 이성 + 미발송(과거 제외) 대상에서 룰 점수 최고를 고른다.
+ */
+export async function getTodayCuration(userId: string) {
+  const items = await getTodayCurations(userId);
+  return items[0] ?? null;
 }
 
 /** 큐레이션 반응 기록 (viewed/passed/liked/superliked) */
@@ -239,8 +239,8 @@ export async function runDailyCuration(): Promise<{ sent: number; skipped: numbe
   let sent = 0;
   let skipped = 0;
   for (const u of users) {
-    const res = await getTodayCuration(u.id);
-    if (res?.log) sent++;
+    const items = await getTodayCurations(u.id);
+    if (items.length) sent += items.length;
     else skipped++;
   }
   return { sent, skipped };

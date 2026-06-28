@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { showAlert } from '../src/brand-alert';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { matchReasons } from '@theone/shared';
 import { C } from '../src/theme';
 import { Btn, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 import { useSignup } from '../src/store';
 import { fetchTodayCuration } from '../src/signup-api';
-import type { CurationCandidateMeta } from '@theone/shared';
+import type { CurationCandidateMeta, CurationEntry } from '@theone/shared';
 
 /** API 미설정/설문 미완료 시 보여줄 목업 케미 3축. */
 const FALLBACK_CHEMI: { kr: string; value: number }[] = [
@@ -28,13 +28,32 @@ const REASONS = matchReasons(
 
 export default function Curation() {
   const router = useRouter();
-  const userId = useSignup((s) => s.userId);
+  // 개발 전용 — ?u=<viewerId> 로 큐레이션을 실데이터로 미리보기(스크린샷/QA). 프로덕션 동작엔 영향 없음.
+  const params = useLocalSearchParams<{ u?: string }>();
+  const storeUserId = useSignup((s) => s.userId);
+  const userId = (typeof __DEV__ !== 'undefined' && __DEV__ && params.u) || storeUserId;
   const blocked = useSignup((s) => s.blocked);
   const [axes, setAxes] = useState(FALLBACK_CHEMI);
   const [overall, setOverall] = useState<number | null>(null);
   const [candidate, setCandidate] = useState<CurationCandidateMeta | null>(null);
+  // 하루 N명(CURATION_PER_DAY) 큐레이션 — 1명씩 보여주고 "더 보기"로 다음 후보로 이동.
+  const [items, setItems] = useState<CurationEntry[]>([]);
+  const [idx, setIdx] = useState(0);
   const [passed, setPassed] = useState(false);
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
+  const hasNext = idx + 1 < items.length;
+
+  // 현재 인덱스 후보를 화면 상태에 반영(케미 3축 포함).
+  function applyItem(it: CurationEntry | undefined) {
+    setCandidate(it?.candidate ?? null);
+    if (it?.chemistry) {
+      setAxes(it.chemistry.axes);
+      setOverall(it.chemistry.overall);
+    } else {
+      setAxes(FALLBACK_CHEMI);
+      setOverall(null);
+    }
+  }
 
   // 오늘의 큐레이션을 실데이터로 — 후보(사진·프로필) + 케미(가치관 일치도)가 더원의 킥.
   useEffect(() => {
@@ -42,11 +61,16 @@ export default function Curation() {
     let alive = true;
     fetchTodayCuration(userId).then((r) => {
       if (!alive || !r.ok) return;
-      if (r.candidate) setCandidate(r.candidate);
-      if (r.chemistry) {
-        setAxes(r.chemistry.axes);
-        setOverall(r.chemistry.overall);
-      }
+      // 신버전은 items[], 구버전은 단일 candidate — 둘 다 목록으로 정규화.
+      const list: CurationEntry[] =
+        r.items && r.items.length
+          ? r.items
+          : r.candidate
+            ? [{ candidate: r.candidate, chemistry: r.chemistry }]
+            : [];
+      setItems(list);
+      setIdx(0);
+      applyItem(list[0]);
     });
     return () => {
       alive = false;
@@ -65,8 +89,21 @@ export default function Curation() {
     : '“주말엔 한남동 작은 갤러리들을 천천히 도는 걸 좋아해요.”';
   const dots = candidate ? Math.max(1, Math.min(4, candidate.badgeCount)) : 4;
 
-  // Pass — 확인 후 오늘의 큐레이션을 접고 자정 갱신 안내 상태로 전환
+  // 다음 후보로 이동(오늘 목록에 더 있을 때).
+  function goNext() {
+    const n = idx + 1;
+    if (n < items.length) {
+      setIdx(n);
+      applyItem(items[n]);
+    }
+  }
+
+  // Pass — 오늘 목록에 다음 후보가 있으면 그분으로, 마지막이면 자정 갱신 안내로 전환
   function onPass() {
+    if (hasNext) {
+      goNext();
+      return;
+    }
     showAlert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '넘기기', style: 'destructive', onPress: () => setPassed(true) },
@@ -247,7 +284,7 @@ export default function Curation() {
           <Btn label="프로필 더 알아보기" variant="champ" onPress={() => router.push('/profile')} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Btn
-              label="Pass · 오늘은 넘기기"
+              label={hasNext ? '다음 분 보기 →' : 'Pass · 오늘은 넘기기'}
               variant="outline"
               labelColor={C.graySoft}
               style={{ flex: 1, borderColor: C.inkSoft }}
@@ -263,7 +300,9 @@ export default function Curation() {
           </View>
         </View>
         <Txt size={11} color={C.gray} style={{ textAlign: 'center', marginTop: 16 }}>
-          오늘의 큐레이션은 자정 이후 갱신됩니다.
+          {items.length > 1
+            ? `오늘의 추천 ${idx + 1} / ${items.length} · 자정 이후 갱신됩니다.`
+            : '오늘의 큐레이션은 자정 이후 갱신됩니다.'}
         </Txt>
       </View>
     </Screen>
