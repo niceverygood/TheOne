@@ -6,6 +6,7 @@ import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
 import { useSignup } from '../src/store';
 import { fetchReceivedMatches, respondToMatch } from '../src/signup-api';
+import { showAlert } from '../src/brand-alert';
 
 interface Letter {
   id: string;
@@ -101,6 +102,14 @@ export default function Inbox() {
     setLetters((l) => l.filter((x) => x.id !== id));
   }
 
+  // 거절은 되돌릴 수 없으므로 2차 확인(QA: 오작동 방지).
+  function confirmDecline(id: string, name: string) {
+    showAlert('정말 거절하시겠어요?', `${name} 님의 신청을 거절하면 되돌릴 수 없습니다.`, [
+      { text: '취소', style: 'cancel' },
+      { text: '정중히 거절', style: 'destructive', onPress: () => decline(id) },
+    ]);
+  }
+
   async function accept(id: string) {
     if (live && userId) {
       setBusy(id);
@@ -121,6 +130,16 @@ export default function Inbox() {
   return (
     <Screen>
       <View style={{ padding: 24 }}>
+        {/* 뒤로가기 — 이전 화면(없으면 큐레이션 홈)으로 (QA: 상단 back 부재) */}
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/curation'))}
+          hitSlop={10}
+          style={{ marginBottom: 10 }}
+        >
+          <Txt variant="mono" size={18} color={C.ink2}>
+            ←
+          </Txt>
+        </Pressable>
         <View
           style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -241,7 +260,7 @@ export default function Inbox() {
                       variant="outline"
                       labelColor={C.terra}
                       style={{ paddingVertical: 8, paddingHorizontal: 14, borderColor: C.terra }}
-                      onPress={() => decline(l.id)}
+                      onPress={() => confirmDecline(l.id, l.name)}
                     />
                     <Btn
                       label={busy === l.id ? '처리 중…' : '수락하고 채팅'}

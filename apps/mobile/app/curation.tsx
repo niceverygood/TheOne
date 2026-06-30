@@ -136,7 +136,8 @@ export default function Curation() {
               : '자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의 방식입니다.'}
           </Txt>
           <View style={{ marginTop: 32 }}>
-            <Btn label="매칭함 보기" variant="outline" onPress={() => router.push('/inbox')} />
+            {/* 어두운 배경 대비 시인성 — 솔리드 샴페인으로(QA: 버튼 인지 어려움) */}
+            <Btn label="매칭함 보기" variant="champ" onPress={() => router.push('/inbox')} />
           </View>
         </View>
       </Screen>

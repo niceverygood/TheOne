@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MASK_NOTICE, maskExternalContact } from '@theone/shared';
@@ -126,211 +133,225 @@ export default function Chat() {
         onClose={() => setSafetyOpen(false)}
         onBlocked={() => router.back()}
       />
-      {/* 헤더 */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 14,
-          borderBottomWidth: 1,
-          borderBottomColor: C.hairLight,
-        }}
+      {/* 키보드 활성화 시 입력창이 키보드 위로 밀려 올라가도록 (QA: 입력 폼 가림 수정) */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Pressable onPress={() => router.back()}>
-            <Txt variant="mono" size={18} color={C.ink2}>
-              ←
-            </Txt>
-          </Pressable>
-          <View style={{ width: 38, height: 38 }}>
-            <Portrait fill source={previewPortraits.jiyoon} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Txt size={15} weight="500" color={C.ink2}>
-                김지윤
-              </Txt>
-              <VerifiedDots marks={4} size={4} />
-            </View>
-            <Txt size={11} color={C.gray}>
-              변호사 · 서초
-            </Txt>
-          </View>
-          <Pressable onPress={() => setSafetyOpen(true)} hitSlop={10}>
-            <Txt variant="mono" size={18} color={C.gray}>
-              ⋯
-            </Txt>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* 번호오픈 바 — 실매칭일 때만. 양측 동의 시 번호 공개(번호오픈 MVP) */}
-      {matchId && contact?.ok ? (
+        {/* 헤더 */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             paddingHorizontal: 24,
-            paddingVertical: 12,
-            backgroundColor: contact.state === 'opened' ? '#F1F5F2' : '#FBF7F0',
+            paddingVertical: 14,
             borderBottomWidth: 1,
             borderBottomColor: C.hairLight,
           }}
         >
-          {contact.state === 'opened' ? (
-            <Txt size={13} color={C.sage}>
-              📞 연락처 공개됨 · {contact.otherPhone ?? '번호 없음'}
-            </Txt>
-          ) : contact.state === 'requested_by_me' ? (
-            <Txt size={12.5} color={C.gray}>
-              연락처 오픈 요청함 · 상대 동의 대기 중
-            </Txt>
-          ) : (
-            <>
-              <Txt size={12.5} color={C.ink2} style={{ flex: 1, marginRight: 12 }}>
-                {contact.state === 'requested_by_them'
-                  ? '상대가 연락처를 열고 싶어 해요'
-                  : '대화가 잘 통한다면, 연락처를 열어보세요'}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Pressable onPress={() => router.back()}>
+              <Txt variant="mono" size={18} color={C.ink2}>
+                ←
               </Txt>
-              <Pressable
-                onPress={onOpenContact}
-                disabled={contactBusy}
-                style={{
-                  borderWidth: 1,
-                  borderColor: C.champagne,
-                  backgroundColor: C.champagne,
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: RADIUS,
-                  opacity: contactBusy ? 0.5 : 1,
-                }}
-              >
-                <Txt size={12.5} color="#fff" weight="500">
-                  {contactBusy
-                    ? '처리 중…'
-                    : `연락처 오픈${contact.cost ? ` · ${contact.cost}크레딧` : ' · 무료'}`}
-                </Txt>
-              </Pressable>
-            </>
-          )}
-        </View>
-      ) : null}
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <Txt variant="mono" size={10} color={C.champagne}>
-            MATCHED · 05.10
-          </Txt>
-          <Txt size={11.5} color={C.gray} style={{ marginTop: 4 }}>
-            두 분이 매칭된 지 7일째입니다
-          </Txt>
-          {/* 진전 단계 — 다음 단계 넛지 */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
-            {STAGES.map((s, i) => (
-              <View key={s} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View
-                  style={{
-                    width: 5,
-                    height: 5,
-                    borderRadius: 3,
-                    backgroundColor: i <= CURRENT_STAGE ? C.sage : C.hairLight,
-                  }}
-                />
-                <Txt
-                  variant="mono"
-                  size={9}
-                  color={i === CURRENT_STAGE ? C.ink2 : i < CURRENT_STAGE ? C.sage : C.graySoft}
-                >
-                  {s}
-                </Txt>
-                {i < STAGES.length - 1 ? (
-                  <View style={{ width: 14, height: 1, backgroundColor: C.hairLight }} />
-                ) : null}
+            </Pressable>
+            {/* 사진·이름 탭 → 프로필 상세 (QA: 프로필 탭 인터랙션 부재) */}
+            <Pressable
+              onPress={() => router.push('/profile')}
+              hitSlop={6}
+              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            >
+              <View style={{ width: 38, height: 38 }}>
+                <Portrait fill source={previewPortraits.jiyoon} />
               </View>
-            ))}
-          </View>
-          <Txt size={10.5} color={C.gray} style={{ marginTop: 8 }}>
-            대화가 무르익었어요 — 이번 주말 만남을 제안해 보세요.
-          </Txt>
-        </View>
-        {msgs.map((m) => (
-          <Bubble key={m.id} me={m.me} time={m.time}>
-            {m.text}
-          </Bubble>
-        ))}
-      </ScrollView>
-
-      {/* AI 추천 */}
-      <View style={{ paddingHorizontal: 24, paddingBottom: 8 }}>
-        <Txt variant="eyebrow" style={{ marginBottom: 8 }}>
-          AI 추천 답장
-        </Txt>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {SUGGEST.map((s, i) => (
-              <Pressable
-                key={i}
-                onPress={() => send(s)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: C.champagne,
-                  paddingVertical: 8,
-                  paddingHorizontal: 12,
-                  borderRadius: RADIUS,
-                }}
-              >
-                <Txt size={12} color={C.champagne}>
-                  {s}
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Txt size={15} weight="500" color={C.ink2}>
+                    김지윤
+                  </Txt>
+                  <VerifiedDots marks={4} size={4} />
+                </View>
+                <Txt size={11} color={C.gray}>
+                  변호사 · 서초
                 </Txt>
-              </Pressable>
-            ))}
+              </View>
+            </Pressable>
+            <Pressable onPress={() => setSafetyOpen(true)} hitSlop={10}>
+              <Txt variant="mono" size={18} color={C.gray}>
+                ⋯
+              </Txt>
+            </Pressable>
           </View>
-        </ScrollView>
-      </View>
+        </View>
 
-      {/* 입력 */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 10,
-          paddingBottom: Math.max(insets.bottom, 12),
-          borderTopWidth: 1,
-          borderTopColor: C.hairLight,
-        }}
-      >
-        {masked ? (
-          <Txt size={10.5} color={C.terra} style={{ marginBottom: 6 }}>
-            {MASK_NOTICE}
-          </Txt>
+        {/* 번호오픈 바 — 실매칭일 때만. 양측 동의 시 번호 공개(번호오픈 MVP) */}
+        {matchId && contact?.ok ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              backgroundColor: contact.state === 'opened' ? '#F1F5F2' : '#FBF7F0',
+              borderBottomWidth: 1,
+              borderBottomColor: C.hairLight,
+            }}
+          >
+            {contact.state === 'opened' ? (
+              <Txt size={13} color={C.sage}>
+                📞 연락처 공개됨 · {contact.otherPhone ?? '번호 없음'}
+              </Txt>
+            ) : contact.state === 'requested_by_me' ? (
+              <Txt size={12.5} color={C.gray}>
+                연락처 오픈 요청함 · 상대 동의 대기 중
+              </Txt>
+            ) : (
+              <>
+                <Txt size={12.5} color={C.ink2} style={{ flex: 1, marginRight: 12 }}>
+                  {contact.state === 'requested_by_them'
+                    ? '상대가 연락처를 열고 싶어 해요'
+                    : '대화가 잘 통한다면, 연락처를 열어보세요'}
+                </Txt>
+                <Pressable
+                  onPress={onOpenContact}
+                  disabled={contactBusy}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: C.champagne,
+                    backgroundColor: C.champagne,
+                    paddingHorizontal: 14,
+                    paddingVertical: 7,
+                    borderRadius: RADIUS,
+                    opacity: contactBusy ? 0.5 : 1,
+                  }}
+                >
+                  <Txt size={12.5} color="#fff" weight="500">
+                    {contactBusy
+                      ? '처리 중…'
+                      : `연락처 오픈${contact.cost ? ` · ${contact.cost}크레딧` : ' · 무료'}`}
+                  </Txt>
+                </Pressable>
+              </>
+            )}
+          </View>
         ) : null}
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Txt variant="mono" size={10} color={C.champagne}>
+              MATCHED · 05.10
+            </Txt>
+            <Txt size={11.5} color={C.gray} style={{ marginTop: 4 }}>
+              두 분이 매칭된 지 7일째입니다
+            </Txt>
+            {/* 진전 단계 — 다음 단계 넛지 */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
+              {STAGES.map((s, i) => (
+                <View key={s} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: 3,
+                      backgroundColor: i <= CURRENT_STAGE ? C.sage : C.hairLight,
+                    }}
+                  />
+                  <Txt
+                    variant="mono"
+                    size={9}
+                    color={i === CURRENT_STAGE ? C.ink2 : i < CURRENT_STAGE ? C.sage : C.graySoft}
+                  >
+                    {s}
+                  </Txt>
+                  {i < STAGES.length - 1 ? (
+                    <View style={{ width: 14, height: 1, backgroundColor: C.hairLight }} />
+                  ) : null}
+                </View>
+              ))}
+            </View>
+            <Txt size={10.5} color={C.gray} style={{ marginTop: 8 }}>
+              대화가 무르익었어요 — 이번 주말 만남을 제안해 보세요.
+            </Txt>
+          </View>
+          {msgs.map((m) => (
+            <Bubble key={m.id} me={m.me} time={m.time}>
+              {m.text}
+            </Bubble>
+          ))}
+        </ScrollView>
+
+        {/* AI 추천 */}
+        <View style={{ paddingHorizontal: 24, paddingBottom: 8 }}>
+          <Txt variant="eyebrow" style={{ marginBottom: 8 }}>
+            AI 추천 답장
+          </Txt>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {SUGGEST.map((s, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => send(s)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: C.champagne,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: RADIUS,
+                  }}
+                >
+                  <Txt size={12} color={C.champagne}>
+                    {s}
+                  </Txt>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* 입력 */}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            borderWidth: 1,
-            borderColor: C.hairLight,
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: RADIUS,
-            backgroundColor: '#fff',
+            paddingHorizontal: 24,
+            paddingTop: 10,
+            paddingBottom: Math.max(insets.bottom, 12),
+            borderTopWidth: 1,
+            borderTopColor: C.hairLight,
           }}
         >
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="메시지를 입력하세요"
-            placeholderTextColor={C.graySoft}
-            style={{ flex: 1, fontSize: 13.5, color: C.ink2 }}
-            onSubmitEditing={() => send()}
-          />
-          <Pressable onPress={() => send()}>
-            <Txt variant="mono" size={15} color={C.champagne}>
-              ↑
+          {masked ? (
+            <Txt size={10.5} color={C.terra} style={{ marginBottom: 6 }}>
+              {MASK_NOTICE}
             </Txt>
-          </Pressable>
+          ) : null}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              borderWidth: 1,
+              borderColor: C.hairLight,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: RADIUS,
+              backgroundColor: '#fff',
+            }}
+          >
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="메시지를 입력하세요"
+              placeholderTextColor={C.graySoft}
+              style={{ flex: 1, fontSize: 13.5, color: C.ink2 }}
+              onSubmitEditing={() => send()}
+            />
+            <Pressable onPress={() => send()}>
+              <Txt variant="mono" size={15} color={C.champagne}>
+                ↑
+              </Txt>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
