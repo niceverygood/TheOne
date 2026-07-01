@@ -41,6 +41,11 @@ apps/mobile/android/
 .env
 .env.*
 !.env.example
+# Firebase Admin SDK 서비스 계정 키 (절대 커밋 금지)
+*firebase-adminsdk*.json
+# 세션 산출물/아카이브 (커밋 금지)
+apps/mobile/assets.zip
+apps/mobile/build-*.tar.gz
 
 # Logs
 *.log
@@ -59,3 +64,4 @@ packages/db/prisma/migrations/dev.db*
 
 # Next.js generated
 next-env.d.ts
+.vercel

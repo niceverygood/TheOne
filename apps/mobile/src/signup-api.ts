@@ -102,6 +102,29 @@ export async function submitManualIdentity(
   }
 }
 
+export type LoginResult =
+  | { ok: true; userId: string; status: string; gender: 'male' | 'female'; token: string }
+  | { ok: false; reason: 'not_member' | 'suspended' | 'invalid_token' | 'server' };
+
+/**
+ * 휴대폰 본인인증 로그인 — KCB/PortOne 결과의 봉인 토큰(idToken)으로 기존 회원 식별.
+ * 비밀번호 없이 인증만으로 본인 계정에 진입한다(가입과 동일한 본인인증 재사용).
+ */
+export async function loginWithIdToken(idToken: string): Promise<LoginResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    const data = (await res.json()) as LoginResult;
+    return data;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
 /** 가입(step01~05) 제출 → userId 수신. */
 export async function submitSignup(args: SubmitSignupArgs): Promise<SignupSubmitResult> {
   if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };

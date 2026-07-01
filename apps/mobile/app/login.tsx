@@ -1,30 +1,109 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Screen, Txt } from '../src/ui';
 import { useSignup } from '../src/store';
+import { KcbWebView } from '../src/kcb-webview';
+import {
+  IDENTITY_PROVIDER,
+  startKcbIdentity,
+  fetchKcbIdentityResult,
+  verifyCode,
+  type BackendIdentity,
+} from '../src/identity';
+import { loginWithIdToken } from '../src/signup-api';
 
 /**
- * 회원 로그인 — 심사 통과 회원 + App Review 데모 계정.
+ * 회원 로그인 — 비밀번호 없이 휴대폰 본인인증으로 일원화한다.
  *
- * 데모 계정(App Store Connect 심사 정보와 동일)으로 로그인하면 demonstration mode 가
- * 켜져 전 기능을 열람·검증할 수 있다(가이드라인 2.1(a) 대응). 일반 회원 로그인은
- * 본인인증 재확인 방식으로 별도 제공 예정.
+ * 가입과 동일한 본인인증(KCB)을 거쳐 받은 봉인 토큰(idToken)을 서버로 보내면,
+ * 서버가 ciHash 로 본인 계정을 찾아 세션을 발급한다. 가입 심사를 신청한 적 없는
+ * 번호면 not_member → 가입 안내. (App Review 데모 계정은 하단 롱프레스로 진입.)
  */
+const USE_KCB = IDENTITY_PROVIDER === 'kcb' && !!process.env.EXPO_PUBLIC_API_BASE_URL;
 const DEMO_EMAIL = 'apple-review@theone.kr';
 const DEMO_PASSWORD = 'Theone!2026Review';
 
 export default function Login() {
   const router = useRouter();
   const set = useSignup((s) => s.set);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [popupUrl, setPopupUrl] = useState<string | null>(null);
+  const txRef = useRef<string | null>(null);
+  // App Review 데모 로그인(숨김) — 하단 안내문 롱프레스로 노출
+  const [demoOpen, setDemoOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  const [err, setErr] = useState<string | null>(null);
 
-  function submit() {
-    const e = email.trim().toLowerCase();
-    if (e === DEMO_EMAIL && pw === DEMO_PASSWORD) {
+  // 본인인증 성공(idToken 확보) → 서버에서 회원 식별 → 세션 발급 → 진입
+  async function finishLogin(v: BackendIdentity) {
+    if (!v.ok || !v.idToken) {
+      setErr('본인인증에 실패했습니다. 다시 시도해 주세요.');
+      return;
+    }
+    const r = await loginWithIdToken(v.idToken);
+    if (r.ok) {
+      set({
+        userId: r.userId,
+        sessionToken: r.token,
+        gender: r.gender,
+        name: v.name,
+        birth: v.birth,
+        phone: v.phone,
+        verified: true,
+        demoMode: false,
+      });
+      router.replace('/curation');
+      return;
+    }
+    if (r.reason === 'not_member') {
+      setErr('가입 심사를 신청한 번호가 아니에요. 먼저 가입 심사를 신청해 주세요.');
+    } else if (r.reason === 'suspended') {
+      setErr('이용이 정지된 계정입니다. 고객센터로 문의해 주세요.');
+    } else {
+      setErr('로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+
+  // ── KCB 본인확인 시작 → 팝업 URL 수신 ──
+  async function startKcb() {
+    setErr(null);
+    setBusy(true);
+    const r = await startKcbIdentity('THE ONE 로그인 본인확인');
+    setBusy(false);
+    if (r.ok && r.popupUrl && r.txSeqNo) {
+      txRef.current = r.txSeqNo;
+      setPopupUrl(r.popupUrl);
+    } else {
+      setErr('본인인증을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+
+  // ── KCB 인증 완료 → 서버 재검증 → 로그인 ──
+  async function onKcbDone() {
+    const tx = txRef.current;
+    setPopupUrl(null);
+    if (!tx) return;
+    setBusy(true);
+    const v = await fetchKcbIdentityResult(tx);
+    await finishLogin(v);
+    setBusy(false);
+  }
+
+  // ── mock 경로(개발/테스트 — 키 미설정 시) ──
+  async function onMockLogin() {
+    setErr(null);
+    setBusy(true);
+    const v = await verifyCode('482000');
+    await finishLogin(v);
+    setBusy(false);
+  }
+
+  // ── App Review 데모 계정(숨김) ──
+  function onDemoLogin() {
+    if (email.trim().toLowerCase() === DEMO_EMAIL && pw === DEMO_PASSWORD) {
       set({
         demoMode: true,
         userId: 'demo-review',
@@ -35,7 +114,12 @@ export default function Login() {
       router.replace('/curation');
       return;
     }
-    setErr('계정 정보를 확인해 주세요. 심사 통과 회원은 가입 시 안내된 방법으로 로그인합니다.');
+    setErr('데모 계정 정보를 확인해 주세요.');
+  }
+
+  // KCB 인증창(WebView) 실행 중이면 전체 화면
+  if (popupUrl) {
+    return <KcbWebView url={popupUrl} onDone={onKcbDone} />;
   }
 
   return (
@@ -54,77 +138,90 @@ export default function Login() {
           회원 로그인
         </Txt>
         <Txt size={13} color={C.gray} style={{ marginTop: 8, lineHeight: 21 }}>
-          심사를 통과한 회원만 로그인할 수 있습니다.
+          가입 때 사용한 휴대폰으로 본인인증하면 바로 로그인됩니다. 별도의 비밀번호는 없습니다.
         </Txt>
 
-        <Txt variant="eyebrow" style={{ marginTop: 32, marginBottom: 8 }}>
-          이메일
-        </Txt>
-        <TextInput
-          value={email}
-          onChangeText={(v) => {
-            setEmail(v);
-            setErr(null);
-          }}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          placeholder="you@example.com"
-          placeholderTextColor={C.graySoft}
-          style={{
-            borderWidth: 1,
-            borderColor: C.hairLight,
-            borderRadius: RADIUS,
-            backgroundColor: '#fff',
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            fontSize: 14,
-            color: C.ink2,
-          }}
-        />
-
-        <Txt variant="eyebrow" style={{ marginTop: 18, marginBottom: 8 }}>
-          비밀번호
-        </Txt>
-        <TextInput
-          value={pw}
-          onChangeText={(v) => {
-            setPw(v);
-            setErr(null);
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-          placeholder="••••••••"
-          placeholderTextColor={C.graySoft}
-          style={{
-            borderWidth: 1,
-            borderColor: C.hairLight,
-            borderRadius: RADIUS,
-            backgroundColor: '#fff',
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            fontSize: 14,
-            color: C.ink2,
-          }}
+        <Btn
+          label={busy ? '진행 중…' : '휴대폰 본인인증으로 로그인'}
+          variant="solid"
+          style={{ marginTop: 36 }}
+          onPress={USE_KCB ? startKcb : onMockLogin}
+          disabled={busy}
         />
 
         {err ? (
-          <Txt size={11.5} color={C.terra} style={{ marginTop: 12, lineHeight: 18 }}>
+          <Txt size={11.5} color={C.terra} style={{ marginTop: 14, lineHeight: 18 }}>
             {err}
           </Txt>
         ) : null}
 
-        <Btn label="로그인" variant="solid" style={{ marginTop: 28 }} onPress={submit} />
-
         <Pressable
           onPress={() => router.push('/signup/intro')}
-          style={{ alignItems: 'center', marginTop: 18 }}
+          style={{ alignItems: 'center', marginTop: 22 }}
         >
           <Txt variant="mono" size={11} color={C.gray}>
             아직 회원이 아니신가요? 가입 심사 신청 →
           </Txt>
         </Pressable>
+
+        {/* App Review 데모 로그인 — 안내문 롱프레스로 노출(가이드라인 2.1(a)) */}
+        <Pressable onLongPress={() => setDemoOpen(true)} delayLongPress={1200}>
+          <Txt size={10.5} color={C.gray} style={{ marginTop: 28, lineHeight: 17 }}>
+            만 19세 이상 실명 회원만 이용할 수 있으며, 본인인증으로 연령·실명이 확인됩니다.
+          </Txt>
+        </Pressable>
+
+        {demoOpen ? (
+          <View
+            style={{
+              marginTop: 16,
+              borderTopWidth: 1,
+              borderTopColor: C.hairLight,
+              paddingTop: 14,
+            }}
+          >
+            <Txt variant="mono" size={10} color={C.gray} style={{ marginBottom: 8 }}>
+              App Review
+            </Txt>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              placeholder="you@example.com"
+              placeholderTextColor={C.graySoft}
+              style={inputStyle}
+            />
+            <TextInput
+              value={pw}
+              onChangeText={setPw}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholder="••••••••"
+              placeholderTextColor={C.graySoft}
+              style={[inputStyle, { marginTop: 10 }]}
+            />
+            <Btn
+              label="데모 로그인"
+              variant="outline"
+              style={{ marginTop: 12 }}
+              onPress={onDemoLogin}
+            />
+          </View>
+        ) : null}
       </View>
     </Screen>
   );
 }
+
+const inputStyle = {
+  borderWidth: 1,
+  borderColor: C.hairLight,
+  borderRadius: RADIUS,
+  backgroundColor: '#fff',
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  fontSize: 14,
+  color: C.ink2,
+} as const;

@@ -41,6 +41,19 @@ export interface CreateSignupArgs {
   introSections?: Record<string, string>;
 }
 
+/**
+ * 본인인증 식별해시(ciHash)로 기존 회원 조회 — 로그인용.
+ * 휴대폰 본인인증을 다시 거친 호출자가 본인 계정인지 식별한다(비밀번호 없음).
+ * 이름 등 직접식별정보는 보관하지 않으므로 식별·상태·성별만 반환한다.
+ */
+export async function findUserByCiHash(ciHash: string) {
+  if (!ciHash) return null;
+  return prisma.user.findUnique({
+    where: { ciHash },
+    select: { id: true, status: true, gender: true },
+  });
+}
+
 /** 가입 1건 생성(상태 pending). 휴대폰/이메일/CI 중복 시 DuplicateUserError. */
 export async function createSignupUser(args: CreateSignupArgs): Promise<User> {
   try {

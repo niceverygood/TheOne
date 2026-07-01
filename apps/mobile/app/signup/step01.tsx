@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { Linking, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { WebView } from 'react-native-webview';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
 import { Field, Txt } from '../../src/ui';
+import { KcbWebView } from '../../src/kcb-webview';
 import {
   CARRIERS,
   requestCode,
@@ -19,68 +19,6 @@ import { useSignup } from '../../src/store';
 // KCB OkCert3 휴대폰 본인확인 — provider=kcb + API_BASE_URL 설정 시 활성. 없으면 mock 폴백.
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
 const USE_KCB = IDENTITY_PROVIDER === 'kcb' && !!API_BASE;
-
-// 통신사 PASS 앱 유니버셜 링크 호스트(iOS). WebView 안에서 열지 말고 OS로 넘겨 PASS 앱을 띄운다.
-// (KCB '앱연동가이드(휴대폰본인확인)' — SKT/KT/LGU)
-const PASS_UNIVERSAL_HOSTS = ['www.sktpass.com', 'fido.kt.com', 'fido.uplus.co.kr'];
-
-function hostOf(url: string): string {
-  return (url.replace(/^https?:\/\//i, '').split('/')[0] ?? '').toLowerCase();
-}
-
-// 안드로이드 intent:// URI 를 커스텀 스킴 URL 로 변환해 실행한다.
-// RN Linking 은 intent:// 를 그대로 못 여므로(스킴/패키지 파싱 안 됨) 직접 변환한다.
-//  intent://host/path?q#Intent;scheme=xxx;package=pkg;end → xxx://host/path?q
-//  intent:scheme://...#Intent;package=pkg;end            → scheme://...
-function launchAndroidIntent(url: string) {
-  const hashIdx = url.indexOf('#Intent;');
-  const meta = hashIdx >= 0 ? url.slice(hashIdx) : '';
-  const scheme = meta.match(/scheme=([^;]+)/)?.[1];
-  const pkg = meta.match(/package=([^;]+)/)?.[1];
-  let body = hashIdx >= 0 ? url.slice(0, hashIdx) : url;
-  let target = '';
-  if (body.startsWith('intent://')) {
-    body = body.slice('intent://'.length);
-    target = scheme ? `${scheme}://${body}` : '';
-  } else if (body.startsWith('intent:')) {
-    target = body.slice('intent:'.length); // 본문이 이미 scheme:// 형태
-  } else {
-    target = body;
-  }
-  const market = pkg ? `market://details?id=${pkg}` : undefined;
-  if (target) {
-    Linking.openURL(target).catch(() => {
-      if (market) Linking.openURL(market).catch(() => {});
-    });
-  } else if (market) {
-    Linking.openURL(market).catch(() => {});
-  }
-}
-
-// 통신사 PASS 앱 실행: intent://(안드로이드)·앱스킴·유니버셜 링크를 OS로 넘긴다.
-function openPassApp(url: string) {
-  if (/^intent:/i.test(url)) {
-    launchAndroidIntent(url);
-    return;
-  }
-  Linking.openURL(url).catch(() => {});
-}
-
-// WebView 가 로드를 시도하기 전 호출 — KCB 페이지는 그대로 로드하고,
-// 통신사 PASS 앱(intent://·커스텀 스킴·유니버셜 링크)만 외부로 보낸다.
-// 이 처리가 없으면 내장 WebView 는 intent:// 를 무시해 PASS 앱이 안 열리고 푸시도 오지 않는다.
-function shouldLoadInWebView(url: string): boolean {
-  if (/^https?:\/\//i.test(url)) {
-    if (PASS_UNIVERSAL_HOSTS.includes(hostOf(url))) {
-      openPassApp(url);
-      return false; // 통신사 유니버셜 링크 → 외부(PASS 앱)
-    }
-    return true; // 일반 KCB 인증 페이지는 WebView 안에서
-  }
-  // intent:// 또는 통신사 앱 커스텀 스킴(tauthlink/ktauth/upluscorporation 등)
-  openPassApp(url);
-  return false;
-}
 
 // 본인인증 결과 표시용 포맷터 ─────────────────────────────
 function koreanAge(birth?: string): number | undefined {
@@ -124,7 +62,6 @@ export default function Step01() {
   // KCB WebView 상태
   const [popupUrl, setPopupUrl] = useState<string | null>(null);
   const txRef = useRef<string | null>(null);
-  const doneRef = useRef(false); // onNavigationStateChange 다중 호출 가드
   // Apple App Review 우회(숨김): 하단 안내문 롱프레스로 노출 → 심사 노트의 코드 입력
   const [reviewMode, setReviewMode] = useState(false);
   const [reviewCode, setReviewCode] = useState('');
@@ -152,7 +89,6 @@ export default function Step01() {
   // ── KCB 본인확인 시작 → 팝업 URL 수신 ───────────────────────
   async function startKcb() {
     setErr(null);
-    doneRef.current = false;
     const r = await startKcbIdentity('THE ONE 본인확인');
     if (r.ok && r.popupUrl && r.txSeqNo) {
       txRef.current = r.txSeqNo;
@@ -213,30 +149,7 @@ export default function Step01() {
 
   // KCB 인증창(WebView) 실행 중이면 전체 화면으로 표시
   if (USE_KCB && popupUrl) {
-    return (
-      <View style={{ flex: 1, backgroundColor: C.ivory }}>
-        <WebView
-          source={{ uri: popupUrl }}
-          // intent:// 등 비-http 스킴이 onShouldStartLoadWithRequest 로 들어오게 허용
-          originWhitelist={['*']}
-          sharedCookiesEnabled
-          thirdPartyCookiesEnabled
-          javaScriptEnabled
-          domStorageEnabled
-          // KCB 페이지가 window.open 으로 PASS 를 띄우는 경우도 같은 핸들러로 처리
-          setSupportMultipleWindows={false}
-          // 통신사 PASS 앱(intent://·앱스킴·유니버셜 링크)을 OS 로 넘겨 실행
-          onShouldStartLoadWithRequest={(req) => shouldLoadInWebView(req.url)}
-          onNavigationStateChange={(s) => {
-            // identity-kcb 가 인증 완료 후 /kcb/done 으로 이동 → 가드 후 결과 조회
-            if (!doneRef.current && /\/kcb\/done\b/.test(s.url)) {
-              doneRef.current = true;
-              void finishKcb();
-            }
-          }}
-        />
-      </View>
-    );
+    return <KcbWebView url={popupUrl} onDone={() => void finishKcb()} />;
   }
 
   return (
