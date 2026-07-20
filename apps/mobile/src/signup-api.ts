@@ -3,6 +3,7 @@
  * 베이스는 EXPO_PUBLIC_API_BASE_URL (미설정 시 server reason 으로 실패 반환).
  */
 import type {
+  CurationRateResult,
   CurationTodayResult,
   IntroSections,
   ManualIdentitySubmitResult,
@@ -146,6 +147,23 @@ export async function fetchTodayCuration(_userId: string): Promise<CurationToday
   try {
     const res = await fetch(`${API_BASE}/api/curation/today`, { headers: authHeader() });
     return (await res.json()) as CurationTodayResult;
+  } catch {
+    return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+/**
+ * 첫인상 별점 제출(1~5) — 3점 이상 = 호감. 응답의 photos 가 새 공개 단계 기준 사진 목록.
+ */
+export async function rateCuration(logId: string, rating: number): Promise<CurationRateResult> {
+  if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
+  try {
+    const res = await fetch(`${API_BASE}/api/curation/rate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ logId, rating }),
+    });
+    return (await res.json()) as CurationRateResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
   }

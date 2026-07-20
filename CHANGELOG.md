@@ -2,6 +2,18 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## 첫인상 별점 + 단계별 사진 공개
+
+큐레이션에 5점 만점 첫인상 별점을 도입 — **3점 이상 = 호감**. 사진은 기본 1장만 보이고, 내 별점 3+ → 2장, 서로 3+ → 3장, 매칭 성사(신청 수락) → 전체 공개로 단계 확장. 사진 잘라내기는 **서버에서** 수행(클라이언트에 비공개 사진 미전송).
+
+- **packages/db**: `CurationLog.rating Int?`(마이그레이션 `20260720000000_curation_rating`). `rateCuration`(1~5 검증·본인 로그만·재평가 허용, 3+ → action liked / 미만 passed, superliked 는 격하 안 함), `getCurationReveal`(양방향 별점 — 날짜 무관 + Match accepted 방향 무관), `slicePhotosForReveal`, `LIKE_RATING_MIN`/`PHOTO_REVEAL_TIERS`.
+- **apps/web**: `POST /api/curation/rate`(신규 — 갱신된 공개 사진 목록 반환), `GET /api/curation/today`(logId·myRating·reveal 추가 + 사진 단계 공개), `GET /api/match/received`(발신자 사진도 공개 단계만큼만).
+- **packages/shared**: `CurationReveal`·`CurationRateResult`, `CurationEntry.logId/myRating/reveal`, `CurationCandidateMeta.photosTotal`(전부 옵션 — 구버전 하위호환).
+- **apps/mobile**: `curation` 화면 히어로를 사진 페이저(스와이프)로 — 공개 사진 + 잠금 안내 페이지(다음 공개 조건 문구), 사진 n/N 공개 카운터. `StarRating`(ui.tsx — 단색 샴페인, 장식 없음 §3 준수), 첫인상 별점 섹션 + 상태 캡션. 프리뷰(서버 미연동)에서도 3+ 시 갤러리 1장 로컬 공개(App Review 데모 유지). `signup-api.rateCuration`.
+- **e2e-flow.ts**: liked 액션을 별점 4점 제출로 교체, 1→2장 공개·매칭 성사 후 전체 공개 검증 추가.
+
+**검증**: db/mobile `tsc` 클린, shared·web 은 신규/변경 파일 에러 0(기존 email·legal·landing JSX 타입 에러는 base 이슈, 무관).
+
 ## LP SEO 보강 (apps/web)
 
 랜딩 검색 노출 강화. 정책(초안 약관·내부 데이터)은 색인에서 확실히 제외.

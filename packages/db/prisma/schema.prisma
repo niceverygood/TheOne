@@ -539,6 +539,8 @@ model CurationLog {
   user        User           @relation("curationViewer", fields: [userId], references: [id], onDelete: Cascade)
   candidate   User           @relation("curationCandidate", fields: [candidateId], references: [id], onDelete: Cascade)
   action      CurationAction @default(sent)
+  /// 첫인상 별점(1~5) — 3점 이상이면 호감(liked). 단계별 사진 공개(1→2→3→전체)의 판정 근거.
+  rating      Int?
   /// 매칭 점수(룰베이스) 스냅샷
   score       Int?
   /// 가치관 케미 일치도(0~100) 스냅샷 — 도시에 "케미 일치도" 표기용. 설문 미완료 시 null.
