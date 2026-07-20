@@ -28,6 +28,8 @@ export type SeedPersona = {
   about: string;
   idealType: string;
   badges: VerificationType[];
+  /** 지정 시 surveyFor() 대신 이 값을 사용(QA 테스트 계정의 확정 케미용). */
+  survey?: number[];
 };
 
 export const SEED_PERSONAS: SeedPersona[] = [
@@ -166,6 +168,54 @@ export const SEED_PERSONAS: SeedPersona[] = [
   },
 ];
 
+// QA 테스트 계정 전용 가치관 60문항 — 남/여 동일 배열(케미 100%)로 고정해
+// 큐레이션 1순위 매칭을 결정적으로 보장한다(검수 시 "오늘 안 옴" 방지).
+const QA_TWIN_SURVEY = Array.from({ length: 60 }, (_, i) => (i % 5) + 1);
+
+/** QA 검수용 남/여 테스트 계정 — email `qa_*@theone.app`, 실회원 큐레이션 풀에서 제외됨. */
+export const QA_TEST_PERSONAS: SeedPersona[] = [
+  {
+    id: 'male',
+    gender: 'male',
+    age: 31,
+    job: 'corporate',
+    region: '서울',
+    height: 179,
+    bio: '(QA 테스트 계정) 검수용으로 생성된 프로필입니다.',
+    jobDetail: 'QA 테스트 계정 (남)',
+    school: '—',
+    hobbies: ['테스트'],
+    drinkingFrequency: '가끔',
+    drinkingAmount: '한두잔',
+    smoking: '비흡연',
+    bodyType: '보통',
+    about: '검수 목적의 더미 계정입니다.',
+    idealType: '—',
+    badges: ['education', 'wealth'],
+    survey: QA_TWIN_SURVEY,
+  },
+  {
+    id: 'female',
+    gender: 'female',
+    age: 29,
+    job: 'corporate',
+    region: '서울',
+    height: 164,
+    bio: '(QA 테스트 계정) 검수용으로 생성된 프로필입니다.',
+    jobDetail: 'QA 테스트 계정 (여)',
+    school: '—',
+    hobbies: ['테스트'],
+    drinkingFrequency: '가끔',
+    drinkingAmount: '한두잔',
+    smoking: '비흡연',
+    bodyType: '보통',
+    about: '검수 목적의 더미 계정입니다.',
+    idealType: '—',
+    badges: ['education', 'wealth'],
+    survey: QA_TWIN_SURVEY,
+  },
+];
+
 /** 페르소나별 가치관 60문항(1~5) — 시드값으로 결정적 생성(매칭 입력용). */
 export function surveyFor(seed: number): number[] {
   return Array.from({ length: 60 }, (_, i) => ((seed * 7 + i * 3) % 5) + 1);
@@ -209,6 +259,59 @@ export async function upsertSeedMember(
           smoking: p.smoking,
           bodyType: p.bodyType,
           surveyAnswers: surveyFor(idx + 1),
+          introSections: { about: p.about, idealType: p.idealType },
+          photos,
+        },
+      },
+      badges: {
+        create: p.badges.map((t) => ({
+          type: t,
+          expiresAt: new Date(Date.UTC(SEED_YEAR + 1, 2, 15)),
+        })),
+      },
+    },
+  });
+  return { id: user.id, email, jobDetail: p.jobDetail, gender: p.gender, photos: photos.length };
+}
+
+/** QA 테스트 계정 email — `seed_`가 아닌 `qa_` 접두사(실회원 큐레이션 풀 제외 필터의 기준). */
+export const qaTestEmail = (id: string) => `qa_${id}@theone.app`;
+
+/**
+ * QA 검수용 남/여 테스트 계정 1명 생성(기존 동일 email 삭제 후). upsertSeedMember와 별개 함수 —
+ * email 접두사(`qa_`)로 실회원 큐레이션 풀에서 제외되고(matching.ts), 서로는 고정 케미 100%로 매칭된다.
+ */
+export async function upsertQaTestAccount(
+  id: 'male' | 'female',
+  photos: string[],
+): Promise<{ id: string; email: string; jobDetail: string; gender: string; photos: number }> {
+  const p = QA_TEST_PERSONAS.find((x) => x.id === id);
+  if (!p) throw new Error(`UNKNOWN_QA_TEST_ID:${id}`);
+  const email = qaTestEmail(p.id);
+
+  await prisma.user.deleteMany({ where: { email } });
+  const user = await prisma.user.create({
+    data: {
+      email,
+      gender: p.gender,
+      jobCategory: p.job,
+      birth: new Date(Date.UTC(SEED_YEAR - p.age, 2, 15)),
+      status: 'active',
+      profile: {
+        create: {
+          region: p.region,
+          residenceRegion: p.region,
+          activityRegion: p.region,
+          jobDetail: p.jobDetail,
+          school: p.school,
+          height: p.height,
+          bio: p.bio,
+          hobbies: p.hobbies,
+          drinkingFrequency: p.drinkingFrequency,
+          drinkingAmount: p.drinkingAmount,
+          smoking: p.smoking,
+          bodyType: p.bodyType,
+          surveyAnswers: p.survey ?? [],
           introSections: { about: p.about, idealType: p.idealType },
           photos,
         },

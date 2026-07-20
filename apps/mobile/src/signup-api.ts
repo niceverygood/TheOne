@@ -125,6 +125,25 @@ export async function loginWithIdToken(idToken: string): Promise<LoginResult> {
   }
 }
 
+/**
+ * QA 검수용 남/여 테스트 계정 로그인 — 본인인증 없이 고정 시드 계정 세션 발급.
+ * 로그인 화면 하단 안내문 롱프레스 → 숨김 메뉴에서만 호출된다.
+ */
+export async function testLogin(gender: 'male' | 'female'): Promise<LoginResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/test-login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gender, secret: 'theone-qa-2026' }),
+    });
+    const data = (await res.json()) as LoginResult;
+    return data;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
 /** 가입(step01~05) 제출 → userId 수신. */
 export async function submitSignup(args: SubmitSignupArgs): Promise<SignupSubmitResult> {
   if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };

@@ -155,10 +155,15 @@ export async function getTodayCurations(userId: string) {
       select: { candidateId: true },
     });
     const seenIds = new Set(seen.map((s) => s.candidateId));
-    const self = await prisma.user.findUnique({ where: { id: userId }, select: { gender: true } });
+    const self = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { gender: true, email: true },
+    });
     const oppGender = self?.gender === 'male' ? 'female' : 'male';
     // 차단 관계(양방향)는 후보 풀에서 제외.
     const blockedIds = await listBlockedIds(userId);
+    // QA 테스트 계정(qa_*)은 실회원 큐레이션 풀에서 제외 — QA 계정끼리만 서로 보인다.
+    const isQaViewer = !!self?.email?.startsWith('qa_');
 
     const pool = await prisma.user.findMany({
       where: {
@@ -166,6 +171,7 @@ export async function getTodayCurations(userId: string) {
         gender: oppGender,
         id: { notIn: [userId, ...seenIds, ...blockedIds] },
         birth: { not: null },
+        ...(isQaViewer ? {} : { email: { not: { startsWith: 'qa_' } } }),
       },
       include: {
         profile: { select: { region: true, surveyAnswers: true } },

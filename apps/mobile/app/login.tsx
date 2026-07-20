@@ -12,7 +12,7 @@ import {
   verifyCode,
   type BackendIdentity,
 } from '../src/identity';
-import { loginWithIdToken } from '../src/signup-api';
+import { loginWithIdToken, testLogin } from '../src/signup-api';
 
 /**
  * 회원 로그인 — 비밀번호 없이 휴대폰 본인인증으로 일원화한다.
@@ -117,6 +117,27 @@ export default function Login() {
     setErr('데모 계정 정보를 확인해 주세요.');
   }
 
+  // ── QA 검수용 남/여 테스트 계정(숨김) — 실제 백엔드 세션으로 로그인해 큐레이션·신청·채팅까지 전부 검수 가능 ──
+  async function onQaTestLogin(gender: 'male' | 'female') {
+    setErr(null);
+    setBusy(true);
+    const r = await testLogin(gender);
+    setBusy(false);
+    if (r.ok) {
+      set({
+        userId: r.userId,
+        sessionToken: r.token,
+        gender: r.gender,
+        verified: true,
+        demoMode: false,
+        name: gender === 'male' ? 'QA 테스트(남)' : 'QA 테스트(여)',
+      });
+      router.replace('/curation');
+      return;
+    }
+    setErr('QA 테스트 계정 로그인에 실패했습니다.');
+  }
+
   // KCB 인증창(WebView) 실행 중이면 전체 화면
   if (popupUrl) {
     return <KcbWebView url={popupUrl} onDone={onKcbDone} />;
@@ -208,6 +229,27 @@ export default function Login() {
               style={{ marginTop: 12 }}
               onPress={onDemoLogin}
             />
+
+            {/* QA 검수용 테스트 계정 — 실백엔드 세션(신청·수락·채팅까지 전부 검수 가능) */}
+            <Txt variant="mono" size={10} color={C.gray} style={{ marginTop: 20, marginBottom: 8 }}>
+              QA Test Accounts
+            </Txt>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn
+                label="남성 테스트 로그인"
+                variant="outline"
+                style={{ flex: 1 }}
+                onPress={() => onQaTestLogin('male')}
+                disabled={busy}
+              />
+              <Btn
+                label="여성 테스트 로그인"
+                variant="outline"
+                style={{ flex: 1 }}
+                onPress={() => onQaTestLogin('female')}
+                disabled={busy}
+              />
+            </View>
           </View>
         ) : null}
       </View>
