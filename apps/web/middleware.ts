@@ -6,6 +6,18 @@ const VID_COOKIE = 'theone_vid';
 const ATTR_MAX_AGE = 30 * 24 * 60 * 60; // 30일 — 광고 어트리뷰션 윈도우
 const VID_MAX_AGE = 365 * 24 * 60 * 60; // 1년 — 익명 방문자
 
+// 모바일 웹 검수 빌드(EAS Hosting) 전용 CORS 허용 — 네이티브 앱은 브라우저가 아니라 CORS 대상이 아님.
+const CORS_ALLOWED_ORIGINS = ['https://theone-qa.expo.app'];
+
+function corsHeaders(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
 /**
  * 광고 퍼널 어트리뷰션 캡처(미들웨어).
  *  1) 익명 방문자 id 쿠키(theone_vid)를 없으면 발급 — 방문→가입 이벤트를 한 사람으로 묶는 키.
@@ -13,8 +25,23 @@ const VID_MAX_AGE = 365 * 24 * 60 * 60; // 1년 — 익명 방문자
  *     → 폼 제출(서버 액션)·이벤트 기록(/api/track)이 읽어 동봉. 이미 쿠키가 있으면 첫 유입 우선.
  */
 export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (pathname.startsWith('/api/')) {
+    const origin = req.headers.get('origin');
+    const allowed = origin && CORS_ALLOWED_ORIGINS.includes(origin) ? origin : null;
+    if (req.method === 'OPTIONS') {
+      return new NextResponse(null, { status: 204, headers: allowed ? corsHeaders(allowed) : {} });
+    }
+    const res = NextResponse.next();
+    if (allowed) {
+      for (const [k, v] of Object.entries(corsHeaders(allowed))) res.headers.set(k, v);
+    }
+    return res;
+  }
+
   const res = NextResponse.next();
-  const { searchParams, pathname } = req.nextUrl;
+  const { searchParams } = req.nextUrl;
 
   // 1) 방문자 id 보장
   if (!req.cookies.has(VID_COOKIE)) {
