@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -17,69 +17,105 @@ import { SafetySheet } from '../src/safety';
 import { previewPortraits } from '../src/preview-assets';
 import { useSignup } from '../src/store';
 import { showAlert } from '../src/brand-alert';
-import { fetchContactStatus, openContact, type ContactStatus } from '../src/signup-api';
+import {
+  fetchChatMessages,
+  fetchContactStatus,
+  openContact,
+  sendChatMessage,
+  type ChatMessage,
+  type ChatPartner,
+  type ContactStatus,
+} from '../src/signup-api';
 
-/** 채팅 상대 — 데모 매칭(실서비스에선 매칭 레코드의 상대 회원 id). */
-const PARTNER = { id: 'demo-match-jiyoon', name: '김지윤' };
-
-interface Msg {
-  id: string;
-  me?: boolean;
-  time: string;
-  text: string;
+function formatMsgTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
-const SEED: Msg[] = [
-  {
-    id: '1',
-    me: true,
-    time: '05.10 21:14',
-    text: '안녕하세요 지윤 님, 신청서 읽어주셔서 감사해요. 좋아하시는 작가가 있으세요?',
-  },
-  {
-    id: '2',
-    time: '05.10 21:32',
-    text: '민준 님 안녕하세요 :) 요즘은 박서보 화백 작품을 좋아해요. 단색화 보면 마음이 차분해지더라구요.',
-  },
-  {
-    id: '3',
-    me: true,
-    time: '05.10 21:40',
-    text: '오 저도 단색화 좋아합니다. 다음 주말에 국제갤러리 전시 같이 가실래요?',
-  },
-];
+
 const SUGGEST = [
   '좋아요, 토요일 오후 어떠세요?',
   '전시 보고 근처에서 차 한잔도 좋겠어요',
   '혹시 선호하는 시간대가 있으세요?',
 ];
+const POLL_MS = 4000;
 
 // 관계 진전 트래커 — 수락 → 대화 → 만남 약속 (P1-8)
 const STAGES = ['신청 수락', '대화 중', '만남 약속'] as const;
 const CURRENT_STAGE = 1; // 0-base: 대화 중
 
-/** Screen 15 · 채팅 — 매칭 7일째 캡션 + AI 추천 + 외부 연락처 마스킹 */
+/** Screen 15 · 채팅 — 실시간(폴링) 메시지 + AI 추천 + 외부 연락처 마스킹 */
 export default function Chat() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [msgs, setMsgs] = useState(SEED);
+  const scrollRef = useRef<ScrollView>(null);
+  const [msgs, setMsgs] = useState<ChatMessage[]>([]);
+  const [partner, setPartner] = useState<ChatPartner | null>(null);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
   const masked = maskExternalContact(draft).masked;
 
-  function send(text?: string) {
-    const raw = (text ?? draft).trim();
-    if (!raw) return;
-    const { text: safe } = maskExternalContact(raw);
-    setMsgs((m) => [...m, { id: String(m.length + 1), me: true, time: '방금', text: safe }]);
-    setDraft('');
-  }
-
-  // 번호오픈 — 실매칭(mid)일 때만 동작. 양측 동의 시 상대 번호 공개.
   const params = useLocalSearchParams<{ mid?: string }>();
   const matchId = typeof params.mid === 'string' ? params.mid : null;
   const userId = useSignup((s) => s.userId);
   const [contact, setContact] = useState<ContactStatus | null>(null);
   const [contactBusy, setContactBusy] = useState(false);
+
+  // 메시지 폴링 — matchId 없으면(프리뷰 진입) 목업 유지.
+  useEffect(() => {
+    if (!matchId) return;
+    let alive = true;
+    let lastId: string | undefined;
+    async function poll() {
+      const r = await fetchChatMessages(matchId!, lastId);
+      if (!alive || !r.ok) return;
+      if (r.partner) setPartner(r.partner);
+      if (r.messages.length) {
+        lastId = r.messages[r.messages.length - 1]!.id;
+        setMsgs((m) => [...m, ...r.messages]);
+      }
+    }
+    poll();
+    const id = setInterval(poll, POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [matchId]);
+
+  // 새 메시지가 오면 맨 아래로 스크롤 — 내가 보낸 메시지도 즉시 보이게 (QA: 스크롤 안 내려가던 문제 수정)
+  useEffect(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [msgs.length]);
+
+  async function send(text?: string) {
+    const raw = (text ?? draft).trim();
+    if (!raw || sending) return;
+    setDraft('');
+    if (!matchId || !userId) {
+      const { text: safe } = maskExternalContact(raw);
+      setMsgs((m) => [
+        ...m,
+        {
+          id: String(m.length + 1),
+          senderId: 'me',
+          text: safe,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
+    setSending(true);
+    const r = await sendChatMessage(matchId, raw);
+    setSending(false);
+    if (r.ok && r.message) {
+      setMsgs((m) => [...m, r.message!]);
+    } else {
+      showAlert('메시지를 보내지 못했어요', '잠시 후 다시 시도해 주세요.');
+      setDraft(raw);
+    }
+  }
 
   useEffect(() => {
     if (!matchId || !userId) return;
@@ -123,13 +159,17 @@ export default function Chat() {
     );
   }
 
+  const titleText = partner?.jobDetail ?? partner?.jobCategory ?? '김지윤';
+  const subText = partner ? [partner.region].filter(Boolean).join(' · ') : '변호사 · 서초';
+  const headerPhoto = partner?.photos?.[0] ? { uri: partner.photos[0] } : previewPortraits.jiyoon;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.ivory }} edges={['top']}>
       {/* 신고/차단 — trust-safety.md 신고 8종 매트릭스 (App Store 1.2) */}
       <SafetySheet
         visible={safetyOpen}
-        reportedName={PARTNER.name}
-        reportedId={PARTNER.id}
+        reportedName={titleText}
+        reportedId={partner?.id ?? 'demo-match-jiyoon'}
         onClose={() => setSafetyOpen(false)}
         onBlocked={() => router.back()}
       />
@@ -156,22 +196,25 @@ export default function Chat() {
             </Pressable>
             {/* 사진·이름 탭 → 프로필 상세 (QA: 프로필 탭 인터랙션 부재) */}
             <Pressable
-              onPress={() => router.push('/profile')}
+              onPress={() => router.push(partner?.id ? `/profile?id=${partner.id}` : '/profile')}
               hitSlop={6}
               style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
             >
               <View style={{ width: 38, height: 38 }}>
-                <Portrait fill source={previewPortraits.jiyoon} />
+                <Portrait fill source={headerPhoto} />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Txt size={15} weight="500" color={C.ink2}>
-                    김지윤
+                    {titleText}
                   </Txt>
-                  <VerifiedDots marks={4} size={4} />
+                  <VerifiedDots
+                    marks={Math.max(1, Math.min(4, partner?.badgeCount ?? 4))}
+                    size={4}
+                  />
                 </View>
                 <Txt size={11} color={C.gray}>
-                  변호사 · 서초
+                  {subText}
                 </Txt>
               </View>
             </Pressable>
@@ -236,13 +279,15 @@ export default function Chat() {
           </View>
         ) : null}
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 24 }}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+        >
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
             <Txt variant="mono" size={10} color={C.champagne}>
-              MATCHED · 05.10
-            </Txt>
-            <Txt size={11.5} color={C.gray} style={{ marginTop: 4 }}>
-              두 분이 매칭된 지 7일째입니다
+              MATCHED
             </Txt>
             {/* 진전 단계 — 다음 단계 넛지 */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
@@ -269,15 +314,22 @@ export default function Chat() {
                 </View>
               ))}
             </View>
-            <Txt size={10.5} color={C.gray} style={{ marginTop: 8 }}>
-              대화가 무르익었어요 — 이번 주말 만남을 제안해 보세요.
-            </Txt>
           </View>
-          {msgs.map((m) => (
-            <Bubble key={m.id} me={m.me} time={m.time}>
-              {m.text}
-            </Bubble>
-          ))}
+          {msgs.length === 0 ? (
+            <Txt size={12.5} color={C.gray} style={{ textAlign: 'center', marginTop: 20 }}>
+              아직 메시지가 없어요. 먼저 인사를 건네보세요.
+            </Txt>
+          ) : (
+            msgs.map((m) => (
+              <Bubble
+                key={m.id}
+                me={m.senderId === userId || m.senderId === 'me'}
+                time={formatMsgTime(m.createdAt)}
+              >
+                {m.text}
+              </Bubble>
+            ))
+          )}
         </ScrollView>
 
         {/* AI 추천 */}

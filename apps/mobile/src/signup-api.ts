@@ -3,6 +3,8 @@
  * 베이스는 EXPO_PUBLIC_API_BASE_URL (미설정 시 server reason 으로 실패 반환).
  */
 import type {
+  CurationCandidateMeta,
+  CurationChemistry,
   CurationTodayResult,
   IntroSections,
   ManualIdentitySubmitResult,
@@ -252,6 +254,111 @@ export async function openContact(matchId: string, _userId: string): Promise<Con
       body: JSON.stringify({ matchId }),
     });
     return (await res.json()) as ContactStatus;
+  } catch {
+    return { ok: false };
+  }
+}
+
+export type ProfileFetchResult =
+  | { ok: true; candidate: CurationCandidateMeta; chemistry: CurationChemistry | null }
+  | { ok: false; reason?: string };
+
+/** 특정 회원 1명의 프로필 상세 — 큐레이션·인박스에서 받은 candidateId 로 조회. */
+export async function fetchProfile(userId: string): Promise<ProfileFetchResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/profile/${encodeURIComponent(userId)}`, {
+      headers: authHeader(),
+    });
+    return (await res.json()) as ProfileFetchResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+export type SendLetterResult =
+  | { ok: true; matchId: string; spent: number; free: boolean }
+  | { ok: false; reason: string };
+
+/** 만남 신청서 발송 — 크레딧 차감(여성 무료) + Match(pending) 생성. */
+export async function sendLetter(
+  toId: string,
+  letter: string,
+  isSuper: boolean,
+): Promise<SendLetterResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/letter/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ toId, letter, isSuper }),
+    });
+    return (await res.json()) as SendLetterResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+/** 크레딧 잔액 조회 — 신청서 작성 화면의 잔액·부족 안내에 사용. */
+export async function fetchCreditBalance(): Promise<{ ok: boolean; balance: number }> {
+  if (!API_BASE) return { ok: false, balance: 0 };
+  try {
+    const res = await fetch(`${API_BASE}/api/credits/balance`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; balance?: number };
+    return { ok: !!d.ok, balance: d.balance ?? 0 };
+  } catch {
+    return { ok: false, balance: 0 };
+  }
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+}
+export interface ChatPartner {
+  id: string;
+  jobCategory: string;
+  jobDetail: string | null;
+  region: string | null;
+  photos: string[];
+  badgeCount: number;
+}
+export type ChatMessagesResult =
+  | { ok: true; messages: ChatMessage[]; partner: ChatPartner | null }
+  | { ok: false; reason?: string };
+
+/** 채팅 메시지 조회(폴링) — afterId 이후만 받아 누적한다. */
+export async function fetchChatMessages(
+  matchId: string,
+  afterId?: string,
+): Promise<ChatMessagesResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const q = afterId ? `?after=${encodeURIComponent(afterId)}` : '';
+    const res = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/messages${q}`, {
+      headers: authHeader(),
+    });
+    return (await res.json()) as ChatMessagesResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+/** 채팅 메시지 전송. */
+export async function sendChatMessage(
+  matchId: string,
+  text: string,
+): Promise<{ ok: boolean; message?: ChatMessage }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ text }),
+    });
+    return (await res.json()) as { ok: boolean; message?: ChatMessage };
   } catch {
     return { ok: false };
   }

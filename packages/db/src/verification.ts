@@ -31,6 +31,19 @@ export async function getOperatorByUsername(username: string): Promise<Operator 
   return prisma.operator.findUnique({ where: { username } });
 }
 
+/** 운영자 등록/역할 변경 — Basic Auth 계정을 실제 심사 권한(Operator)에 연결한다. */
+export async function upsertOperator(
+  username: string,
+  name: string,
+  role: OperatorRole,
+): Promise<Operator> {
+  return prisma.operator.upsert({
+    where: { username },
+    create: { username, name, role, active: true },
+    update: { name, role, active: true },
+  });
+}
+
 // ---- AccessLog ----
 
 export async function recordAccess(input: {

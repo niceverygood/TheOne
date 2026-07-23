@@ -112,12 +112,26 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
 const CURATION_PER_DAY = Math.max(1, Math.min(5, Number(process.env.CURATION_PER_DAY) || 1));
 
 /** 후보 1명을 화면용(profile·badges 포함)으로 로드 + 케미 3축 계산. */
-async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
+export async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
   const candidate = await prisma.user.findUnique({
     where: { id: candidateId },
     include: { profile: true, badges: true },
   });
   const breakdown = surveyBreakdown(viewerSurvey, candidate?.profile?.surveyAnswers ?? []);
+  return { candidate, breakdown };
+}
+
+/**
+ * 프로필 상세 화면용 — 큐레이션 밖(만남 신청서 작성 등)에서도 특정 후보를 조회한다.
+ * 본인 조회·차단 관계·비활성 회원은 null(프로필 화면이 폴백을 쓰도록).
+ */
+export async function getCandidateForViewer(candidateId: string, viewerId: string) {
+  if (candidateId === viewerId) return null;
+  const blocked = await listBlockedIds(viewerId);
+  if (blocked.includes(candidateId)) return null;
+  const viewer = await loadUserForMatch(viewerId);
+  const { candidate, breakdown } = await hydrateCandidate(candidateId, viewer?.survey ?? []);
+  if (!candidate || candidate.status !== 'active') return null;
   return { candidate, breakdown };
 }
 

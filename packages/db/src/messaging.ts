@@ -26,6 +26,23 @@ export async function getMessages(conversationId: string, afterId?: string) {
   });
 }
 
+/**
+ * 채팅 화면 진입 컨텍스트 — matchId 로 대화방·상대(partnerId)를 찾고,
+ * 요청자가 이 매칭의 당사자(fromId/toId)인지 검증한다(IDOR 차단).
+ * 매칭이 수락 상태 + 대화 개설 전이면 null(아직 채팅 불가).
+ */
+export async function getMatchContextForUser(matchId: string, actorId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { fromId: true, toId: true, status: true, conversation: { select: { id: true } } },
+  });
+  if (!match) return null;
+  if (match.fromId !== actorId && match.toId !== actorId) return null;
+  if (match.status !== 'accepted' || !match.conversation) return null;
+  const partnerId = match.fromId === actorId ? match.toId : match.fromId;
+  return { conversationId: match.conversation.id, partnerId };
+}
+
 /** 만남 신청 수락 시 대화 개설 */
 export async function openConversation(matchId: string) {
   return prisma.conversation.upsert({

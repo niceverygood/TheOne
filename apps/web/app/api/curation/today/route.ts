@@ -29,6 +29,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         const intro = (c.profile?.introSections ?? null) as Partial<IntroSections> | null;
         return {
           candidate: {
+            id: c.id,
             region: c.profile?.region ?? null,
             age: c.birth ? ageFromBirth(c.birth) : null,
             jobCategory: c.jobCategory,
