@@ -471,3 +471,100 @@ export async function moderateAdminReport(
     return { ok: false };
   }
 }
+
+// ── 인증 심사(8종) — 앱 내 관리자 ────────────────────────────────────
+
+export interface AdminVerificationItem {
+  id: string;
+  type: VerificationType;
+  status: 'submitted' | 'reviewing';
+  valueTier: string | null;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  submittedAt: string;
+  /** SLA 마감(제출 + 24h) */
+  slaDueAt: string;
+  docLabels: string[];
+}
+
+export interface AdminVerificationStats {
+  pending: number;
+  /** SLA 마감 6h 이내 또는 초과 */
+  urgent: number;
+  approvedToday: number;
+  rejectedToday: number;
+}
+
+export interface AdminVerificationDetail extends AdminVerificationItem {
+  reviewedAt: string | null;
+  rejectReason: string | null;
+  /** 승인 시 회원에게 지급되는 크레딧 */
+  rewardCredits: number;
+  requiredDocs: string[];
+  documents: { id: string; label: string; mime: string; size: number; uploadedAt: string }[];
+}
+
+const EMPTY_VERIFY_STATS: AdminVerificationStats = {
+  pending: 0,
+  urgent: 0,
+  approvedToday: 0,
+  rejectedToday: 0,
+};
+
+/** 인증 심사 대기열 + 현황(SLA 임박순). */
+export async function fetchAdminVerifications(): Promise<{
+  ok: boolean;
+  stats: AdminVerificationStats;
+  queue: AdminVerificationItem[];
+}> {
+  if (!API_BASE) return { ok: false, stats: EMPTY_VERIFY_STATS, queue: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications`, {
+      headers: authHeader(),
+    });
+    const d = (await res.json()) as {
+      ok: boolean;
+      stats?: AdminVerificationStats;
+      queue?: AdminVerificationItem[];
+    };
+    return { ok: !!d.ok, stats: d.stats ?? EMPTY_VERIFY_STATS, queue: d.queue ?? [] };
+  } catch {
+    return { ok: false, stats: EMPTY_VERIFY_STATS, queue: [] };
+  }
+}
+
+/** 심사 상세 — 제출 서류 메타. 열람 사실은 서버에서 AccessLog 로 남는다. */
+export async function fetchAdminVerificationDetail(
+  id: string,
+): Promise<AdminVerificationDetail | null> {
+  if (!API_BASE) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications/${id}`, {
+      headers: authHeader(),
+    });
+    const d = (await res.json()) as { ok: boolean; application?: AdminVerificationDetail };
+    return d.ok && d.application ? d.application : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 심사 승인/반려. 반려는 표준 사유 코드로 — `other` 만 자유 입력. */
+export async function reviewAdminVerification(args: {
+  applicationId: string;
+  action: 'approve' | 'reject';
+  reasonCode?: string;
+  reasonText?: string;
+}): Promise<{ ok: boolean; rewardCredits?: number; reason?: string }> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications/review`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify(args),
+    });
+    return (await res.json()) as { ok: boolean; rewardCredits?: number; reason?: string };
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
