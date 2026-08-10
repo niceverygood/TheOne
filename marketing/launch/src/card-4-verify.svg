@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <!-- 04 · 4종 인증 -->
+  <rect width="1080" height="1080" fill="#FAF7F2"/>
+  <rect x="48" y="48" width="984" height="984" fill="none" stroke="#EDE8DE" stroke-width="2"/>
+
+  <text x="110" y="232" font-family="JetBrains Mono" font-size="28" letter-spacing="6"
+        fill="#B8956A">VERIFIED</text>
+
+  <text font-family="Noto Serif KR" font-size="70" font-weight="600"
+        letter-spacing="-2" fill="#1A1F2E">
+    <tspan x="110" y="372">말이 아니라,</tspan>
+    <tspan x="110" y="466">증명.</tspan>
+  </text>
+
+  <!-- 4 rows -->
+  <g font-family="Noto Serif KR" font-size="42" font-weight="500" fill="#1A1F2E">
+    <!-- row 1 -->
+    <line x1="110" y1="566" x2="970" y2="566" stroke="#EDE8DE" stroke-width="2"/>
+    <g transform="translate(110,612)"><path d="M0 14 L11 26 L34 -2" fill="none" stroke="#6B8E7F" stroke-width="5" stroke-linecap="square"/></g>
+    <text x="172" y="630">학력</text>
+    <text x="970" y="630" font-family="JetBrains Mono" font-size="26" font-weight="400" letter-spacing="2" fill="#8B8378" text-anchor="end">학위증명</text>
+
+    <!-- row 2 -->
+    <line x1="110" y1="656" x2="970" y2="656" stroke="#EDE8DE" stroke-width="2"/>
+    <g transform="translate(110,702)"><path d="M0 14 L11 26 L34 -2" fill="none" stroke="#6B8E7F" stroke-width="5" stroke-linecap="square"/></g>
+    <text x="172" y="720">재산</text>
+    <text x="970" y="720" font-family="JetBrains Mono" font-size="26" font-weight="400" letter-spacing="2" fill="#8B8378" text-anchor="end">잔고·자산</text>
+
+    <!-- row 3 -->
+    <line x1="110" y1="746" x2="970" y2="746" stroke="#EDE8DE" stroke-width="2"/>
+    <g transform="translate(110,792)"><path d="M0 14 L11 26 L34 -2" fill="none" stroke="#6B8E7F" stroke-width="5" stroke-linecap="square"/></g>
+    <text x="172" y="810">차량</text>
+    <text x="970" y="810" font-family="JetBrains Mono" font-size="26" font-weight="400" letter-spacing="2" fill="#8B8378" text-anchor="end">자동차등록증</text>
+
+    <!-- row 4 -->
+    <line x1="110" y1="836" x2="970" y2="836" stroke="#EDE8DE" stroke-width="2"/>
+    <g transform="translate(110,882)"><path d="M0 14 L11 26 L34 -2" fill="none" stroke="#6B8E7F" stroke-width="5" stroke-linecap="square"/></g>
+    <text x="172" y="900">부동산</text>
+    <text x="970" y="900" font-family="JetBrains Mono" font-size="26" font-weight="400" letter-spacing="2" fill="#8B8378" text-anchor="end">등기부등본</text>
+    <line x1="110" y1="926" x2="970" y2="926" stroke="#EDE8DE" stroke-width="2"/>
+  </g>
+
+  <text x="110" y="988" font-family="Pretendard Variable" font-size="26" font-weight="400"
+        letter-spacing="-1" fill="#8B8378">서류 기반 검증 · 상대에겐 인증 뱃지만 표시</text>
+  <text x="1000" y="988" font-family="JetBrains Mono" font-size="24" letter-spacing="2"
+        fill="#8B8378" text-anchor="end">04 / 05</text>
+</svg>
