@@ -1,8 +1,10 @@
 import { ReactNode } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ImageSourcePropType,
   ImageStyle,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -133,6 +135,68 @@ export function Screen({
         <View style={{ flex: 1 }}>{children}</View>
       )}
     </SafeAreaView>
+  );
+}
+
+/* ---- + 마크 ---- */
+/**
+ * 두 선으로 그린 `+` — 폰트 베이스라인(특히 Android `includeFontPadding`) 때문에
+ * 텍스트 `+` 가 박스 안에서 아래로 치우쳐 보이는 문제를 피한다. 정확히 가운데 정렬.
+ */
+export function PlusMark({
+  size = 18,
+  thickness = 1.5,
+  color = C.graySoft,
+}: {
+  size?: number;
+  thickness?: number;
+  color?: string;
+}) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{ position: 'absolute', width: size, height: thickness, backgroundColor: color }}
+      />
+      <View
+        style={{ position: 'absolute', width: thickness, height: size, backgroundColor: color }}
+      />
+    </View>
+  );
+}
+
+/* ---- 로딩 오버레이 ---- */
+/** 네트워크 대기 동안 덮는 브랜드 인디케이터. 시스템 스피너 톤 대신 아이보리 카드 + 샴페인. */
+export function LoadingOverlay({ visible, label }: { visible: boolean; label?: string }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(15,16,20,0.55)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: C.ivory,
+            borderRadius: RADIUS,
+            borderWidth: 1,
+            borderColor: C.hairLight,
+            paddingVertical: 26,
+            paddingHorizontal: 38,
+            alignItems: 'center',
+          }}
+        >
+          <ActivityIndicator size="small" color={C.champagne} />
+          {label ? (
+            <Txt size={12.5} color={C.gray} style={{ marginTop: 14, letterSpacing: -0.2 }}>
+              {label}
+            </Txt>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
