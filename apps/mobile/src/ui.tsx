@@ -170,6 +170,34 @@ export function VerifiedDots({
   );
 }
 
+/* ---- 첫인상 별점(1~5) — 단색 샴페인 채움, 장식·그라데이션 없음(§3 금기 준수) ---- */
+export function StarRating({
+  value,
+  onChange,
+  size = 28,
+  emptyColor,
+}: {
+  value: number | null;
+  onChange?: (n: number) => void;
+  size?: number;
+  emptyColor?: string;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 10 }}>
+      {[1, 2, 3, 4, 5].map((n) => {
+        const on = value != null && n <= value;
+        return (
+          <Pressable key={n} disabled={!onChange} onPress={() => onChange?.(n)} hitSlop={8}>
+            <Txt size={size} color={on ? C.champagne : (emptyColor ?? C.graySoft)}>
+              {on ? '★' : '☆'}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /* ---- SVG 인물 placeholder ---- */
 export function Portrait({
   height = 200,

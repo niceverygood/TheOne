@@ -253,6 +253,109 @@ export async function recordCurationAction(
   });
 }
 
+/** 호감 판정 기준 별점(5점 만점) — 3점 이상 = 호감. */
+export const LIKE_RATING_MIN = 3;
+
+/** 단계별 사진 공개 — 기본 1장 → 내 별점 3+ 2장 → 상호 3+ 3장 → 매칭 성사 시 전체. */
+export const PHOTO_REVEAL_TIERS = { initial: 1, liked: 2, mutual: 3 } as const;
+
+export interface CurationRevealState {
+  myRating: number | null;
+  /** 내가 별점 3점 이상 */
+  liked: boolean;
+  /** 서로 별점 3점 이상 */
+  mutual: boolean;
+  /** 매칭 성사(만남 신청 수락) — 전체 공개 */
+  matched: boolean;
+  /** 공개 사진 수 — null 이면 전체 공개 */
+  count: number | null;
+}
+
+/**
+ * viewer→candidate 사진 공개 단계 계산.
+ * 큐레이션은 상호·동일날짜가 보장되지 않으므로 별점은 양방향 CurationLog 를 날짜 무관하게 본다.
+ * 매칭 성사는 편지(Match) 흐름의 accepted 로 판정 — 방향 무관.
+ */
+export async function getCurationReveal(
+  viewerId: string,
+  candidateId: string,
+): Promise<CurationRevealState> {
+  const [mine, theirs, accepted] = await Promise.all([
+    prisma.curationLog.findFirst({
+      where: { userId: viewerId, candidateId, rating: { not: null } },
+      orderBy: { sentAt: 'desc' },
+      select: { rating: true },
+    }),
+    prisma.curationLog.findFirst({
+      where: { userId: candidateId, candidateId: viewerId, rating: { gte: LIKE_RATING_MIN } },
+      select: { id: true },
+    }),
+    prisma.match.findFirst({
+      where: {
+        status: 'accepted',
+        OR: [
+          { fromId: viewerId, toId: candidateId },
+          { fromId: candidateId, toId: viewerId },
+        ],
+      },
+      select: { id: true },
+    }),
+  ]);
+  const myRating = mine?.rating ?? null;
+  const liked = myRating != null && myRating >= LIKE_RATING_MIN;
+  const mutual = liked && theirs != null;
+  const matched = accepted != null;
+  const count = matched
+    ? null
+    : mutual
+      ? PHOTO_REVEAL_TIERS.mutual
+      : liked
+        ? PHOTO_REVEAL_TIERS.liked
+        : PHOTO_REVEAL_TIERS.initial;
+  return { myRating, liked, mutual, matched, count };
+}
+
+/** 공개 단계에 맞춰 사진 배열을 자른다(null = 전체). */
+export function slicePhotosForReveal(photos: string[], count: number | null): string[] {
+  return count == null ? photos : photos.slice(0, count);
+}
+
+/**
+ * 첫인상 별점 제출(1~5) — 본인 로그만 가능. 재평가 허용(마지막 값이 유효).
+ * 3점 이상은 liked, 미만은 passed 로 action 도 함께 기록(ML 로그 하위호환).
+ * superliked(신청서 발송)는 상위 반응이므로 별점이 낮아도 격하하지 않는다.
+ */
+export async function rateCuration(logId: string, actorId: string, rating: number) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new Error('invalid_rating');
+  const log = await prisma.curationLog.findUnique({
+    where: { id: logId },
+    select: { id: true, userId: true, candidateId: true, action: true },
+  });
+  if (!log) throw new Error('log_not_found');
+  if (log.userId !== actorId) throw new Error('forbidden');
+
+  const liked = rating >= LIKE_RATING_MIN;
+  const action = log.action === 'superliked' ? 'superliked' : liked ? 'liked' : 'passed';
+  await prisma.curationLog.update({
+    where: { id: log.id },
+    data: { rating, action, viewedAt: new Date() },
+  });
+
+  const [reveal, profile] = await Promise.all([
+    getCurationReveal(actorId, log.candidateId),
+    prisma.profile.findUnique({ where: { userId: log.candidateId }, select: { photos: true } }),
+  ]);
+  const photos = profile?.photos ?? [];
+  return {
+    rating,
+    liked: reveal.liked,
+    mutual: reveal.mutual,
+    matched: reveal.matched,
+    photos: slicePhotosForReveal(photos, reveal.count),
+    photosTotal: photos.length,
+  };
+}
+
 /** CRON: 활동 회원 전원에게 오늘의 큐레이션 발송. 발송 건수 반환. */
 export async function runDailyCuration(): Promise<{ sent: number; skipped: number }> {
   const users = await prisma.user.findMany({ where: { status: 'active' }, select: { id: true } });

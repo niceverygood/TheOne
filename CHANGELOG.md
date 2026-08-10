@@ -2,6 +2,22 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## 첫인상 별점 + 단계별 사진 공개
+
+큐레이션에 5점 만점 첫인상 별점을 도입 — **3점 이상 = 호감**. 사진은 기본 1장만 보이고, 내 별점 3+ → 2장, 서로 3+ → 3장, 매칭 성사(신청 수락) → 전체 공개로 단계 확장. 사진 잘라내기는 **서버에서** 수행(클라이언트에 비공개 사진 미전송).
+
+- **packages/db**: `CurationLog.rating Int?`(마이그레이션 `20260720000000_curation_rating`). `rateCuration`(1~5 검증·본인 로그만·재평가 허용, 3+ → action liked / 미만 passed, superliked 는 격하 안 함), `getCurationReveal`(양방향 별점 — 날짜 무관 + Match accepted 방향 무관), `slicePhotosForReveal`, `LIKE_RATING_MIN`/`PHOTO_REVEAL_TIERS`.
+- **apps/web**: `POST /api/curation/rate`(신규 — 갱신된 공개 사진 목록 반환), `GET /api/curation/today`(logId·myRating·reveal 추가 + 사진 단계 공개), `GET /api/match/received`(발신자 사진도 공개 단계만큼만).
+- **packages/shared**: `CurationReveal`·`CurationRateResult`, `CurationEntry.logId/myRating/reveal`, `CurationCandidateMeta.photosTotal`(전부 옵션 — 구버전 하위호환).
+- **apps/mobile**: `curation` 화면 히어로를 사진 페이저(스와이프)로 — 공개 사진 + 잠금 안내 페이지(다음 공개 조건 문구), 사진 n/N 공개 카운터. `StarRating`(ui.tsx — 단색 샴페인, 장식 없음 §3 준수), 첫인상 별점 섹션 + 상태 캡션. 프리뷰(서버 미연동)에서도 3+ 시 갤러리 1장 로컬 공개(App Review 데모 유지). `signup-api.rateCuration`.
+- **e2e-flow.ts**: liked 액션을 별점 4점 제출로 교체, 1→2장 공개·매칭 성사 후 전체 공개 검증 추가.
+
+**검증**: db/mobile `tsc` 클린, shared·web 은 신규/변경 파일 에러 0(기존 email·legal·landing JSX 타입 에러는 base 이슈, 무관).
+
+**머지 시 충돌 해결(2026-08-10)**: base 가 6커밋 뒤처져 있어 main 을 머지하며 3곳을 정리했다 — ① `/api/curation/today` 는 단계별 사진 공개(이 PR)와 `candidate.id` 반환(`11fbd9c` 프로필 화면 배선)을 **둘 다** 유지 ② `signup-api.ts` 타입 import 는 양쪽 합침 ③ CHANGELOG 는 두 항목 병기.
+
+> ⚠️ **배포 전 필수**: `20260720000000_curation_rating` 마이그레이션(`curation_logs.rating` 컬럼)을 Supabase 에 먼저 실행해야 한다. 컬럼 없이 배포하면 Prisma 가 없는 컬럼을 조회해 `/api/curation/today` 가 500 으로 죽는다. 컬럼은 nullable 이라 **먼저 실행해도 기존 코드에 무해**하다.
+
 ## 앱 내 관리자 콘솔 — 인증 심사(8종) 탭 ◐
 
 가입심사·신고처리만 있던 모바일 관리자 콘솔(`062d273`)에 **인증 심사**를 추가했다. 인증 SLA는 24h인데 심사가 웹 Basic Auth 콘솔에만 있어 운영자가 PC 앞에 있어야만 처리 가능했다.
