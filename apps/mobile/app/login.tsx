@@ -54,6 +54,7 @@ export default function Login() {
         phone: v.phone,
         verified: true,
         demoMode: false,
+        isAdmin: !!r.isAdmin,
       });
       router.replace('/curation');
       return;
@@ -110,6 +111,7 @@ export default function Login() {
         verified: true,
         name: '데모 회원',
         gender: 'male',
+        isAdmin: false,
       });
       router.replace('/curation');
       return;
@@ -130,6 +132,7 @@ export default function Login() {
         gender: r.gender,
         verified: true,
         demoMode: false,
+        isAdmin: false,
         name: gender === 'male' ? 'QA 테스트(남)' : 'QA 테스트(여)',
       });
       router.replace('/curation');

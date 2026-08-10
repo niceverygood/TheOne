@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { C, RADIUS } from '../src/theme';
 import { Hairline, Screen, Txt } from '../src/ui';
+import { useSignup } from '../src/store';
 
 const GROUPS: { title: string; items: [string, Href][] }[] = [
   {
@@ -52,6 +53,7 @@ const GROUPS: { title: string; items: [string, Href][] }[] = [
 /** 데모 내비게이션 — 전체 화면 둘러보기 (실서비스에선 탭바/딥링크로 대체) */
 export default function Menu() {
   const router = useRouter();
+  const isAdmin = useSignup((s) => s.isAdmin);
   return (
     <Screen>
       <View style={{ padding: 24 }}>
@@ -66,6 +68,33 @@ export default function Menu() {
         <Txt variant="serifKr" size={27} weight="700" color={C.ink2} style={{ marginTop: 4 }}>
           전체 화면 둘러보기
         </Txt>
+
+        {/* 관리자 계정만 노출 — 앱 내 가입 심사·신고 처리 */}
+        {isAdmin ? (
+          <View style={{ marginTop: 28 }}>
+            <Txt variant="eyebrow" style={{ marginBottom: 8 }} color={C.champagne}>
+              관리자
+            </Txt>
+            <Pressable onPress={() => router.push('/admin')}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingVertical: 15,
+                }}
+              >
+                <Txt size={15} color={C.ink2} weight="500">
+                  관리자 콘솔 · 가입 심사 / 신고 처리
+                </Txt>
+                <Txt variant="mono" size={14} color={C.graySoft}>
+                  ›
+                </Txt>
+              </View>
+              <Hairline />
+            </Pressable>
+          </View>
+        ) : null}
 
         {GROUPS.map((g) => (
           <View key={g.title} style={{ marginTop: 28 }}>

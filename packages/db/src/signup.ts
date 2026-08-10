@@ -50,7 +50,7 @@ export async function findUserByCiHash(ciHash: string) {
   if (!ciHash) return null;
   return prisma.user.findUnique({
     where: { ciHash },
-    select: { id: true, status: true, gender: true },
+    select: { id: true, status: true, gender: true, isAdmin: true },
   });
 }
 

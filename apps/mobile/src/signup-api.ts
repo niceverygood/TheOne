@@ -105,7 +105,14 @@ export async function submitManualIdentity(
 }
 
 export type LoginResult =
-  | { ok: true; userId: string; status: string; gender: 'male' | 'female'; token: string }
+  | {
+      ok: true;
+      userId: string;
+      status: string;
+      gender: 'male' | 'female';
+      token: string;
+      isAdmin?: boolean;
+    }
   | { ok: false; reason: 'not_member' | 'suspended' | 'invalid_token' | 'server' };
 
 /**
@@ -385,5 +392,82 @@ export async function submitVerification(
     return (await res.json()) as VerificationSubmitResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+// ── 앱 내 관리자 화면(isAdmin 계정 전용) ──────────────────────────────
+
+export interface AdminPendingMember {
+  id: string;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  createdAt: string;
+  referredBySeq: number | null;
+}
+
+/** 가입 심사 대기 목록. */
+export async function fetchAdminMembers(): Promise<{ ok: boolean; members: AdminPendingMember[] }> {
+  if (!API_BASE) return { ok: false, members: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/members`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; members?: AdminPendingMember[] };
+    return { ok: !!d.ok, members: d.members ?? [] };
+  } catch {
+    return { ok: false, members: [] };
+  }
+}
+
+/** 가입 심사 승인. */
+export async function approveAdminMember(userId: string): Promise<{ ok: boolean }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/members/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ userId }),
+    });
+    return (await res.json()) as { ok: boolean };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export interface AdminReportGroup {
+  userId: string;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  status: string;
+  suspendCount: number;
+  count: number;
+  categories: string[];
+}
+
+/** 미처리 신고 큐(피신고자별 누적). */
+export async function fetchAdminReports(): Promise<{ ok: boolean; queue: AdminReportGroup[] }> {
+  if (!API_BASE) return { ok: false, queue: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/reports`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; queue?: AdminReportGroup[] };
+    return { ok: !!d.ok, queue: d.queue ?? [] };
+  } catch {
+    return { ok: false, queue: [] };
+  }
+}
+
+/** 신고 처리 — 일시정지/영구강퇴/복구. */
+export async function moderateAdminReport(
+  userId: string,
+  action: 'suspend' | 'ban' | 'reinstate',
+): Promise<{ ok: boolean }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/reports/moderate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ userId, action }),
+    });
+    return (await res.json()) as { ok: boolean };
+  } catch {
+    return { ok: false };
   }
 }

@@ -11,8 +11,8 @@ function gateOk(req: NextRequest): boolean {
 
 /**
  * POST /api/admin/find-by-phone
- * body: { phoneContains, approve?: boolean }
- * 특정 실회원을 전화번호 뒷자리로 조회 → 필요 시 심사 승인까지 처리.
+ * body: { phoneContains, approve?: boolean, makeAdmin?: boolean }
+ * 특정 실회원을 전화번호 뒷자리로 조회 → 필요 시 심사 승인 + 앱 내 관리자 권한(User.isAdmin) 부여.
  * 일회성 운영 작업용 — QA_SEED_TOKEN 지우면 비활성.
  */
 export async function POST(req: NextRequest) {
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     phoneContains?: unknown;
     approve?: unknown;
+    makeAdmin?: unknown;
   } | null;
   const phoneContains = typeof body?.phoneContains === 'string' ? body.phoneContains : null;
   if (!phoneContains || phoneContains.length < 6) {
@@ -38,14 +39,19 @@ export async function POST(req: NextRequest) {
         gender: true,
         jobCategory: true,
         email: true,
+        isAdmin: true,
         createdAt: true,
       },
     });
     if (!user) return NextResponse.json({ ok: false, reason: 'not_found' }, { status: 404 });
 
     const statusBefore = user.status;
+    const isAdminBefore = user.isAdmin;
     if (body?.approve && user.status !== 'active') {
       await approveMembership(user.id);
+    }
+    if (body?.makeAdmin && !user.isAdmin) {
+      await prisma.user.update({ where: { id: user.id }, data: { isAdmin: true } });
     }
 
     return NextResponse.json({
@@ -54,6 +60,8 @@ export async function POST(req: NextRequest) {
         ...user,
         statusBefore,
         statusNow: body?.approve ? 'active' : user.status,
+        isAdminBefore,
+        isAdminNow: body?.makeAdmin ? true : user.isAdmin,
       },
     });
   } catch (e) {
