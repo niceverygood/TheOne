@@ -2,6 +2,32 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## 앱 내 관리자 콘솔 — 인증 심사(8종) 탭 ◐
+
+가입심사·신고처리만 있던 모바일 관리자 콘솔(`062d273`)에 **인증 심사**를 추가했다. 인증 SLA는 24h인데 심사가 웹 Basic Auth 콘솔에만 있어 운영자가 PC 앞에 있어야만 처리 가능했다.
+
+**권한 — 앱 관리자를 Operator 에 매핑**
+- 심사는 `reviewer_id`·`AccessLog.operator_id` 가 필수(FK)라, 가입승인·신고처리처럼 `User.isAdmin` 만으로는 처리할 수 없다. `ensureAppOperator(userId, seq)` 가 `app:<userId>` username 의 Operator 를 최초 1회 `reviewer` 로 생성하고 이후 재사용 → **앱에서 처리한 심사도 웹과 동일한 감사 추적에 남는다**.
+- 기존 Operator 의 role/active 는 덮어쓰지 않는다 → 웹 콘솔에서 `active=false` 로 내리면 앱 심사 권한도 즉시 회수(`requireMobileReviewer` 가 active + reviewer 이상을 확인).
+
+**apps/web — API 3종** (`lib/mobile-admin.ts` 에 `requireMobileReviewer`·`reqIp` 추가)
+- `GET /api/admin/mobile/verifications` — 대기열(SLA 임박순) + 현황 4종(대기·SLA임박·오늘 승인·오늘 반려).
+- `GET /api/admin/mobile/verifications/[id]` — 상세(필수/제출 서류 메타, 이전 반려 사유, 승인 시 보상액) + **AccessLog `view_meta` 기록**.
+- `POST /api/admin/mobile/verifications/review` — 승인(뱃지 1년 + 타입별 크레딧, applicationId 멱등) / 반려. 반려 사유는 **서버가 표준 문구 10종에서 코드→문구로 확정**(임의 문자열이 회원에게 그대로 가지 않게), `other` 만 자유 입력(300자). 이미 처리된 신청은 409 — 승인 후 반려로 뱃지가 남는 뒤집기를 차단.
+
+**apps/mobile**
+- `src/admin-verifications.tsx`(신규) — 현황 4칸 + 대기열. 행 탭 → 상세 인라인 확장(필수 서류 ✓/× 대조, 제출 서류 메타, 이전 반려) → 승인(`+NNC` 표기, 확인 다이얼로그) / 반려(표준 사유 칩 10종 + 기타 입력). 늦게 도착한 상세 응답을 버리는 순번 가드 포함.
+- `app/admin/index.tsx` — 탭 3개(가입·인증·신고)로 확장, `TabBtn` 추출. **SLA 임박 건이 있으면 인증 탭이 terra 로 표시**된다.
+- `src/signup-api.ts` — `fetchAdminVerifications`/`fetchAdminVerificationDetail`/`reviewAdminVerification`.
+
+**서류 열람 정책**: 원본은 앱에 내려주지 않는다 — 워터마크·다운로드 차단이 걸린 웹 보안 뷰어 전용(verification-sop §5-1). 앱은 메타(라벨·형식·용량)까지만. `docs/verification-sop.md` §5-1 에 앱 관리자 항목 반영.
+
+**정리**: SLA 잔여시간 표기가 웹 콘솔과 앱에 중복 구현돼 있어 `slaRemaining`·`SLA_URGENT_HOURS`(6h)를 `packages/shared/verification.ts` 로 단일화 — `apps/admin/verifications` 와 `getQueueStats` 의 urgent 기준도 같은 상수를 쓴다.
+
+**검증**: shared `vitest` 44/44(SLA 표기 4건·반려 문구 2건 신규) · db/mobile `tsc` OK · web/admin `next build` OK(신규 3라우트 등록 확인) · web/admin `next lint` OK · prettier OK.
+
+**잔여**: ① 서류 원본 뷰어는 웹·앱 모두 여전히 placeholder — `apps/web/lib/s3.ts` presign TODO 활성화(자격증명 + `@aws-sdk/*`)가 선행돼야 실제 심사 가능 ② 신분증 수동확인(`/identity-review`)은 아직 웹 콘솔 전용 ③ `/api/admin/migrate` 임시 raw ALTER 라우트 정리 미착수.
+
 ## LP SEO 보강 (apps/web)
 
 랜딩 검색 노출 강화. 정책(초안 약관·내부 데이터)은 색인에서 확실히 제외.
