@@ -11,7 +11,7 @@ import {
 } from '@theone/shared';
 import { AppShell, FormFooter } from '../../src/app-shell';
 import { C, RADIUS } from '../../src/theme';
-import { Txt } from '../../src/ui';
+import { PlusMark, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
 import { registerForPushToken } from '../../src/notifications';
 import { startPhotoStudio, pollPhotoStudio, type StudioImage } from '../../src/photo-studio-api';
@@ -205,9 +205,9 @@ export default function Step02() {
     setAiResults((prev) => prev.map((x, i) => (i === idx ? { ...x, added: true } : x)));
   }
 
-  // 그리드 슬롯: 선택한 사진들 + (여유 있으면) 추가 슬롯 1개
-  const slots: ('add' | string)[] = [...photos];
-  if (photos.length < MAX_PHOTOS) slots.push('add');
+  // 그리드는 항상 MAX_PHOTOS 칸을 유지한다(목업 step04-photos 동일).
+  // 사진이 0장일 때 칸 하나만 외톨이로 크게 보이던 문제 방지 — 빈 칸 중 첫 칸에만 + 마크.
+  const slots = Array.from({ length: MAX_PHOTOS }, (_, i) => i);
 
   return (
     <AppShell
@@ -229,12 +229,12 @@ export default function Step02() {
       }
     >
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {slots.map((slot, i) =>
-          slot === 'add' ? (
+        {slots.map((i) =>
+          i >= photos.length ? (
             // 비율 유지: aspectRatio 는 사진 슬롯과 동일하게 바깥 View 에 두고,
             // 점선 Pressable 은 100% 채움 — in-flow 자식(+)이 있을 때 Pressable 에 직접
             // aspectRatio 를 주면 일부 렌더러에서 세로가 무너져(가로>세로) 비율이 깨진다.
-            <View key="add" style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
+            <View key={`add-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
               <Pressable
                 onPress={onAdd}
                 style={{
@@ -250,15 +250,14 @@ export default function Step02() {
                   justifyContent: 'center',
                 }}
               >
-                <Txt variant="mono" size={20} color={C.graySoft}>
-                  +
-                </Txt>
+                {/* 빈 칸 중 첫 칸에만 + 마크 — 나머지는 자리만 잡는 빈 슬롯 */}
+                {i === photos.length ? <PlusMark size={18} color={C.graySoft} /> : null}
               </Pressable>
             </View>
           ) : (
-            <View key={`${slot}-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
+            <View key={`photo-${i}`} style={{ width: '31.5%', aspectRatio: 3 / 4 }}>
               <Image
-                source={{ uri: slot }}
+                source={{ uri: photos[i] }}
                 resizeMode="cover"
                 style={{ width: '100%', height: '100%', borderRadius: RADIUS }}
               />
