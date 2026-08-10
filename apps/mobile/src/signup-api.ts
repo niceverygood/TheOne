@@ -3,6 +3,8 @@
  * 베이스는 EXPO_PUBLIC_API_BASE_URL (미설정 시 server reason 으로 실패 반환).
  */
 import type {
+  CurationCandidateMeta,
+  CurationChemistry,
   CurationRateResult,
   CurationTodayResult,
   IntroSections,
@@ -104,7 +106,14 @@ export async function submitManualIdentity(
 }
 
 export type LoginResult =
-  | { ok: true; userId: string; status: string; gender: 'male' | 'female'; token: string }
+  | {
+      ok: true;
+      userId: string;
+      status: string;
+      gender: 'male' | 'female';
+      token: string;
+      isAdmin?: boolean;
+    }
   | { ok: false; reason: 'not_member' | 'suspended' | 'invalid_token' | 'server' };
 
 /**
@@ -118,6 +127,25 @@ export async function loginWithIdToken(idToken: string): Promise<LoginResult> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ idToken }),
+    });
+    const data = (await res.json()) as LoginResult;
+    return data;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+/**
+ * QA 검수용 남/여 테스트 계정 로그인 — 본인인증 없이 고정 시드 계정 세션 발급.
+ * 로그인 화면 하단 안내문 롱프레스 → 숨김 메뉴에서만 호출된다.
+ */
+export async function testLogin(gender: 'male' | 'female'): Promise<LoginResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/test-login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gender, secret: 'theone-qa-2026' }),
     });
     const data = (await res.json()) as LoginResult;
     return data;
@@ -256,6 +284,111 @@ export async function openContact(matchId: string, _userId: string): Promise<Con
   }
 }
 
+export type ProfileFetchResult =
+  | { ok: true; candidate: CurationCandidateMeta; chemistry: CurationChemistry | null }
+  | { ok: false; reason?: string };
+
+/** 특정 회원 1명의 프로필 상세 — 큐레이션·인박스에서 받은 candidateId 로 조회. */
+export async function fetchProfile(userId: string): Promise<ProfileFetchResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/profile/${encodeURIComponent(userId)}`, {
+      headers: authHeader(),
+    });
+    return (await res.json()) as ProfileFetchResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+export type SendLetterResult =
+  | { ok: true; matchId: string; spent: number; free: boolean }
+  | { ok: false; reason: string };
+
+/** 만남 신청서 발송 — 크레딧 차감(여성 무료) + Match(pending) 생성. */
+export async function sendLetter(
+  toId: string,
+  letter: string,
+  isSuper: boolean,
+): Promise<SendLetterResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/letter/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ toId, letter, isSuper }),
+    });
+    return (await res.json()) as SendLetterResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+/** 크레딧 잔액 조회 — 신청서 작성 화면의 잔액·부족 안내에 사용. */
+export async function fetchCreditBalance(): Promise<{ ok: boolean; balance: number }> {
+  if (!API_BASE) return { ok: false, balance: 0 };
+  try {
+    const res = await fetch(`${API_BASE}/api/credits/balance`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; balance?: number };
+    return { ok: !!d.ok, balance: d.balance ?? 0 };
+  } catch {
+    return { ok: false, balance: 0 };
+  }
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+}
+export interface ChatPartner {
+  id: string;
+  jobCategory: string;
+  jobDetail: string | null;
+  region: string | null;
+  photos: string[];
+  badgeCount: number;
+}
+export type ChatMessagesResult =
+  | { ok: true; messages: ChatMessage[]; partner: ChatPartner | null }
+  | { ok: false; reason?: string };
+
+/** 채팅 메시지 조회(폴링) — afterId 이후만 받아 누적한다. */
+export async function fetchChatMessages(
+  matchId: string,
+  afterId?: string,
+): Promise<ChatMessagesResult> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const q = afterId ? `?after=${encodeURIComponent(afterId)}` : '';
+    const res = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/messages${q}`, {
+      headers: authHeader(),
+    });
+    return (await res.json()) as ChatMessagesResult;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+}
+
+/** 채팅 메시지 전송. */
+export async function sendChatMessage(
+  matchId: string,
+  text: string,
+): Promise<{ ok: boolean; message?: ChatMessage }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/match/${encodeURIComponent(matchId)}/messages`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ text }),
+    });
+    return (await res.json()) as { ok: boolean; message?: ChatMessage };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export interface SubmitVerificationArgs {
   userId: string;
   type: VerificationType;
@@ -277,5 +410,179 @@ export async function submitVerification(
     return (await res.json()) as VerificationSubmitResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+// ── 앱 내 관리자 화면(isAdmin 계정 전용) ──────────────────────────────
+
+export interface AdminPendingMember {
+  id: string;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  createdAt: string;
+  referredBySeq: number | null;
+}
+
+/** 가입 심사 대기 목록. */
+export async function fetchAdminMembers(): Promise<{ ok: boolean; members: AdminPendingMember[] }> {
+  if (!API_BASE) return { ok: false, members: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/members`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; members?: AdminPendingMember[] };
+    return { ok: !!d.ok, members: d.members ?? [] };
+  } catch {
+    return { ok: false, members: [] };
+  }
+}
+
+/** 가입 심사 승인. */
+export async function approveAdminMember(userId: string): Promise<{ ok: boolean }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/members/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ userId }),
+    });
+    return (await res.json()) as { ok: boolean };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export interface AdminReportGroup {
+  userId: string;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  status: string;
+  suspendCount: number;
+  count: number;
+  categories: string[];
+}
+
+/** 미처리 신고 큐(피신고자별 누적). */
+export async function fetchAdminReports(): Promise<{ ok: boolean; queue: AdminReportGroup[] }> {
+  if (!API_BASE) return { ok: false, queue: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/reports`, { headers: authHeader() });
+    const d = (await res.json()) as { ok: boolean; queue?: AdminReportGroup[] };
+    return { ok: !!d.ok, queue: d.queue ?? [] };
+  } catch {
+    return { ok: false, queue: [] };
+  }
+}
+
+/** 신고 처리 — 일시정지/영구강퇴/복구. */
+export async function moderateAdminReport(
+  userId: string,
+  action: 'suspend' | 'ban' | 'reinstate',
+): Promise<{ ok: boolean }> {
+  if (!API_BASE) return { ok: false };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/reports/moderate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ userId, action }),
+    });
+    return (await res.json()) as { ok: boolean };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// ── 인증 심사(8종) — 앱 내 관리자 ────────────────────────────────────
+
+export interface AdminVerificationItem {
+  id: string;
+  type: VerificationType;
+  status: 'submitted' | 'reviewing';
+  valueTier: string | null;
+  gender: 'male' | 'female';
+  jobCategory: string;
+  submittedAt: string;
+  /** SLA 마감(제출 + 24h) */
+  slaDueAt: string;
+  docLabels: string[];
+}
+
+export interface AdminVerificationStats {
+  pending: number;
+  /** SLA 마감 6h 이내 또는 초과 */
+  urgent: number;
+  approvedToday: number;
+  rejectedToday: number;
+}
+
+export interface AdminVerificationDetail extends AdminVerificationItem {
+  reviewedAt: string | null;
+  rejectReason: string | null;
+  /** 승인 시 회원에게 지급되는 크레딧 */
+  rewardCredits: number;
+  requiredDocs: string[];
+  documents: { id: string; label: string; mime: string; size: number; uploadedAt: string }[];
+}
+
+const EMPTY_VERIFY_STATS: AdminVerificationStats = {
+  pending: 0,
+  urgent: 0,
+  approvedToday: 0,
+  rejectedToday: 0,
+};
+
+/** 인증 심사 대기열 + 현황(SLA 임박순). */
+export async function fetchAdminVerifications(): Promise<{
+  ok: boolean;
+  stats: AdminVerificationStats;
+  queue: AdminVerificationItem[];
+}> {
+  if (!API_BASE) return { ok: false, stats: EMPTY_VERIFY_STATS, queue: [] };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications`, {
+      headers: authHeader(),
+    });
+    const d = (await res.json()) as {
+      ok: boolean;
+      stats?: AdminVerificationStats;
+      queue?: AdminVerificationItem[];
+    };
+    return { ok: !!d.ok, stats: d.stats ?? EMPTY_VERIFY_STATS, queue: d.queue ?? [] };
+  } catch {
+    return { ok: false, stats: EMPTY_VERIFY_STATS, queue: [] };
+  }
+}
+
+/** 심사 상세 — 제출 서류 메타. 열람 사실은 서버에서 AccessLog 로 남는다. */
+export async function fetchAdminVerificationDetail(
+  id: string,
+): Promise<AdminVerificationDetail | null> {
+  if (!API_BASE) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications/${id}`, {
+      headers: authHeader(),
+    });
+    const d = (await res.json()) as { ok: boolean; application?: AdminVerificationDetail };
+    return d.ok && d.application ? d.application : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 심사 승인/반려. 반려는 표준 사유 코드로 — `other` 만 자유 입력. */
+export async function reviewAdminVerification(args: {
+  applicationId: string;
+  action: 'approve' | 'reject';
+  reasonCode?: string;
+  reasonText?: string;
+}): Promise<{ ok: boolean; rewardCredits?: number; reason?: string }> {
+  if (!API_BASE) return { ok: false, reason: 'server' };
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/mobile/verifications/review`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify(args),
+    });
+    return (await res.json()) as { ok: boolean; rewardCredits?: number; reason?: string };
+  } catch {
+    return { ok: false, reason: 'server' };
   }
 }

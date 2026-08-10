@@ -433,7 +433,11 @@ export default function Curation() {
         </View>
 
         <View style={{ marginTop: 32, gap: 10 }}>
-          <Btn label="프로필 더 알아보기" variant="champ" onPress={() => router.push('/profile')} />
+          <Btn
+            label="프로필 더 알아보기"
+            variant="champ"
+            onPress={() => router.push(candidate?.id ? `/profile?id=${candidate.id}` : '/profile')}
+          />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Btn
               label={hasNext ? '다음 분 보기 →' : 'Pass · 오늘은 넘기기'}
@@ -447,7 +451,11 @@ export default function Curation() {
               variant="outline"
               labelColor={C.champagne}
               style={{ flex: 1, borderColor: C.champagne }}
-              onPress={() => router.push('/letter?mode=super')}
+              onPress={() =>
+                router.push(
+                  candidate?.id ? `/letter?mode=super&to=${candidate.id}` : '/letter?mode=super',
+                )
+              }
             />
           </View>
         </View>

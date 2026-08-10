@@ -1,16 +1,18 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { letterCost } from '@theone/shared';
+import type { CurationCandidateMeta } from '@theone/shared';
 import { C, RADIUS } from '../src/theme';
 import { Btn, Hairline, Portrait, Screen, Txt } from '../src/ui';
 import { ChoiceRow } from '../src/ui';
 import { previewPortraits } from '../src/preview-assets';
+import { fetchCreditBalance, fetchProfile, sendLetter } from '../src/signup-api';
+import { showAlert } from '../src/brand-alert';
 
-// 서버 연동 전 프리뷰 상태 — 첫 신청 여부·잔액
-const IS_FIRST_LETTER = true;
-const BALANCE = 187;
+const MAX_LEN = 300;
+const MIN_LEN = 80;
 
 /** 작성 가이드 — 수락률을 높이는 3요소. 탭하면 문장 시작점을 본문에 추가한다. */
 const GUIDES: { label: string; starter: string }[] = [
@@ -19,23 +21,77 @@ const GUIDES: { label: string; starter: string }[] = [
   { label: '구체적인 만남 제안', starter: '괜찮으시다면 ' },
 ];
 
+const SEND_FAIL_MESSAGE: Record<string, string> = {
+  cannot_letter_self: '본인에게는 신청서를 보낼 수 없어요.',
+  letter_too_short: '80자 이상 작성해 주세요.',
+  recipient_unavailable: '지금은 신청서를 보낼 수 없는 회원이에요.',
+  blocked: '차단 관계에서는 신청서를 보낼 수 없어요.',
+  already_sent: '이미 신청서를 보낸 상대예요. 응답을 기다려 주세요.',
+  sender_inactive: '현재 계정 상태에서는 신청서를 보낼 수 없어요.',
+};
+
 /** Screen 12 · 만남 신청서 (Interest Letter) — 골드스푼식 진지한 글쓰기 + 크레딧 차감 */
 export default function Letter() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { mode } = useLocalSearchParams<{ mode?: string }>();
-  const [body, setBody] = useState(
-    '지윤 님, 갤러리를 천천히 도는 걸 좋아한다는 문장에서 멈췄어요. 저도 주말이면 종종 미술관에 가는데, 좋아하는 작가가 겹칠지 궁금합니다. 서로의 일을 존중하면서 함께 성장할 수 있는 관계를 진지하게 찾고 있어요.',
-  );
+  const { mode, to } = useLocalSearchParams<{ mode?: string; to?: string }>();
+  const [body, setBody] = useState('');
   const [sup, setSup] = useState(mode === 'super'); // Super Like 진입 시 우선 신청서 기본 선택
+  const [candidate, setCandidate] = useState<CurationCandidateMeta | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [sending, setSending] = useState(false);
   const len = body.length;
-  const enough = len >= 80;
+  const enough = len >= MIN_LEN && len <= MAX_LEN;
 
-  const cost = letterCost(sup ? 'super' : 'normal', { isFirstLetter: IS_FIRST_LETTER });
-  const short = BALANCE < cost; // 잔액 부족 → 충전 유도
+  useEffect(() => {
+    fetchCreditBalance().then((r) => {
+      if (r.ok) setBalance(r.balance);
+    });
+    if (!to) return;
+    let alive = true;
+    fetchProfile(to).then((r) => {
+      if (alive && r.ok) setCandidate(r.candidate);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [to]);
+
+  const titleText = candidate?.jobDetail ?? candidate?.jobCategory ?? '김지윤';
+  const subText = candidate
+    ? [candidate.age ? `${candidate.age}` : null, candidate.region].filter(Boolean).join(' · ')
+    : '32 · 변호사 · 서초';
+  const heroSource = candidate?.photos?.[0]
+    ? { uri: candidate.photos[0] }
+    : previewPortraits.jiyoon;
+
+  const cost = letterCost(sup ? 'super' : 'normal', { isFirstLetter: false });
+  const short = balance < cost; // 잔액 부족 → 충전 유도
 
   function appendStarter(starter: string) {
     setBody((b) => (b.trim().length === 0 ? starter : `${b.trimEnd()}\n${starter}`));
+  }
+
+  async function onSend() {
+    if (short) {
+      router.push('/credits');
+      return;
+    }
+    if (!to) {
+      showAlert('상대를 찾을 수 없어요', '큐레이션 화면에서 다시 시도해 주세요.');
+      return;
+    }
+    setSending(true);
+    const r = await sendLetter(to, body.trim(), sup);
+    setSending(false);
+    if (r.ok) {
+      router.replace('/inbox');
+      return;
+    }
+    showAlert(
+      '신청서를 보내지 못했어요',
+      SEND_FAIL_MESSAGE[r.reason] ?? '잠시 후 다시 시도해 주세요.',
+    );
   }
 
   return (
@@ -63,14 +119,14 @@ export default function Letter() {
                 </Txt>
               </Pressable>
               <Txt variant="mono" size={10} color={C.gray}>
-                잔액 {BALANCE} C
+                잔액 {balance} C
               </Txt>
             </View>
             <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 8 }}>
               An Interest Letter
             </Txt>
             <Txt variant="serifKr" size={24} weight="700" color={C.ink2} style={{ lineHeight: 33 }}>
-              김지윤 님께{'\n'}마음을 전합니다
+              {titleText} 님께{'\n'}마음을 전합니다
             </Txt>
             <Txt size={13} color={C.gray} style={{ marginTop: 10, lineHeight: 21 }}>
               가벼운 호감 대신, 진심을 담은 글을 보냅니다. 정성이 담긴 글이 매칭함 상단에 먼저
@@ -90,14 +146,14 @@ export default function Letter() {
               }}
             >
               <View style={{ width: 44, height: 44 }}>
-                <Portrait fill source={previewPortraits.jiyoon} />
+                <Portrait fill source={heroSource} />
               </View>
               <View>
                 <Txt size={14} weight="500" color={C.ink2}>
-                  김지윤
+                  {titleText}
                 </Txt>
                 <Txt size={11.5} color={C.gray}>
-                  32 · 변호사 · 서초
+                  {subText}
                 </Txt>
               </View>
             </View>
@@ -127,8 +183,9 @@ export default function Letter() {
             </View>
             <TextInput
               value={body}
-              onChangeText={setBody}
+              onChangeText={(v) => setBody(v.slice(0, MAX_LEN))}
               multiline
+              maxLength={MAX_LEN}
               style={{
                 borderWidth: 1,
                 borderColor: C.hairLight,
@@ -143,8 +200,8 @@ export default function Letter() {
               }}
             />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-              <Txt variant="mono" size={10} color={C.gray}>
-                {len} / 300자
+              <Txt variant="mono" size={10} color={len >= MAX_LEN ? C.terra : C.gray}>
+                {len} / {MAX_LEN}자
               </Txt>
               <Txt variant="mono" size={10} color={enough ? C.sage : C.terra}>
                 {enough ? '✓ 충분한 분량' : '80자 이상'}
@@ -156,7 +213,7 @@ export default function Letter() {
                 전송 방식
               </Txt>
               <ChoiceRow
-                label={IS_FIRST_LETTER ? '일반 신청서 · 첫 신청 무료' : `일반 신청서 · ${20}C`}
+                label="일반 신청서"
                 hint="매칭함에 순서대로 도착"
                 selected={!sup}
                 onPress={() => setSup(false)}
@@ -182,20 +239,22 @@ export default function Letter() {
           >
             {short ? (
               <Txt size={11} color={C.terra} style={{ marginBottom: 10, textAlign: 'center' }}>
-                잔액이 {cost - BALANCE}C 부족합니다. 충전 후 보낼 수 있어요.
+                잔액이 {cost - balance}C 부족합니다. 충전 후 보낼 수 있어요.
               </Txt>
             ) : null}
             <Btn
               label={
-                short
-                  ? '크레딧 충전하기'
-                  : cost === 0
-                    ? '신청서 보내기 · 첫 신청 무료'
-                    : `신청서 보내기 · ${cost}C 차감`
+                sending
+                  ? '보내는 중…'
+                  : short
+                    ? '크레딧 충전하기'
+                    : cost === 0
+                      ? '신청서 보내기 · 무료'
+                      : `신청서 보내기 · ${cost}C 차감`
               }
               variant="solid"
-              disabled={!enough && !short}
-              onPress={() => (short ? router.push('/credits') : router.replace('/inbox'))}
+              disabled={(!enough && !short) || sending}
+              onPress={onSend}
             />
           </View>
         </View>

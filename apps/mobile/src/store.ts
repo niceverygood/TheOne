@@ -56,6 +56,8 @@ export interface SignupState {
   acceptedTerms: boolean;
   /** 내가 차단한 회원 id 목록 — 큐레이션·매칭·채팅 노출에서 제외(서버와 best-effort 동기화). */
   blocked: string[];
+  /** 앱 내 관리자 화면(가입 심사·신고 처리) 접근 권한 — 로그인 응답의 isAdmin 그대로. */
+  isAdmin: boolean;
 
   set: (patch: Partial<SignupState>) => void;
   acceptTerms: () => void;
@@ -75,6 +77,7 @@ export const useSignup = create<SignupState>((set, get) => ({
   demoMode: false,
   acceptedTerms: false,
   blocked: [],
+  isAdmin: false,
   set: (patch) => set(patch),
   acceptTerms: () => set({ acceptedTerms: true }),
   block: (id) => set((s) => (s.blocked.includes(id) ? s : { blocked: [...s.blocked, id] })),
@@ -107,5 +110,6 @@ export const useSignup = create<SignupState>((set, get) => ({
       demoMode: false,
       acceptedTerms: false,
       blocked: [],
+      isAdmin: false,
     }),
 }));

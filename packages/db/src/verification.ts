@@ -3,6 +3,7 @@
  * 모든 서류 열람/처리는 AccessLog 기록을 동반한다 (privacy-design §2-4).
  */
 import { prisma } from './index';
+import { SLA_URGENT_HOURS } from '@theone/shared';
 import { awardVerificationReward } from './economy';
 import type {
   AccessAction,
@@ -29,6 +30,41 @@ export function badgeExpiryFrom(from: Date = new Date()): Date {
 
 export async function getOperatorByUsername(username: string): Promise<Operator | null> {
   return prisma.operator.findUnique({ where: { username } });
+}
+
+/** 운영자 등록/역할 변경 — Basic Auth 계정을 실제 심사 권한(Operator)에 연결한다. */
+export async function upsertOperator(
+  username: string,
+  name: string,
+  role: OperatorRole,
+): Promise<Operator> {
+  return prisma.operator.upsert({
+    where: { username },
+    create: { username, name, role, active: true },
+    update: { name, role, active: true },
+  });
+}
+
+/** 앱 내 관리자(User.isAdmin)용 운영자 계정 username 규칙 — 웹 Basic Auth 계정과 네임스페이스 분리. */
+export function appOperatorUsername(userId: string): string {
+  return `app:${userId}`;
+}
+
+/**
+ * 앱 내 관리자를 심사 운영자(Operator)에 1:1 매핑한다.
+ * 인증 심사는 reviewerId·AccessLog.operatorId 가 필수(FK)라, 앱에서 처리한 심사도
+ * 동일한 감사 추적에 남기기 위해 계정을 한 번만 만들어 재사용한다.
+ *
+ * 이미 있으면 그대로 반환 — role/active 를 덮어쓰지 않는다. 따라서 웹 콘솔에서
+ * `active=false` 로 내리거나 role 을 조정하면 앱 심사 권한도 즉시 회수된다.
+ */
+export async function ensureAppOperator(userId: string, seq: number): Promise<Operator> {
+  const username = appOperatorUsername(userId);
+  const existing = await prisma.operator.findUnique({ where: { username } });
+  if (existing) return existing;
+  return prisma.operator.create({
+    data: { username, name: `앱 관리자 #${seq}`, role: 'reviewer', active: true },
+  });
 }
 
 // ---- AccessLog ----
@@ -84,7 +120,7 @@ export interface QueueStats {
 export async function getQueueStats(): Promise<QueueStats> {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const soon = new Date(now.getTime() + 6 * 3600_000);
+  const soon = new Date(now.getTime() + SLA_URGENT_HOURS * 3600_000);
   const [pending, urgent, approvedToday, rejectedToday] = await Promise.all([
     prisma.verificationApplication.count({ where: { status: { in: ['submitted', 'reviewing'] } } }),
     prisma.verificationApplication.count({

@@ -112,12 +112,26 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
 const CURATION_PER_DAY = Math.max(1, Math.min(5, Number(process.env.CURATION_PER_DAY) || 1));
 
 /** 후보 1명을 화면용(profile·badges 포함)으로 로드 + 케미 3축 계산. */
-async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
+export async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
   const candidate = await prisma.user.findUnique({
     where: { id: candidateId },
     include: { profile: true, badges: true },
   });
   const breakdown = surveyBreakdown(viewerSurvey, candidate?.profile?.surveyAnswers ?? []);
+  return { candidate, breakdown };
+}
+
+/**
+ * 프로필 상세 화면용 — 큐레이션 밖(만남 신청서 작성 등)에서도 특정 후보를 조회한다.
+ * 본인 조회·차단 관계·비활성 회원은 null(프로필 화면이 폴백을 쓰도록).
+ */
+export async function getCandidateForViewer(candidateId: string, viewerId: string) {
+  if (candidateId === viewerId) return null;
+  const blocked = await listBlockedIds(viewerId);
+  if (blocked.includes(candidateId)) return null;
+  const viewer = await loadUserForMatch(viewerId);
+  const { candidate, breakdown } = await hydrateCandidate(candidateId, viewer?.survey ?? []);
+  if (!candidate || candidate.status !== 'active') return null;
   return { candidate, breakdown };
 }
 
@@ -155,10 +169,15 @@ export async function getTodayCurations(userId: string) {
       select: { candidateId: true },
     });
     const seenIds = new Set(seen.map((s) => s.candidateId));
-    const self = await prisma.user.findUnique({ where: { id: userId }, select: { gender: true } });
+    const self = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { gender: true, email: true },
+    });
     const oppGender = self?.gender === 'male' ? 'female' : 'male';
     // 차단 관계(양방향)는 후보 풀에서 제외.
     const blockedIds = await listBlockedIds(userId);
+    // QA 테스트 계정(qa_*)은 실회원 큐레이션 풀에서 제외 — QA 계정끼리만 서로 보인다.
+    const isQaViewer = !!self?.email?.startsWith('qa_');
 
     const pool = await prisma.user.findMany({
       where: {
@@ -166,6 +185,7 @@ export async function getTodayCurations(userId: string) {
         gender: oppGender,
         id: { notIn: [userId, ...seenIds, ...blockedIds] },
         birth: { not: null },
+        ...(isQaViewer ? {} : { email: { not: { startsWith: 'qa_' } } }),
       },
       include: {
         profile: { select: { region: true, surveyAnswers: true } },

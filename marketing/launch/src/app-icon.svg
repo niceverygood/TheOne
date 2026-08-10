@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- THE ONE · 앱 아이콘 (잉크블랙 + 샴페인 T 모노그램) -->
+  <!-- 작은 사이즈에서도 읽히도록 텍스트를 빼고 모노그램만 남김 -->
+  <rect width="1024" height="1024" fill="#0F1014"/>
+
+  <!-- hairline 액자 (다크 hairline) -->
+  <rect x="72" y="72" width="880" height="880" fill="none" stroke="#1F222B" stroke-width="2"/>
+
+  <!-- 상단 짧은 디바이더 -->
+  <line x1="462" y1="250" x2="562" y2="250" stroke="#B8956A" stroke-width="3"/>
+
+  <!-- 중앙 모노그램 T (Noto Serif KR, 샴페인) -->
+  <text x="512" y="745"
+        font-family="Noto Serif KR" font-size="620" font-weight="600"
+        fill="#B8956A" text-anchor="middle">T</text>
+</svg>

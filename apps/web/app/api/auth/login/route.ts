@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       status: user.status,
       gender: user.gender,
+      isAdmin: user.isAdmin,
       token,
     });
   } catch (e) {

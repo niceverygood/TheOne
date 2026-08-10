@@ -7,6 +7,9 @@ import type { VerificationType } from './schemas';
 /** SLA: 제출 후 검토 완료까지 (영업 기준 24h). */
 export const VERIFICATION_SLA_HOURS = 24;
 
+/** SLA 마감 임박 기준 — 남은 시간이 이 값 이하면 긴급으로 본다(심사 콘솔 urgent 집계와 동일). */
+export const SLA_URGENT_HOURS = 6;
+
 /** 인증 유효기간 1년. */
 export const BADGE_VALID_DAYS = 365;
 
@@ -32,6 +35,22 @@ export function daysUntilExpiry(expiresAt: Date, now: Date = new Date()): number
 export function isBadgeExpiringSoon(expiresAt: Date, now: Date = new Date()): boolean {
   const d = daysUntilExpiry(expiresAt, now);
   return d >= 0 && d <= RENEWAL_NOTICE_DAYS;
+}
+
+/**
+ * 심사 SLA 마감까지 남은 시간 표기 + 긴급 여부 — 심사 콘솔(웹·앱) 공용.
+ * 마감을 넘겼거나 SLA_URGENT_HOURS 이내면 urgent.
+ */
+export function slaRemaining(
+  dueAt: Date | string,
+  now: Date = new Date(),
+): { text: string; urgent: boolean } {
+  const ms = new Date(dueAt).getTime() - now.getTime();
+  const abs = Math.abs(ms);
+  const h = Math.floor(abs / 3600_000);
+  const m = Math.floor((abs % 3600_000) / 60_000);
+  if (ms < 0) return { text: `초과 ${h}h ${m}m`, urgent: true };
+  return { text: `${h}h ${m}m 남음`, urgent: ms <= SLA_URGENT_HOURS * 3600_000 };
 }
 
 /** 운영자 권한 3단계 */

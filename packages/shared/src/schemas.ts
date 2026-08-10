@@ -283,6 +283,8 @@ export type VerificationSubmitResult =
 
 /** 큐레이션 상대 메타 — 직접식별정보(이름) 제외(privacy-design §2-4). 뱃지·케미만 노출. */
 export interface CurationCandidateMeta {
+  /** 내부 회원 id(cuid) — 프로필 상세·신청서 발송 대상 지정용. 직접식별정보 아님. */
+  id: string;
   region: string | null;
   age: number | null;
   jobCategory: string;

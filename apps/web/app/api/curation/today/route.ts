@@ -43,6 +43,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               matched: reveal.matched,
             },
             candidate: {
+              id: c.id,
               region: c.profile?.region ?? null,
               age: c.birth ? ageFromBirth(c.birth) : null,
               jobCategory: c.jobCategory,
