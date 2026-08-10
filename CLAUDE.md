@@ -111,3 +111,20 @@ pnpm typecheck && pnpm lint
 - Phase 2 docs(약관·개인정보처리방침)는 변호사 검토 완료 시점에 `v1.0` 태깅, 그 전 외부 노출 금지.
 - 디자인 변경 시 `tokens.ts` ↔ 목업 ↔ Tailwind 설정을 항상 동기화.
 - 환경변수는 `.env.example`에 자리만, 실제 값은 절대 커밋 금지.
+
+### 8-1. 외부 콘솔 작업을 지시할 때는 링크를 같이 준다
+
+사용자에게 **직접 실행/설정해 달라고 요청할 때**는 설명만 하지 말고 해당 화면 링크를 같이 준다.
+
+**Supabase SQL(마이그레이션)** — 항상 SQL Editor 링크 + 복사 가능한 SQL 블록을 함께:
+
+> **[Supabase SQL Editor 열기](https://supabase.com/dashboard/project/_/sql/new)** 에서 실행해 주세요.
+> ```sql
+> ALTER TABLE "..." ADD COLUMN "..." ...;
+> ```
+> (영향: 무엇이 되는지 / 안 돌리면 무엇이 깨지는지 한 줄)
+
+- 프로젝트 ref를 알면 `https://supabase.com/dashboard/project/<project-ref>/sql/new`, 모르면 `_` (최근 프로젝트로 이동). 목록은 <https://supabase.com/dashboard/projects>.
+- **배포 전 필수**인지(스키마가 코드보다 먼저 있어야 함) 아니면 **먼저 돌려도 무해**한지(nullable 컬럼 추가 등)를 함께 밝힌다.
+
+다른 콘솔도 동일: [Vercel](https://vercel.com/dashboard) · [App Store Connect](https://appstoreconnect.apple.com) · [Apple Identifiers](https://developer.apple.com/account/resources/identifiers) · [Play Console](https://play.google.com/console) · GitHub Secrets(`https://github.com/<owner>/<repo>/settings/secrets/actions`).
