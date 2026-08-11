@@ -27,6 +27,9 @@ import {
   badgeExpiresAt,
   daysUntilExpiry,
   isBadgeExpiringSoon,
+  slaRemaining,
+  REJECT_REASONS,
+  SLA_URGENT_HOURS,
 } from '../verification';
 import { verificationTypeSchema, signupInputSchema } from '../schemas';
 import { referralCodeFromSeq, referralSeqFromCode } from '../referral';
@@ -42,6 +45,21 @@ describe('maskExternalContact', () => {
     const r = maskExternalContact('카톡 id: minjun92 추가해줘');
     expect(r.masked).toBe(true);
     expect(r.text).not.toContain('minjun92');
+  });
+  it('마스킹: 한글 조사가 끼어든 카톡 아이디', () => {
+    const r = maskExternalContact('제 카톡 아이디는 jiyoon99 입니다');
+    expect(r.masked).toBe(true);
+    expect(r.kinds).toContain('kakao');
+    expect(r.text).not.toContain('jiyoon99');
+  });
+  it('마스킹: 인스타 아디', () => {
+    const r = maskExternalContact('인스타 아디 gallery_kim 이에요');
+    expect(r.masked).toBe(true);
+    expect(r.text).not.toContain('gallery_kim');
+  });
+  it('오탐 없음: 키워드만 언급', () => {
+    const r = maskExternalContact('카톡보다 여기가 편해요');
+    expect(r.masked).toBe(false);
   });
   it('마스킹: 전각 숫자 우회', () => {
     const r = maskExternalContact('０１０１２３４５６７８');
@@ -322,6 +340,45 @@ describe('verification (8종 + 보상)', () => {
     expect(VERIFY_REWARD_CREDITS.income).toBe(50);
     expect(VERIFY_REWARD_CREDITS.family_wealth).toBe(80);
     expect(VERIFY_REWARD_CREDITS.reputation).toBe(80);
+  });
+});
+
+describe('심사 SLA 표기 (웹 콘솔 ↔ 앱 콘솔 공용)', () => {
+  const now = new Date('2026-08-10T00:00:00Z');
+  const after = (h: number, m = 0) =>
+    new Date(now.getTime() + h * 3600_000 + m * 60_000).toISOString();
+
+  it('여유 있으면 남은 시간 표기 · urgent 아님', () => {
+    expect(slaRemaining(after(12, 30), now)).toEqual({ text: '12h 30m 남음', urgent: false });
+  });
+
+  it('마감 6h 이내면 urgent', () => {
+    expect(slaRemaining(after(SLA_URGENT_HOURS), now).urgent).toBe(true);
+    expect(slaRemaining(after(SLA_URGENT_HOURS, 1), now).urgent).toBe(false);
+  });
+
+  it('마감 초과는 초과분을 표기하고 항상 urgent', () => {
+    expect(slaRemaining(after(-3, -15), now)).toEqual({ text: '초과 3h 15m', urgent: true });
+  });
+
+  it('Date 와 ISO 문자열을 모두 받는다', () => {
+    const due = new Date(now.getTime() + 2 * 3600_000);
+    expect(slaRemaining(due, now)).toEqual(slaRemaining(due.toISOString(), now));
+  });
+});
+
+describe('반려 사유 표준 문구 (verification-sop §5-2)', () => {
+  it('10종이고 코드가 유일하다', () => {
+    expect(REJECT_REASONS).toHaveLength(10);
+    expect(new Set(REJECT_REASONS.map((r) => r.code)).size).toBe(10);
+  });
+
+  it('other 를 뺀 모든 사유는 회원 안내 문구를 가진다', () => {
+    for (const r of REJECT_REASONS) {
+      expect(r.label).toBeTruthy();
+      if (r.code === 'other') expect(r.message).toBe('');
+      else expect(r.message).toBeTruthy();
+    }
   });
 });
 

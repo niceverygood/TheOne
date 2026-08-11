@@ -16,7 +16,6 @@ export interface WaitlistReferralThanksProps {
 
 const ink = '#0F1014';
 const ivory = '#FAF7F2';
-const champagne = '#B8956A';
 const gray = '#8B8378';
 
 export function WaitlistReferralThanksEmail({

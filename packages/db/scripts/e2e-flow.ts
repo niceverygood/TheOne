@@ -8,7 +8,8 @@ import {
   createSignupUser,
   approveMembership,
   getTodayCuration,
-  recordCurationAction,
+  getCurationReveal,
+  rateCuration,
   sendLetter,
   respondToMatch,
   sendMessage,
@@ -98,10 +99,13 @@ async function runViewer(opts: {
     `     사진 ${c.profile?.photos?.length ?? 0}장 · 뱃지 ${(c.badges ?? []).length}개 · 케미 ${res.breakdown?.overall ?? '?'}%`,
   );
 
-  // 4) 큐레이션 액션(좋아요)
+  // 4) 첫인상 별점(4점 → 호감) — 사진 공개 1장 → 2장 확인
   if (res.log) {
-    await recordCurationAction(res.log.id, 'liked');
-    console.log('4) 큐레이션 액션(liked) ✓');
+    const before = await getCurationReveal(user.id, c.id);
+    const rated = await rateCuration(res.log.id, user.id, 4);
+    console.log(
+      `4) 첫인상 별점(4점→liked) ✓  사진 공개 ${before.count}장 → ${rated.photos.length}장 (전체 ${rated.photosTotal}장)${rated.mutual ? ' · 상호 호감' : ''}`,
+    );
   }
 
   // 5) 매칭 신청(letter)
@@ -123,6 +127,11 @@ async function runViewer(opts: {
   const resp = await respondToMatch(sent.matchId, c.id, 'accept');
   console.log(
     `6) 상대 수락 ✓  status=${resp.status} · conversationId=${resp.conversationId?.slice(0, 8)}…`,
+  );
+  // 매칭 성사 → 사진 전체 공개 확인 (count=null 이 전체 공개)
+  const afterMatch = await getCurationReveal(user.id, c.id);
+  console.log(
+    `   → 사진 공개 단계: ${afterMatch.count == null ? '전체 공개(매칭 성사)' : `${afterMatch.count}장`} ✓`,
   );
 
   // 7) 첫 메시지 전송(대화 성사 후)

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { listReviewQueue, getQueueStats } from '@theone/db';
-import { VERIFICATION_LABELS } from '@theone/shared';
+import { VERIFICATION_LABELS, slaRemaining } from '@theone/shared';
 import { getCurrentOperator, operatorRole } from '@/lib/operator';
 
 export const dynamic = 'force-dynamic';
@@ -32,14 +32,6 @@ const td: React.CSSProperties = {
   padding: '10px 12px',
   borderBottom: '1px solid #F5F1EA',
 };
-
-function fmtRemaining(due: Date): { text: string; urgent: boolean } {
-  const ms = due.getTime() - Date.now();
-  const h = Math.floor(Math.abs(ms) / 3600_000);
-  const m = Math.floor((Math.abs(ms) % 3600_000) / 60_000);
-  if (ms < 0) return { text: `초과 ${h}h ${m}m`, urgent: true };
-  return { text: `${h}h ${m}m 남음`, urgent: ms <= 6 * 3600_000 };
-}
 
 export default async function VerificationsQueue() {
   const op = await getCurrentOperator();
@@ -111,7 +103,7 @@ export default async function VerificationsQueue() {
               </tr>
             ) : (
               queue.map((a) => {
-                const rem = fmtRemaining(a.slaDueAt);
+                const rem = slaRemaining(a.slaDueAt);
                 return (
                   <tr key={a.id}>
                     <td style={td}>{VERIFICATION_LABELS[a.type].kr}</td>

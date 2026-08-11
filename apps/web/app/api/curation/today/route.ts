@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTodayCurations } from '@theone/db';
+import { getCurationReveal, getTodayCurations, slicePhotosForReveal } from '@theone/db';
 import { ageFromBirth, chemistryAxes, type IntroSections } from '@theone/shared';
 import { authUserId } from '@/lib/session';
 
@@ -22,27 +22,43 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const list = await getTodayCurations(userId);
 
     // 각 후보를 화면용으로 변환(직접식별정보 제외 — 뱃지·케미만).
-    const items = list
-      .filter((r) => r.candidate)
-      .map((r) => {
-        const c = r.candidate!;
-        const intro = (c.profile?.introSections ?? null) as Partial<IntroSections> | null;
-        return {
-          candidate: {
-            id: c.id,
-            region: c.profile?.region ?? null,
-            age: c.birth ? ageFromBirth(c.birth) : null,
-            jobCategory: c.jobCategory,
-            jobDetail: c.profile?.jobDetail?.trim() ? c.profile.jobDetail.trim() : null,
-            photos: c.profile?.photos ?? [],
-            badgeCount: c.badges?.length ?? 0,
-            quote: intro?.about?.trim() ? intro.about.trim() : null,
-          },
-          chemistry: r.breakdown
-            ? { overall: r.breakdown.overall, axes: chemistryAxes(r.breakdown) }
-            : null,
-        };
-      });
+    // 사진은 공개 단계(기본 1장 → 별점 3+ 2장 → 상호 3장 → 매칭 전체)만큼만 내려준다.
+    const items = await Promise.all(
+      list
+        .filter((r) => r.candidate)
+        .map(async (r) => {
+          const c = r.candidate!;
+          const intro = (c.profile?.introSections ?? null) as Partial<IntroSections> | null;
+          const allPhotos = c.profile?.photos ?? [];
+          const reveal = await getCurationReveal(userId, c.id);
+          const photos = slicePhotosForReveal(allPhotos, reveal.count);
+          return {
+            logId: r.log.id,
+            myRating: reveal.myRating,
+            reveal: {
+              count: photos.length,
+              total: allPhotos.length,
+              liked: reveal.liked,
+              mutual: reveal.mutual,
+              matched: reveal.matched,
+            },
+            candidate: {
+              id: c.id,
+              region: c.profile?.region ?? null,
+              age: c.birth ? ageFromBirth(c.birth) : null,
+              jobCategory: c.jobCategory,
+              jobDetail: c.profile?.jobDetail?.trim() ? c.profile.jobDetail.trim() : null,
+              photos,
+              photosTotal: allPhotos.length,
+              badgeCount: c.badges?.length ?? 0,
+              quote: intro?.about?.trim() ? intro.about.trim() : null,
+            },
+            chemistry: r.breakdown
+              ? { overall: r.breakdown.overall, axes: chemistryAxes(r.breakdown) }
+              : null,
+          };
+        }),
+    );
 
     // 후보 없음
     if (items.length === 0) {
