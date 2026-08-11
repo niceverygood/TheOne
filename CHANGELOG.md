@@ -24,6 +24,62 @@
 
 **잔여**: `/api/admin/migrate`·`find-by-phone`·`seed-*` 등 토큰 게이트 운영 라우트는 시딩 종료 후 `QA_SEED_TOKEN` 제거로 비활성화 필요. 인증 신청 중복 제출은 서버에서 막지 않음(반려 후 재신청 허용 정책이면 그대로, 아니면 pending 중복 차단 필요).
 
+## 가입 사진/본인인증 화면 다듬기 (PR #3 선별 이식)
+
+6월 PR #3(`claude/photo-popup-design-pdo8e6`)은 main 보다 50커밋 뒤처져 3개 파일이 충돌했고, 3개 항목 중 **다이얼로그 항목은 이미 main 에 다른 방식으로 반영**돼 있었다(`c6dc00d` 이 `Alert.alert` → `BrandAlert` 로 19곳 통일). 그래서 통째로 머지하지 않고 **고유 가치 3건만 이식**했다.
+
+- **`PlusMark`(ui.tsx 신규)**: 두 선으로 그린 `+`. 폰트 베이스라인(특히 Android `includeFontPadding`) 때문에 텍스트 `+` 가 박스 안에서 아래로 치우쳐 보이던 문제 해결.
+- **`LoadingOverlay`(ui.tsx 신규)**: 아이보리 카드 + 샴페인 인디케이터. 시스템 스피너 톤 제거.
+- **step02 사진 그리드**: 항상 5칸 유지(목업 step04-photos 동일). 사진 0장일 때 칸 하나만 외톨이로 크게 보이던 문제 해결 — 빈 칸 중 첫 칸에만 `+` 마크.
+- **step01 본인인증**: 탭 즉시 `LoadingOverlay`("본인인증을 준비하고 있어요") 표시 + 연타 가드(팝업 이중 오픈 방지).
+
+**이식하지 않은 것**: PR #3 의 `Dialog` 컴포넌트와 step02 적용 — main 의 `BrandAlert` 와 알림 UI 가 두 갈래로 갈라지므로 제외.
+**되돌리지 않은 것**: PR #3 의 그리드 코드는 점선 박스에 `borderRadius: RADIUS` 를 주고 `aspectRatio` 를 Pressable 에 직접 걸었는데, 둘 다 main 이 이후에 고친 Android 렌더 버그(모서리 잘림 · 세로 비율 붕괴)다. main 구조(바깥 View 가 비율, 점선은 radius 0)를 유지하고 슬롯 계산과 `+` 마크만 교체했다.
+
+**검증**: mobile `tsc --noEmit` 클린 · prettier OK. PR #3 은 이 이식으로 대체되어 닫는다.
+
+## 첫인상 별점 + 단계별 사진 공개
+
+큐레이션에 5점 만점 첫인상 별점을 도입 — **3점 이상 = 호감**. 사진은 기본 1장만 보이고, 내 별점 3+ → 2장, 서로 3+ → 3장, 매칭 성사(신청 수락) → 전체 공개로 단계 확장. 사진 잘라내기는 **서버에서** 수행(클라이언트에 비공개 사진 미전송).
+
+- **packages/db**: `CurationLog.rating Int?`(마이그레이션 `20260720000000_curation_rating`). `rateCuration`(1~5 검증·본인 로그만·재평가 허용, 3+ → action liked / 미만 passed, superliked 는 격하 안 함), `getCurationReveal`(양방향 별점 — 날짜 무관 + Match accepted 방향 무관), `slicePhotosForReveal`, `LIKE_RATING_MIN`/`PHOTO_REVEAL_TIERS`.
+- **apps/web**: `POST /api/curation/rate`(신규 — 갱신된 공개 사진 목록 반환), `GET /api/curation/today`(logId·myRating·reveal 추가 + 사진 단계 공개), `GET /api/match/received`(발신자 사진도 공개 단계만큼만).
+- **packages/shared**: `CurationReveal`·`CurationRateResult`, `CurationEntry.logId/myRating/reveal`, `CurationCandidateMeta.photosTotal`(전부 옵션 — 구버전 하위호환).
+- **apps/mobile**: `curation` 화면 히어로를 사진 페이저(스와이프)로 — 공개 사진 + 잠금 안내 페이지(다음 공개 조건 문구), 사진 n/N 공개 카운터. `StarRating`(ui.tsx — 단색 샴페인, 장식 없음 §3 준수), 첫인상 별점 섹션 + 상태 캡션. 프리뷰(서버 미연동)에서도 3+ 시 갤러리 1장 로컬 공개(App Review 데모 유지). `signup-api.rateCuration`.
+- **e2e-flow.ts**: liked 액션을 별점 4점 제출로 교체, 1→2장 공개·매칭 성사 후 전체 공개 검증 추가.
+
+**검증**: db/mobile `tsc` 클린, shared·web 은 신규/변경 파일 에러 0(기존 email·legal·landing JSX 타입 에러는 base 이슈, 무관).
+
+**머지 시 충돌 해결(2026-08-10)**: base 가 6커밋 뒤처져 있어 main 을 머지하며 3곳을 정리했다 — ① `/api/curation/today` 는 단계별 사진 공개(이 PR)와 `candidate.id` 반환(`11fbd9c` 프로필 화면 배선)을 **둘 다** 유지 ② `signup-api.ts` 타입 import 는 양쪽 합침 ③ CHANGELOG 는 두 항목 병기.
+
+> ⚠️ **배포 전 필수**: `20260720000000_curation_rating` 마이그레이션(`curation_logs.rating` 컬럼)을 Supabase 에 먼저 실행해야 한다. 컬럼 없이 배포하면 Prisma 가 없는 컬럼을 조회해 `/api/curation/today` 가 500 으로 죽는다. 컬럼은 nullable 이라 **먼저 실행해도 기존 코드에 무해**하다.
+
+## 앱 내 관리자 콘솔 — 인증 심사(8종) 탭 ◐
+
+가입심사·신고처리만 있던 모바일 관리자 콘솔(`062d273`)에 **인증 심사**를 추가했다. 인증 SLA는 24h인데 심사가 웹 Basic Auth 콘솔에만 있어 운영자가 PC 앞에 있어야만 처리 가능했다.
+
+**권한 — 앱 관리자를 Operator 에 매핑**
+- 심사는 `reviewer_id`·`AccessLog.operator_id` 가 필수(FK)라, 가입승인·신고처리처럼 `User.isAdmin` 만으로는 처리할 수 없다. `ensureAppOperator(userId, seq)` 가 `app:<userId>` username 의 Operator 를 최초 1회 `reviewer` 로 생성하고 이후 재사용 → **앱에서 처리한 심사도 웹과 동일한 감사 추적에 남는다**.
+- 기존 Operator 의 role/active 는 덮어쓰지 않는다 → 웹 콘솔에서 `active=false` 로 내리면 앱 심사 권한도 즉시 회수(`requireMobileReviewer` 가 active + reviewer 이상을 확인).
+
+**apps/web — API 3종** (`lib/mobile-admin.ts` 에 `requireMobileReviewer`·`reqIp` 추가)
+- `GET /api/admin/mobile/verifications` — 대기열(SLA 임박순) + 현황 4종(대기·SLA임박·오늘 승인·오늘 반려).
+- `GET /api/admin/mobile/verifications/[id]` — 상세(필수/제출 서류 메타, 이전 반려 사유, 승인 시 보상액) + **AccessLog `view_meta` 기록**.
+- `POST /api/admin/mobile/verifications/review` — 승인(뱃지 1년 + 타입별 크레딧, applicationId 멱등) / 반려. 반려 사유는 **서버가 표준 문구 10종에서 코드→문구로 확정**(임의 문자열이 회원에게 그대로 가지 않게), `other` 만 자유 입력(300자). 이미 처리된 신청은 409 — 승인 후 반려로 뱃지가 남는 뒤집기를 차단.
+
+**apps/mobile**
+- `src/admin-verifications.tsx`(신규) — 현황 4칸 + 대기열. 행 탭 → 상세 인라인 확장(필수 서류 ✓/× 대조, 제출 서류 메타, 이전 반려) → 승인(`+NNC` 표기, 확인 다이얼로그) / 반려(표준 사유 칩 10종 + 기타 입력). 늦게 도착한 상세 응답을 버리는 순번 가드 포함.
+- `app/admin/index.tsx` — 탭 3개(가입·인증·신고)로 확장, `TabBtn` 추출. **SLA 임박 건이 있으면 인증 탭이 terra 로 표시**된다.
+- `src/signup-api.ts` — `fetchAdminVerifications`/`fetchAdminVerificationDetail`/`reviewAdminVerification`.
+
+**서류 열람 정책**: 원본은 앱에 내려주지 않는다 — 워터마크·다운로드 차단이 걸린 웹 보안 뷰어 전용(verification-sop §5-1). 앱은 메타(라벨·형식·용량)까지만. `docs/verification-sop.md` §5-1 에 앱 관리자 항목 반영.
+
+**정리**: SLA 잔여시간 표기가 웹 콘솔과 앱에 중복 구현돼 있어 `slaRemaining`·`SLA_URGENT_HOURS`(6h)를 `packages/shared/verification.ts` 로 단일화 — `apps/admin/verifications` 와 `getQueueStats` 의 urgent 기준도 같은 상수를 쓴다.
+
+**검증**: shared `vitest` 44/44(SLA 표기 4건·반려 문구 2건 신규) · db/mobile `tsc` OK · web/admin `next build` OK(신규 3라우트 등록 확인) · web/admin `next lint` OK · prettier OK.
+
+**잔여**: ① 서류 원본 뷰어는 웹·앱 모두 여전히 placeholder — `apps/web/lib/s3.ts` presign TODO 활성화(자격증명 + `@aws-sdk/*`)가 선행돼야 실제 심사 가능 ② 신분증 수동확인(`/identity-review`)은 아직 웹 콘솔 전용 ③ `/api/admin/migrate` 임시 raw ALTER 라우트 정리 미착수.
+
 ## LP SEO 보강 (apps/web)
 
 랜딩 검색 노출 강화. 정책(초안 약관·내부 데이터)은 색인에서 확실히 제외.

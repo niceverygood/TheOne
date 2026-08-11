@@ -5,14 +5,25 @@ import { C, RADIUS } from '../../src/theme';
 import { Hairline, Screen, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
 import { showAlert } from '../../src/brand-alert';
+import { AdminVerifications } from '../../src/admin-verifications';
 import {
   fetchAdminMembers,
   approveAdminMember,
   fetchAdminReports,
   moderateAdminReport,
+  fetchAdminVerifications,
   type AdminPendingMember,
   type AdminReportGroup,
+  type AdminVerificationItem,
+  type AdminVerificationStats,
 } from '../../src/signup-api';
+
+const EMPTY_VERIFY_STATS: AdminVerificationStats = {
+  pending: 0,
+  urgent: 0,
+  approvedToday: 0,
+  rejectedToday: 0,
+};
 
 const CATEGORY_KR: Record<string, string> = {
   fraud: '사기·금전요구',
@@ -25,25 +36,71 @@ const CATEGORY_KR: Record<string, string> = {
   other: '기타',
 };
 
-/** 앱 내 관리자 콘솔 — isAdmin 계정 전용. 가입 심사 승인 + 신고 처리(정지/강퇴/복구). */
+/** 콘솔 탭 버튼. alert=true 면 처리 시급(SLA 임박 등)을 terra 로 표시. */
+function TabBtn({
+  label,
+  count,
+  active,
+  alert,
+  onPress,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  alert?: boolean;
+  onPress: () => void;
+}) {
+  const accent = alert ? C.terra : C.champagne;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: RADIUS,
+        borderWidth: 1,
+        borderColor: active ? accent : C.hairLight,
+        backgroundColor: active ? accent : 'transparent',
+        alignItems: 'center',
+      }}
+    >
+      <Txt size={13} color={active ? '#fff' : alert ? accent : C.ink2} weight="500">
+        {label} · {count}
+      </Txt>
+    </Pressable>
+  );
+}
+
+/**
+ * 앱 내 관리자 콘솔 — isAdmin 계정 전용.
+ * 가입 심사 승인 · 인증 심사(8종) 승인/반려 · 신고 처리(정지/강퇴/복구).
+ */
 export default function AdminConsole() {
   const router = useRouter();
   const isAdmin = useSignup((s) => s.isAdmin);
-  // 마이페이지 '운영' 섹션에서 ?tab=members|reports 로 원하는 탭을 바로 연다.
+  // 마이페이지 '운영' 섹션에서 ?tab=members|verifications|reports 로 원하는 탭을 바로 연다.
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
-  const [tab, setTab] = useState<'members' | 'reports'>(
-    tabParam === 'reports' ? 'reports' : 'members',
+  const [tab, setTab] = useState<'members' | 'verifications' | 'reports'>(
+    tabParam === 'reports' || tabParam === 'verifications' ? tabParam : 'members',
   );
   const [members, setMembers] = useState<AdminPendingMember[]>([]);
   const [reports, setReports] = useState<AdminReportGroup[]>([]);
+  const [verifyStats, setVerifyStats] = useState<AdminVerificationStats>(EMPTY_VERIFY_STATS);
+  const [verifyQueue, setVerifyQueue] = useState<AdminVerificationItem[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const [m, r] = await Promise.all([fetchAdminMembers(), fetchAdminReports()]);
+    const [m, r, v] = await Promise.all([
+      fetchAdminMembers(),
+      fetchAdminReports(),
+      fetchAdminVerifications(),
+    ]);
     setMembers(m.members);
     setReports(r.queue);
+    setVerifyStats(v.stats);
+    setVerifyQueue(v.queue);
     setLoading(false);
   }, []);
 
@@ -121,39 +178,26 @@ export default function AdminConsole() {
         </Txt>
 
         {/* 탭 */}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 20 }}>
-          <Pressable
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 20 }}>
+          <TabBtn
+            label="가입"
+            count={members.length}
+            active={tab === 'members'}
             onPress={() => setTab('members')}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: RADIUS,
-              borderWidth: 1,
-              borderColor: tab === 'members' ? C.champagne : C.hairLight,
-              backgroundColor: tab === 'members' ? C.champagne : 'transparent',
-              alignItems: 'center',
-            }}
-          >
-            <Txt size={13} color={tab === 'members' ? '#fff' : C.ink2} weight="500">
-              가입 심사 · {members.length}
-            </Txt>
-          </Pressable>
-          <Pressable
+          />
+          <TabBtn
+            label="인증"
+            count={verifyQueue.length}
+            active={tab === 'verifications'}
+            alert={verifyStats.urgent > 0}
+            onPress={() => setTab('verifications')}
+          />
+          <TabBtn
+            label="신고"
+            count={reports.length}
+            active={tab === 'reports'}
             onPress={() => setTab('reports')}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: RADIUS,
-              borderWidth: 1,
-              borderColor: tab === 'reports' ? C.champagne : C.hairLight,
-              backgroundColor: tab === 'reports' ? C.champagne : 'transparent',
-              alignItems: 'center',
-            }}
-          >
-            <Txt size={13} color={tab === 'reports' ? '#fff' : C.ink2} weight="500">
-              신고 처리 · {reports.length}
-            </Txt>
-          </Pressable>
+          />
         </View>
 
         {loading ? (
@@ -208,6 +252,8 @@ export default function AdminConsole() {
               ))
             )}
           </View>
+        ) : tab === 'verifications' ? (
+          <AdminVerifications stats={verifyStats} queue={verifyQueue} onReviewed={reload} />
         ) : (
           <View style={{ marginTop: 24 }}>
             {reports.length === 0 ? (

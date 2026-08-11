@@ -290,12 +290,30 @@ export interface CurationCandidateMeta {
   jobCategory: string;
   /** 직업 상세(예: 약사) — 식별정보 아님, 노출 허용 */
   jobDetail: string | null;
-  /** 프로필 사진(data URI 또는 URL). 첫 장이 대표. */
+  /** 공개된 프로필 사진(data URI 또는 URL). 첫 장이 대표 — 공개 단계에 따라 잘려 온다. */
   photos: string[];
+  /** 전체 사진 수(잠긴 장수 = photosTotal - photos.length). 구버전 응답엔 없을 수 있음. */
+  photosTotal?: number;
   /** 인증 뱃지 수(verified dots) */
   badgeCount: number;
   /** 자기소개 한 줄(있으면) */
   quote: string | null;
+}
+
+/**
+ * 사진 공개 단계 — 기본 1장 → 내 별점 3점 이상 2장 → 서로 3점 이상 3장 → 매칭 성사 전체.
+ */
+export interface CurationReveal {
+  /** 현재 공개 사진 수 */
+  count: number;
+  /** 전체 사진 수 */
+  total: number;
+  /** 내가 별점 3점 이상(호감) */
+  liked: boolean;
+  /** 서로 별점 3점 이상 */
+  mutual: boolean;
+  /** 매칭 성사(만남 신청 수락) — 전체 공개 */
+  matched: boolean;
 }
 
 /** 케미 일치도 — 종합 + 도시에 3축(결혼관·라이프스타일·갈등 해결). 설문 미완료면 null. */
@@ -306,9 +324,33 @@ export interface CurationChemistry {
 
 /** 큐레이션 1건 — 후보 + 케미. 하루 N건(CURATION_PER_DAY)일 때 items[] 로 묶인다. */
 export interface CurationEntry {
+  /** 별점 제출용 CurationLog id. 구버전 응답엔 없을 수 있음. */
+  logId?: string;
+  /** 내가 남긴 첫인상 별점(1~5). 미평가면 null. */
+  myRating?: number | null;
+  /** 사진 공개 단계. 구버전 응답엔 없을 수 있음. */
+  reveal?: CurationReveal;
   candidate: CurationCandidateMeta;
   chemistry: CurationChemistry | null;
 }
+
+/** 첫인상 별점 제출 결과 — 갱신된 공개 사진 목록을 함께 돌려준다. */
+export type CurationRateResult =
+  | {
+      ok: true;
+      rating: number;
+      liked: boolean;
+      mutual: boolean;
+      matched: boolean;
+      /** 새 공개 단계 기준 사진 목록 */
+      photos: string[];
+      photosTotal: number;
+    }
+  | {
+      ok: false;
+      reason: 'validation' | 'not_found' | 'forbidden' | 'unauthorized' | 'server';
+      message?: string;
+    };
 
 export type CurationTodayResult =
   | {
