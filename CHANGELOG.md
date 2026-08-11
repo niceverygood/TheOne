@@ -2,6 +2,28 @@
 
 각 Phase 종료 시 결과 요약을 기록한다.
 
+## 전체 앱 검수 + 마이페이지 / 앱 내 관리자 재배치
+
+로컬 PostgreSQL 16 을 띄워 `migrate deploy → seed → 실세션 API` 를 끝까지 태운 전수 검수. 발견한 결함을 고치고, 관리자 계정이 일반 회원과 화면상 구분되지 않도록 진입점을 마이페이지로 옮겼다.
+
+**고친 결함**
+
+- **스키마 드리프트(치명)**: `User.isAdmin` 이 스키마에만 있고 마이그레이션이 없어 **신규 DB 는 `prisma db seed`·로그인이 전부 실패**(P2022 `is_admin does not exist`). `20260810000000_user_is_admin_order_provider_default` 추가 — `is_admin` 컬럼 + `orders.provider` 기본값을 스키마(IAP v1.0 `iap_apple`)와 일치. 임시방편이던 `/api/admin/migrate` 없이도 배포된다.
+- **신고·차단이 서버에 기록되지 않음**: `src/safety.tsx` 의 `/api/safety/report`·`/block` 호출에 `Authorization` 헤더가 없어 서버가 401 로 거부(차단은 fire-and-forget 이라 무증상). `authHeader()` 를 `signup-api` 에서 export 해 두 호출에 부착 — App Store 1.2 UGC 안전장치가 실제로 동작.
+- **외부 연락처 마스킹 우회**: `카톡 아이디는 jiyoon99`, `인스타 아디 gallery_kim` 처럼 **한글 조사가 끼면 마스킹되지 않았다**. 키워드-식별자 연결부에 조사 구간(3자 이내)을 허용하고, 식별자는 핸들 형태(숫자·`_`·`.` 포함 또는 6자 이상)만 인정해 `카톡보다 여기가 편해요` 류 오탐은 배제. 회귀 테스트 3건 추가(41/41 통과).
+- **모노레포 타입/린트 파손**: 루트에 `@types/react` 18 을 고정해 web/admin/shared 의 JSX 타입 에러(React 19 타입 혼입) 32건 제거, `apps/mobile` 은 tsconfig `paths` 로 자기 19 타입을 계속 사용. `@theone/shared` 린트 설정 부재(ESLint 실패)·`@theone/auth` 테스트 0건 실패도 해소 → **typecheck·lint·test 11/11 통과**.
+- **메뉴 죽은 링크 3건**: `/verify/wealth`·`/verify/vehicle`·`/verify/reviewing` → 실제 라우트(`family-wealth`·`income`·`job`·`realestate`)로 교정.
+
+**마이페이지 / 앱 내 관리자**
+
+- **`app/my.tsx`(신규) — 마이페이지**: 크레딧 잔액·내 프로필·추천 코드·매칭·인증 6종·프라이버시·로그아웃. 큐레이션 `☰ MENU` 진입점을 여기로 변경(기존 QA용 전체 화면 목록은 하단 표기 롱프레스로만 열림).
+- **관리자 진입점 이동**: `/menu` 상단의 '관리자' 블록 제거 → 마이페이지 최하단 **'운영' 섹션**(가입 심사 / 신고 처리)으로. 관리자 계정도 일반 회원과 화면 구성·색상·문구가 동일하고, 이 섹션만 추가된다. `/admin?tab=members|reports` 로 탭 직행.
+- **`ADMIN_PHONES` 환경변수**: 지정한 휴대폰으로 로그인하면 `User.isAdmin` 을 동기화(쉼표 구분·하이픈 무관, 미설정 시 DB 값만 사용). 권한의 진실의 원천은 여전히 DB 컬럼이고, 화면은 숨김이 아니라 **서버가 세션→`isAdmin` 을 확인**해 관리자 API 자체를 403 으로 막는다.
+
+**검증(실 DB·실 세션)**: 마이그레이션 15종 적용 → 드리프트 0(리스트 기본값 표기 차이 제외) → 시드(운영자 3·회원 50·신청 20·신고 5) → QA 남/여 세션으로 큐레이션(케미 100%)·신청서(80자 규칙·크레딧 20 차감·중복 `already_sent`)·수락(발신자 수락 시도 403)·채팅(휴대폰 즉시 마스킹)·연락처 공개·인증 신청(SLA 24h)·신고(접수 ID)·차단/해제 정상. 관리자 API 는 비관리자 403 → `isAdmin` 부여 후 200, 심사 승인(pending→active)·정지/복구 정상. web `/api/health` 200(DB up), admin Basic Auth 401/200. web·admin `next build` OK, 모바일 `expo export --platform web` 번들 OK.
+
+**잔여**: `/api/admin/migrate`·`find-by-phone`·`seed-*` 등 토큰 게이트 운영 라우트는 시딩 종료 후 `QA_SEED_TOKEN` 제거로 비활성화 필요. 인증 신청 중복 제출은 서버에서 막지 않음(반려 후 재신청 허용 정책이면 그대로, 아니면 pending 중복 차단 필요).
+
 ## 가입 사진/본인인증 화면 다듬기 (PR #3 선별 이식)
 
 6월 PR #3(`claude/photo-popup-design-pdo8e6`)은 main 보다 50커밋 뒤처져 3개 파일이 충돌했고, 3개 항목 중 **다이얼로그 항목은 이미 main 에 다른 방식으로 반영**돼 있었다(`c6dc00d` 이 `Alert.alert` → `BrandAlert` 로 19곳 통일). 그래서 통째로 머지하지 않고 **고유 가치 3건만 이식**했다.

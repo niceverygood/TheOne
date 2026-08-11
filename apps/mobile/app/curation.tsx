@@ -38,6 +38,15 @@ const PREVIEW_TOTAL = 2;
 
 const HERO_H = 520;
 
+/** 자정(다음 큐레이션)까지 남은 시간 HH:MM. 화면에 고정 문자열을 박아 두지 않는다. */
+function timeToMidnight(): string {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  const mins = Math.max(0, Math.floor((next.getTime() - now.getTime()) / 60000));
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+}
+
 export default function Curation() {
   const router = useRouter();
   const { width: winW } = useWindowDimensions();
@@ -46,6 +55,7 @@ export default function Curation() {
   const storeUserId = useSignup((s) => s.userId);
   const userId = (typeof __DEV__ !== 'undefined' && __DEV__ && params.u) || storeUserId;
   const blocked = useSignup((s) => s.blocked);
+  const demoMode = useSignup((s) => s.demoMode);
   const [axes, setAxes] = useState(FALLBACK_CHEMI);
   const [overall, setOverall] = useState<number | null>(null);
   const [candidate, setCandidate] = useState<CurationCandidateMeta | null>(null);
@@ -57,6 +67,13 @@ export default function Curation() {
   const [previewRating, setPreviewRating] = useState<number | null>(null);
   const [rateBusy, setRateBusy] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
+  /**
+   * 실회원 세션인데 오늘 소개할 후보가 없는 상태.
+   * 이때 목업 인물(김지윤)을 대신 보여주면 없는 사람을 소개하는 셈이라, 빈 화면으로 정직하게 알린다.
+   * 목업 폴백은 세션이 없는 프리뷰/데모(App Review) 경로에서만 유지한다.
+   */
+  const [empty, setEmpty] = useState(false);
+  const [nextIn, setNextIn] = useState(timeToMidnight);
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
   const hasNext = idx + 1 < items.length;
   const entry: CurationEntry | undefined = items[idx];
@@ -73,12 +90,23 @@ export default function Curation() {
     }
   }
 
+  // 자정까지 남은 시간 — 1분마다 갱신.
+  useEffect(() => {
+    const t = setInterval(() => setNextIn(timeToMidnight()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
   // 오늘의 큐레이션을 실데이터로 — 후보(사진·프로필) + 케미(가치관 일치도)가 더원의 킥.
   useEffect(() => {
     if (!userId) return;
     let alive = true;
     fetchTodayCuration(userId).then((r) => {
-      if (!alive || !r.ok) return;
+      if (!alive) return;
+      if (!r.ok) {
+        // 조회 자체가 실패(네트워크·서버) — 실세션이면 목업 대신 빈 화면.
+        setEmpty(!demoMode);
+        return;
+      }
       // 신버전은 items[], 구버전은 단일 candidate — 둘 다 목록으로 정규화.
       const list: CurationEntry[] =
         r.items && r.items.length
@@ -89,6 +117,7 @@ export default function Curation() {
       setItems(list);
       setIdx(0);
       applyItem(list[0]);
+      setEmpty(list.length === 0 && !demoMode);
     });
     return () => {
       alive = false;
@@ -198,10 +227,29 @@ export default function Curation() {
     ]);
   }
 
-  if (passed || isBlocked) {
+  if (passed || isBlocked || empty) {
+    const emptyOnly = empty && !passed && !isBlocked;
     return (
       <Screen dark>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          {/* 메뉴 진입점 — 후보가 없어도 마이페이지(프로필·인증·크레딧)로 갈 수 있어야 한다 */}
+          <Pressable
+            onPress={() => router.push('/my')}
+            hitSlop={10}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 24,
+              borderWidth: 1,
+              borderColor: 'rgba(250,247,242,0.35)',
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+            }}
+          >
+            <Txt variant="mono" size={10} color={C.ivory}>
+              ☰ MENU
+            </Txt>
+          </Pressable>
           <Txt variant="serifEn" size={15} color={C.champagne}>
             See you tomorrow
           </Txt>
@@ -212,20 +260,33 @@ export default function Curation() {
             color={C.ivory}
             style={{ marginTop: 12, lineHeight: 34 }}
           >
-            {isBlocked ? (
+            {emptyOnly ? (
+              <>오늘 소개할 분을{'\n'}찾지 못했습니다</>
+            ) : isBlocked ? (
               <>오늘의 큐레이션을{'\n'}숨겼습니다</>
             ) : (
               <>오늘의 큐레이션을{'\n'}넘겼습니다</>
             )}
           </Txt>
           <Txt size={13.5} color="rgba(250,247,242,0.72)" style={{ marginTop: 14, lineHeight: 22 }}>
-            {isBlocked
-              ? '차단한 회원은 더 이상 큐레이션·매칭에 노출되지 않습니다. 자정 이후 새로운 한 분을 소개해 드릴게요.'
-              : '자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의 방식입니다.'}
+            {emptyOnly
+              ? '조건에 맞는 분이 준비되면 바로 소개해 드릴게요. 프로필과 인증을 채우실수록 더 잘 맞는 분을 만나실 수 있습니다.'
+              : isBlocked
+                ? '차단한 회원은 더 이상 큐레이션·매칭에 노출되지 않습니다. 자정 이후 새로운 한 분을 소개해 드릴게요.'
+                : '자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의 방식입니다.'}
           </Txt>
           <View style={{ marginTop: 32 }}>
             {/* 어두운 배경 대비 시인성 — 솔리드 샴페인으로(QA: 버튼 인지 어려움) */}
             <Btn label="매칭함 보기" variant="champ" onPress={() => router.push('/inbox')} />
+            {emptyOnly ? (
+              <Btn
+                label="내 프로필 채우기"
+                variant="outline"
+                labelColor={C.ivory}
+                style={{ marginTop: 10, borderColor: 'rgba(250,247,242,0.4)' }}
+                onPress={() => router.push('/my')}
+              />
+            ) : null}
           </View>
         </View>
       </Screen>
@@ -297,16 +358,16 @@ export default function Curation() {
         >
           <View pointerEvents="none">
             <Txt variant="mono" size={10} color="rgba(15,16,20,0.6)">
-              TODAY · No. 047
+              {items.length > 1 ? `TODAY · ${idx + 1} / ${items.length}` : 'TODAY'}
             </Txt>
             <Txt variant="serifEn" size={15} color="rgba(15,16,20,0.7)" style={{ marginTop: 2 }}>
               Curated for you
             </Txt>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            {/* 메뉴 진입점 — 프로필 설정·크레딧 충전 (App Review: 로그인 후 접근 경로) */}
+            {/* 메뉴 진입점 — 마이페이지(프로필·인증·크레딧). App Review: 로그인 후 접근 경로 */}
             <Pressable
-              onPress={() => router.push('/menu')}
+              onPress={() => router.push('/my')}
               hitSlop={10}
               style={{
                 borderWidth: 1,
@@ -324,7 +385,7 @@ export default function Curation() {
               NEXT IN
             </Txt>
             <Txt variant="mono" size={22} weight="600" color={C.ink2}>
-              23:47
+              {nextIn}
             </Txt>
           </View>
         </View>

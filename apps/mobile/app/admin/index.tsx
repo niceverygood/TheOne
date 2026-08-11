@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { C, RADIUS } from '../../src/theme';
 import { Hairline, Screen, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
@@ -78,7 +78,11 @@ function TabBtn({
 export default function AdminConsole() {
   const router = useRouter();
   const isAdmin = useSignup((s) => s.isAdmin);
-  const [tab, setTab] = useState<'members' | 'verifications' | 'reports'>('members');
+  // 마이페이지 '운영' 섹션에서 ?tab=members|verifications|reports 로 원하는 탭을 바로 연다.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<'members' | 'verifications' | 'reports'>(
+    tabParam === 'reports' || tabParam === 'verifications' ? tabParam : 'members',
+  );
   const [members, setMembers] = useState<AdminPendingMember[]>([]);
   const [reports, setReports] = useState<AdminReportGroup[]>([]);
   const [verifyStats, setVerifyStats] = useState<AdminVerificationStats>(EMPTY_VERIFY_STATS);

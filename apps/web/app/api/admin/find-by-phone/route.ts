@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
         email: true,
         isAdmin: true,
         createdAt: true,
+        birth: true,
+        profile: { select: { region: true, surveyAnswers: true } },
       },
     });
     if (!user) return NextResponse.json({ ok: false, reason: 'not_found' }, { status: 404 });
@@ -54,14 +56,39 @@ export async function POST(req: NextRequest) {
       await prisma.user.update({ where: { id: user.id }, data: { isAdmin: true } });
     }
 
+    // 큐레이션이 비는 이유 진단 — 후보 풀은 '활성·이성·생년 있음'이고,
+    // 뷰어 쪽은 생년이 없으면 매칭 자체가 성립하지 않는다(matching.loadUserForMatch).
+    const statusNow = body?.approve ? 'active' : user.status;
+    const poolSize = await prisma.user.count({
+      where: {
+        status: 'active',
+        gender: user.gender === 'male' ? 'female' : 'male',
+        id: { not: user.id },
+        birth: { not: null },
+        email: { not: { startsWith: 'qa_' } },
+      },
+    });
+    const blockers: string[] = [];
+    if (statusNow !== 'active') blockers.push('가입 심사 미승인(status)');
+    if (!user.birth) blockers.push('생년 없음 — 나이 필터가 성립하지 않아 후보 0명');
+    if (!user.profile?.region) blockers.push('거주 지역 없음 — 기본값 서울로 간주됨');
+    if (poolSize === 0) blockers.push('이성 활성 회원 풀 0명');
+
     return NextResponse.json({
       ok: true,
       user: {
         ...user,
         statusBefore,
-        statusNow: body?.approve ? 'active' : user.status,
+        statusNow,
         isAdminBefore,
         isAdminNow: body?.makeAdmin ? true : user.isAdmin,
+      },
+      curation: {
+        hasBirth: !!user.birth,
+        region: user.profile?.region ?? null,
+        surveyAnswered: user.profile?.surveyAnswers?.length ?? 0,
+        oppositeGenderActivePool: poolSize,
+        blockers,
       },
     });
   } catch (e) {

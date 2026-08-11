@@ -19,7 +19,7 @@ import { useSignup } from './store';
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 /** 보호 API 호출용 Authorization 헤더. 세션 토큰 없으면 빈 객체. */
-function authHeader(): Record<string, string> {
+export function authHeader(): Record<string, string> {
   const token = useSignup.getState().sessionToken;
   return token ? { authorization: `Bearer ${token}` } : {};
 }

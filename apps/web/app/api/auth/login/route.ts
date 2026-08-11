@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByCiHash } from '@theone/db';
+import { findUserByCiHash, syncAdminFlagByPhone } from '@theone/db';
 import { openIdentity } from '@/lib/identity-token';
 import { issueSession } from '@/lib/session';
 
@@ -36,13 +36,15 @@ export async function POST(req: NextRequest) {
     if (user.status === 'suspended') {
       return NextResponse.json({ ok: false, reason: 'suspended' }, { status: 403 });
     }
+    // 운영자 지정 번호(ADMIN_PHONES)면 로그인 시점에 isAdmin 을 맞춘다.
+    const isAdmin = await syncAdminFlagByPhone(user.id, user.phone, user.isAdmin);
     const token = issueSession(user.id);
     return NextResponse.json({
       ok: true,
       userId: user.id,
       status: user.status,
       gender: user.gender,
-      isAdmin: user.isAdmin,
+      isAdmin,
       token,
     });
   } catch (e) {

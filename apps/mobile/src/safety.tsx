@@ -4,6 +4,7 @@ import { showAlert } from './brand-alert';
 import { C, RADIUS } from './theme';
 import { Btn, Hairline, Txt } from './ui';
 import { useSignup } from './store';
+import { authHeader } from './signup-api';
 
 /** 웹 법무 페이지 베이스 — 프로덕션 env(없으면 배포 URL 폴백). */
 const WEB_BASE =
@@ -49,7 +50,8 @@ async function submitReport(args: {
   try {
     const res = await fetch(`${WEB_BASE}/api/safety/report`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      // 서버가 세션으로 신고자를 식별한다(authUserId) — 헤더가 없으면 401.
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify(args),
     });
     const json = await res.json().catch(() => ({}));
@@ -65,7 +67,7 @@ async function submitBlock(args: { blockerId?: string; blockedId: string }): Pro
   try {
     await fetch(`${WEB_BASE}/api/safety/block`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...authHeader() },
       body: JSON.stringify(args),
     });
   } catch {

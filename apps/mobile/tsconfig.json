@@ -4,7 +4,12 @@
     "lib": ["ES2022", "DOM"],
     "jsx": "react-native",
     "noEmit": true,
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
+    }
   },
   "include": ["app", "**/*.ts", "**/*.tsx"]
 }
