@@ -111,3 +111,4 @@ pnpm typecheck && pnpm lint
 - Phase 2 docs(약관·개인정보처리방침)는 변호사 검토 완료 시점에 `v1.0` 태깅, 그 전 외부 노출 금지.
 - 디자인 변경 시 `tokens.ts` ↔ 목업 ↔ Tailwind 설정을 항상 동기화.
 - 환경변수는 `.env.example`에 자리만, 실제 값은 절대 커밋 금지.
+- **코드 작업(기능·수정) 완료 시 별도 확인 없이 자동으로 git commit + push까지 진행한다** (사용자 명시 지침, 영구). typecheck 통과 확인 후 커밋. 단 force-push·hooks 스킵 등 파괴적 git 작업은 여전히 금지 — 일반 커밋·푸시에만 적용.
