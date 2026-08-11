@@ -50,8 +50,30 @@ export async function findUserByCiHash(ciHash: string) {
   if (!ciHash) return null;
   return prisma.user.findUnique({
     where: { ciHash },
-    select: { id: true, status: true, gender: true, isAdmin: true },
+    select: { id: true, status: true, gender: true, isAdmin: true, phone: true },
   });
+}
+
+/**
+ * 운영자 지정 휴대폰(ADMIN_PHONES, 쉼표 구분)이면 User.isAdmin 을 켠다 — 로그인 시 1회 동기화.
+ * 관리자 권한의 진실의 원천은 DB 컬럼이고, 이 함수는 운영자 계정을 수동 DB 작업 없이
+ * 환경변수로 지정할 수 있게 해주는 배선일 뿐이다. 목록이 비어 있으면 아무 것도 하지 않는다.
+ */
+export async function syncAdminFlagByPhone(
+  userId: string,
+  phone: string | null,
+  currentIsAdmin: boolean,
+): Promise<boolean> {
+  const digits = (v: string) => v.replace(/\D/g, '');
+  const allow = (process.env.ADMIN_PHONES ?? '')
+    .split(',')
+    .map((v) => digits(v))
+    .filter((v) => v.length >= 10);
+  if (allow.length === 0 || !phone) return currentIsAdmin;
+  const shouldBeAdmin = allow.includes(digits(phone));
+  if (shouldBeAdmin === currentIsAdmin) return currentIsAdmin;
+  await prisma.user.update({ where: { id: userId }, data: { isAdmin: shouldBeAdmin } });
+  return shouldBeAdmin;
 }
 
 /** 가입 1건 생성(상태 pending). 휴대폰/이메일/CI 중복 시 DuplicateUserError. */

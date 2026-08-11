@@ -43,6 +43,21 @@ describe('maskExternalContact', () => {
     expect(r.masked).toBe(true);
     expect(r.text).not.toContain('minjun92');
   });
+  it('마스킹: 한글 조사가 끼어든 카톡 아이디', () => {
+    const r = maskExternalContact('제 카톡 아이디는 jiyoon99 입니다');
+    expect(r.masked).toBe(true);
+    expect(r.kinds).toContain('kakao');
+    expect(r.text).not.toContain('jiyoon99');
+  });
+  it('마스킹: 인스타 아디', () => {
+    const r = maskExternalContact('인스타 아디 gallery_kim 이에요');
+    expect(r.masked).toBe(true);
+    expect(r.text).not.toContain('gallery_kim');
+  });
+  it('오탐 없음: 키워드만 언급', () => {
+    const r = maskExternalContact('카톡보다 여기가 편해요');
+    expect(r.masked).toBe(false);
+  });
   it('마스킹: 전각 숫자 우회', () => {
     const r = maskExternalContact('０１０１２３４５６７８');
     expect(r.masked).toBe(true);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { C, RADIUS } from '../../src/theme';
 import { Hairline, Screen, Txt } from '../../src/ui';
 import { useSignup } from '../../src/store';
@@ -29,7 +29,11 @@ const CATEGORY_KR: Record<string, string> = {
 export default function AdminConsole() {
   const router = useRouter();
   const isAdmin = useSignup((s) => s.isAdmin);
-  const [tab, setTab] = useState<'members' | 'reports'>('members');
+  // 마이페이지 '운영' 섹션에서 ?tab=members|reports 로 원하는 탭을 바로 연다.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<'members' | 'reports'>(
+    tabParam === 'reports' ? 'reports' : 'members',
+  );
   const [members, setMembers] = useState<AdminPendingMember[]>([]);
   const [reports, setReports] = useState<AdminReportGroup[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);

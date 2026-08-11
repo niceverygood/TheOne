@@ -180,9 +180,9 @@ export default function Curation() {
             </Txt>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            {/* 메뉴 진입점 — 프로필 설정·크레딧 충전 (App Review: 로그인 후 접근 경로) */}
+            {/* 메뉴 진입점 — 마이페이지(프로필·인증·크레딧). App Review: 로그인 후 접근 경로 */}
             <Pressable
-              onPress={() => router.push('/menu')}
+              onPress={() => router.push('/my')}
               hitSlop={10}
               style={{
                 borderWidth: 1,
