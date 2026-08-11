@@ -38,6 +38,15 @@ const PREVIEW_TOTAL = 2;
 
 const HERO_H = 520;
 
+/** 자정(다음 큐레이션)까지 남은 시간 HH:MM. 화면에 고정 문자열을 박아 두지 않는다. */
+function timeToMidnight(): string {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  const mins = Math.max(0, Math.floor((next.getTime() - now.getTime()) / 60000));
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+}
+
 export default function Curation() {
   const router = useRouter();
   const { width: winW } = useWindowDimensions();
@@ -64,6 +73,7 @@ export default function Curation() {
    * 목업 폴백은 세션이 없는 프리뷰/데모(App Review) 경로에서만 유지한다.
    */
   const [empty, setEmpty] = useState(false);
+  const [nextIn, setNextIn] = useState(timeToMidnight);
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
   const hasNext = idx + 1 < items.length;
   const entry: CurationEntry | undefined = items[idx];
@@ -79,6 +89,12 @@ export default function Curation() {
       setOverall(null);
     }
   }
+
+  // 자정까지 남은 시간 — 1분마다 갱신.
+  useEffect(() => {
+    const t = setInterval(() => setNextIn(timeToMidnight()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   // 오늘의 큐레이션을 실데이터로 — 후보(사진·프로필) + 케미(가치관 일치도)가 더원의 킥.
   useEffect(() => {
@@ -342,7 +358,7 @@ export default function Curation() {
         >
           <View pointerEvents="none">
             <Txt variant="mono" size={10} color="rgba(15,16,20,0.6)">
-              TODAY · No. 047
+              {items.length > 1 ? `TODAY · ${idx + 1} / ${items.length}` : 'TODAY'}
             </Txt>
             <Txt variant="serifEn" size={15} color="rgba(15,16,20,0.7)" style={{ marginTop: 2 }}>
               Curated for you
@@ -369,7 +385,7 @@ export default function Curation() {
               NEXT IN
             </Txt>
             <Txt variant="mono" size={22} weight="600" color={C.ink2}>
-              23:47
+              {nextIn}
             </Txt>
           </View>
         </View>
