@@ -424,3 +424,68 @@ export const runDailyCuration = runCurationSlot;
 export async function saveUserPushToken(userId: string, token: string | null): Promise<void> {
   await prisma.user.update({ where: { id: userId }, data: { pushToken: token || null } });
 }
+
+/**
+ * 지난 카드 — 이 회원에게 소개됐던 후보 이력(최신순, 커서 페이지네이션).
+ *
+ * 큐레이션은 매일 사라지지만 "그때 그 분"을 다시 찾아볼 수는 있어야 한다.
+ * 무한 스와이프가 되지 않도록 새 후보를 만들지는 않고, 이미 발송된 CurationLog 만 되짚는다.
+ * 사진은 지금 시점의 공개 단계(별점·상호호감·매칭)만큼만 내려준다.
+ *
+ * cursor 는 이전 페이지 마지막 항목의 sentAt(ISO) — 그보다 과거만 가져온다.
+ */
+export async function getCurationHistory(
+  userId: string,
+  opts: { cursor?: Date | null; limit?: number; includeToday?: boolean } = {},
+) {
+  const limit = Math.max(1, Math.min(50, opts.limit ?? 20));
+  const viewer = await loadUserForMatch(userId);
+  const viewerSurvey = viewer?.survey ?? [];
+
+  // 커서와 '오늘 제외'는 둘 다 sentAt 상한이므로 하나로 합친다(따로 쓰면 뒤엣것이 앞을 덮는다).
+  const bounds = [opts.cursor ?? null, opts.includeToday ? null : kstDayStart()].filter(
+    (d): d is Date => d instanceof Date,
+  );
+  const upperBound = bounds.length ? new Date(Math.min(...bounds.map((d) => d.getTime()))) : null;
+
+  const logs = await prisma.curationLog.findMany({
+    where: {
+      userId,
+      ...(upperBound ? { sentAt: { lt: upperBound } } : {}),
+    },
+    orderBy: { sentAt: 'desc' },
+    take: limit + 1,
+  });
+
+  const page = logs.slice(0, limit);
+  const items = [];
+  for (const log of page) {
+    const { candidate, breakdown } = await hydrateCandidate(log.candidateId, viewerSurvey);
+    if (!candidate) continue; // 탈퇴·삭제된 후보는 이력에서도 감춘다
+    const reveal = await getCurationReveal(userId, log.candidateId);
+    const allPhotos = candidate.profile?.photos ?? [];
+    // 내가 이 사람에게 이미 신청서를 보냈는지 — 이력 카드에 상태로 표시한다.
+    const sentLetter = await prisma.match.findFirst({
+      where: { fromId: userId, toId: log.candidateId },
+      select: { id: true, status: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    items.push({
+      logId: log.id,
+      sentAt: log.sentAt,
+      myRating: log.rating,
+      chemistry: log.chemistry,
+      breakdown,
+      candidate,
+      photos: slicePhotosForReveal(allPhotos, reveal.count),
+      photosTotal: allPhotos.length,
+      reveal,
+      letter: sentLetter ? { matchId: sentLetter.id, status: sentLetter.status } : null,
+    });
+  }
+
+  return {
+    items,
+    nextCursor: logs.length > limit ? (page[page.length - 1]?.sentAt ?? null) : null,
+  };
+}

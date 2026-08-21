@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: [string, Href][] }[] = [
     title: '매칭',
     items: [
       ['오늘의 큐레이션', '/curation'],
+      ['지난 카드', '/history'],
       ['프로필 상세', '/profile'],
       ['만남 신청서', '/letter'],
       ['매칭함', '/inbox'],

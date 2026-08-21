@@ -362,6 +362,24 @@ export interface CurationSlotState {
   nextAt: string;
 }
 
+/** 지난 카드 1건 — 이미 소개됐던 후보 이력. */
+export interface CurationHistoryEntry {
+  logId: string;
+  /** 소개된 시각(ISO). */
+  sentAt: string;
+  /** 내가 남긴 첫인상 별점(1~5). 평가 전이면 null. */
+  myRating: number | null;
+  /** 내가 이 분에게 보낸 만남 신청 상태. 보낸 적 없으면 null. */
+  letter: { matchId: string; status: string } | null;
+  reveal: CurationReveal;
+  candidate: CurationCandidateMeta;
+  chemistry: CurationChemistry | null;
+}
+
+export type CurationHistoryResult =
+  | { ok: true; items: CurationHistoryEntry[]; nextCursor: string | null }
+  | { ok: false; reason: 'unauthorized' | 'validation' | 'server'; message: string };
+
 export type CurationTodayResult =
   | {
       ok: true;

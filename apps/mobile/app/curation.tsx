@@ -85,6 +85,7 @@ export default function Curation() {
   const [nextIn, setNextIn] = useState(() => countdownTo(nextSlotAt()));
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
   const hasNext = idx + 1 < items.length;
+  const hasPrev = idx > 0;
   const entry: CurationEntry | undefined = items[idx];
 
   // 현재 인덱스 후보를 화면 상태에 반영(케미 3축 포함).
@@ -221,14 +222,18 @@ export default function Curation() {
     applyItem(next);
   }
 
-  // 다음 후보로 이동(오늘 목록에 더 있을 때).
+  // 오늘 목록 안에서 앞뒤로 이동. 이미 본 분에게 되돌아갈 수 있어야 한다.
+  function goTo(n: number) {
+    if (n < 0 || n >= items.length) return;
+    setIdx(n);
+    setPhotoIdx(0);
+    applyItem(items[n]);
+  }
   function goNext() {
-    const n = idx + 1;
-    if (n < items.length) {
-      setIdx(n);
-      setPhotoIdx(0);
-      applyItem(items[n]);
-    }
+    goTo(idx + 1);
+  }
+  function goPrev() {
+    goTo(idx - 1);
   }
 
   // Pass — 오늘 목록에 다음 후보가 있으면 그분으로, 마지막이면 자정 갱신 안내로 전환
@@ -237,7 +242,7 @@ export default function Curation() {
       goNext();
       return;
     }
-    showAlert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
+    showAlert('오늘은 넘길까요?', '넘긴 분도 [지난 카드]에서 다시 보실 수 있습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '넘기기', style: 'destructive', onPress: () => setPassed(true) },
     ]);
@@ -306,6 +311,13 @@ export default function Curation() {
           <View style={{ marginTop: 32 }}>
             {/* 어두운 배경 대비 시인성 — 솔리드 샴페인으로(QA: 버튼 인지 어려움) */}
             <Btn label="매칭함 보기" variant="champ" onPress={() => router.push('/inbox')} />
+            <Btn
+              label="지난 카드 보기"
+              variant="outline"
+              labelColor={C.ivory}
+              style={{ marginTop: 10, borderColor: 'rgba(250,247,242,0.4)' }}
+              onPress={() => router.push('/history')}
+            />
             {emptyOnly ? (
               <Btn
                 label="내 프로필 채우기"
@@ -522,6 +534,14 @@ export default function Curation() {
         </View>
 
         <View style={{ marginTop: 32, gap: 10 }}>
+          {/* 오늘 앞서 본 분으로 되돌아가기 — 카드가 한 장뿐이면 숨긴다. */}
+          {hasPrev ? (
+            <Pressable onPress={goPrev} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
+              <Txt variant="mono" size={11} color={C.graySoft}>
+                ← 앞서 본 분 ({idx} / {items.length - 1})
+              </Txt>
+            </Pressable>
+          ) : null}
           <Btn
             label="프로필 더 알아보기"
             variant="champ"

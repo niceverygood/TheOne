@@ -13,6 +13,7 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
     title: '매칭',
     rows: [
       { label: '오늘의 큐레이션', href: '/curation' },
+      { label: '지난 카드', href: '/history' },
       { label: '매칭함', href: '/inbox' },
       { label: '케미 리포트', href: '/chemistry' },
     ],
