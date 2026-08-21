@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurationReveal, getTodayCurations, slicePhotosForReveal } from '@theone/db';
+import {
+  curationNextSlotAt,
+  curationQuotaNow,
+  curationSlotHours,
+  getCurationReveal,
+  getTodayCurations,
+  slicePhotosForReveal,
+} from '@theone/db';
 import { ageFromBirth, chemistryAxes, type IntroSections } from '@theone/shared';
 import { authUserId } from '@/lib/session';
 
@@ -60,9 +67,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         }),
     );
 
-    // 후보 없음
+    // 카드는 정해진 시각(12·15·20시 KST)에 한 장씩 열린다 — 다음 도착 시각을 함께 내려준다.
+    const slots = {
+      hours: curationSlotHours(),
+      released: curationQuotaNow(),
+      nextAt: curationNextSlotAt().toISOString(),
+    };
+
+    // 아직 열린 카드 없음(첫 슬롯 전) 또는 후보 없음
     if (items.length === 0) {
-      return NextResponse.json({ ok: true, candidate: null, chemistry: null, items: [] });
+      return NextResponse.json({ ok: true, candidate: null, chemistry: null, items: [], slots });
     }
     // 하위호환: candidate/chemistry = 첫 후보. 신규 클라는 items[] 로 N명 수신.
     return NextResponse.json({
@@ -70,6 +84,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       candidate: items[0]!.candidate,
       chemistry: items[0]!.chemistry,
       items,
+      slots,
     });
   } catch {
     return NextResponse.json(

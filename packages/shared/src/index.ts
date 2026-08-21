@@ -9,3 +9,4 @@ export * from './survey';
 export * from './matching';
 export * from './credits';
 export * from './photo-studio';
+export * from './curation-slots';

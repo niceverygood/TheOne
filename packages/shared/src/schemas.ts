@@ -352,13 +352,43 @@ export type CurationRateResult =
       message?: string;
     };
 
+/** 카드 발송 슬롯 상태 — 화면의 "다음 카드까지" 카운트다운에 쓴다. */
+export interface CurationSlotState {
+  /** 발송 시각(KST 기준 시). 기본 [12, 15, 20]. */
+  hours: number[];
+  /** 오늘 지금까지 열린 카드 수. */
+  released: number;
+  /** 다음 카드가 열리는 시각(ISO). */
+  nextAt: string;
+}
+
+/** 지난 카드 1건 — 이미 소개됐던 후보 이력. */
+export interface CurationHistoryEntry {
+  logId: string;
+  /** 소개된 시각(ISO). */
+  sentAt: string;
+  /** 내가 남긴 첫인상 별점(1~5). 평가 전이면 null. */
+  myRating: number | null;
+  /** 내가 이 분에게 보낸 만남 신청 상태. 보낸 적 없으면 null. */
+  letter: { matchId: string; status: string } | null;
+  reveal: CurationReveal;
+  candidate: CurationCandidateMeta;
+  chemistry: CurationChemistry | null;
+}
+
+export type CurationHistoryResult =
+  | { ok: true; items: CurationHistoryEntry[]; nextCursor: string | null }
+  | { ok: false; reason: 'unauthorized' | 'validation' | 'server'; message: string };
+
 export type CurationTodayResult =
   | {
       ok: true;
       /** 하위호환: 첫 후보(items[0]). */
       candidate: CurationCandidateMeta | null;
       chemistry: CurationChemistry | null;
-      /** 오늘의 큐레이션 목록(최대 CURATION_PER_DAY). 구버전 응답엔 없을 수 있음. */
+      /** 오늘 열린 카드 목록(슬롯 수만큼). 구버전 응답엔 없을 수 있음. */
       items?: CurationEntry[];
+      /** 카드 발송 슬롯(12·15·20시 KST) 상태. 구버전 서버 응답엔 없을 수 있음. */
+      slots?: CurationSlotState;
     }
   | { ok: false; reason: 'validation' | 'not_found' | 'server'; message: string };

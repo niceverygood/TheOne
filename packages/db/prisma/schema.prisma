@@ -202,6 +202,8 @@ model User {
   status       UserStatus @default(pending)
   /// 앱 내 관리자 화면(가입 심사·신고 처리) 접근 권한 — 웹 어드민 콘솔(Operator)과는 별개.
   isAdmin      Boolean    @default(false) @map("is_admin")
+  /// Expo 푸시 토큰 — 카드 도착(12·15·20시) 알림 발송용. 로그인·앱 진입 시 갱신.
+  pushToken    String?    @map("push_token")
   /// 본인인증 고유식별 (암호화 컬럼 — privacy-design §2-4)
   ciHash       String?    @unique @map("ci_hash")
   /// 추천인(가입 시 추천코드로 연결). 자기참조.

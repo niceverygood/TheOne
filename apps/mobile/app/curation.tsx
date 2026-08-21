@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { showAlert } from '../src/brand-alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { countdownTo, nextSlotAt, slotLabel } from '@theone/shared';
 import { matchReasons } from '@theone/shared';
 import { C } from '../src/theme';
 import { Btn, Screen, StarRating, Txt, VerifiedDots } from '../src/ui';
@@ -38,13 +39,16 @@ const PREVIEW_TOTAL = 2;
 
 const HERO_H = 520;
 
-/** 자정(다음 큐레이션)까지 남은 시간 HH:MM. 화면에 고정 문자열을 박아 두지 않는다. */
-function timeToMidnight(): string {
-  const now = new Date();
-  const next = new Date(now);
-  next.setHours(24, 0, 0, 0);
-  const mins = Math.max(0, Math.floor((next.getTime() - now.getTime()) / 60000));
-  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+/**
+ * 다음 카드가 오는 시각 — 서버가 준 slots.nextAt 이 진실이고,
+ * 서버 응답 전(또는 구버전 서버)에는 기본 슬롯(12·15·20 KST)으로 계산한다.
+ */
+function nextCardAt(serverNextAt?: string | null): Date {
+  if (serverNextAt) {
+    const d = new Date(serverNextAt);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return nextSlotAt();
 }
 
 export default function Curation() {
@@ -73,9 +77,15 @@ export default function Curation() {
    * 목업 폴백은 세션이 없는 프리뷰/데모(App Review) 경로에서만 유지한다.
    */
   const [empty, setEmpty] = useState(false);
-  const [nextIn, setNextIn] = useState(timeToMidnight);
+  /** 서버가 알려준 다음 카드 시각(ISO). 없으면 기본 슬롯으로 계산한다. */
+  const [nextAtIso, setNextAtIso] = useState<string | null>(null);
+  const [slotHours, setSlotHours] = useState<number[]>([12, 15, 20]);
+  /** 오늘 지금까지 열린 카드 수 — 0이면 아직 첫 슬롯 전. */
+  const [releasedToday, setReleasedToday] = useState<number | null>(null);
+  const [nextIn, setNextIn] = useState(() => countdownTo(nextSlotAt()));
   const isBlocked = blocked.includes(CURATION_SUBJECT.id);
   const hasNext = idx + 1 < items.length;
+  const hasPrev = idx > 0;
   const entry: CurationEntry | undefined = items[idx];
 
   // 현재 인덱스 후보를 화면 상태에 반영(케미 3축 포함).
@@ -90,11 +100,13 @@ export default function Curation() {
     }
   }
 
-  // 자정까지 남은 시간 — 1분마다 갱신.
+  // 다음 카드까지 남은 시간 — 1분마다 갱신.
   useEffect(() => {
-    const t = setInterval(() => setNextIn(timeToMidnight()), 60_000);
+    const tick = () => setNextIn(countdownTo(nextCardAt(nextAtIso)));
+    tick();
+    const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [nextAtIso]);
 
   // 오늘의 큐레이션을 실데이터로 — 후보(사진·프로필) + 케미(가치관 일치도)가 더원의 킥.
   useEffect(() => {
@@ -114,6 +126,11 @@ export default function Curation() {
           : r.candidate
             ? [{ candidate: r.candidate, chemistry: r.chemistry }]
             : [];
+      if (r.slots) {
+        setNextAtIso(r.slots.nextAt);
+        setSlotHours(r.slots.hours);
+        setReleasedToday(r.slots.released);
+      }
       setItems(list);
       setIdx(0);
       applyItem(list[0]);
@@ -205,14 +222,18 @@ export default function Curation() {
     applyItem(next);
   }
 
-  // 다음 후보로 이동(오늘 목록에 더 있을 때).
+  // 오늘 목록 안에서 앞뒤로 이동. 이미 본 분에게 되돌아갈 수 있어야 한다.
+  function goTo(n: number) {
+    if (n < 0 || n >= items.length) return;
+    setIdx(n);
+    setPhotoIdx(0);
+    applyItem(items[n]);
+  }
   function goNext() {
-    const n = idx + 1;
-    if (n < items.length) {
-      setIdx(n);
-      setPhotoIdx(0);
-      applyItem(items[n]);
-    }
+    goTo(idx + 1);
+  }
+  function goPrev() {
+    goTo(idx - 1);
   }
 
   // Pass — 오늘 목록에 다음 후보가 있으면 그분으로, 마지막이면 자정 갱신 안내로 전환
@@ -221,7 +242,7 @@ export default function Curation() {
       goNext();
       return;
     }
-    showAlert('오늘은 넘길까요?', '넘긴 큐레이션은 다시 표시되지 않습니다.', [
+    showAlert('오늘은 넘길까요?', '넘긴 분도 [지난 카드]에서 다시 보실 수 있습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '넘기기', style: 'destructive', onPress: () => setPassed(true) },
     ]);
@@ -229,6 +250,9 @@ export default function Curation() {
 
   if (passed || isBlocked || empty) {
     const emptyOnly = empty && !passed && !isBlocked;
+    // 첫 슬롯 전이면 "후보가 없다"가 아니라 "아직 도착 전"이다 — 문구를 구분한다.
+    const beforeFirstSlot = emptyOnly && releasedToday === 0;
+    const firstSlotLabel = slotLabel(slotHours[0] ?? 12);
     return (
       <Screen dark>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
@@ -251,7 +275,7 @@ export default function Curation() {
             </Txt>
           </Pressable>
           <Txt variant="serifEn" size={15} color={C.champagne}>
-            See you tomorrow
+            {beforeFirstSlot ? 'Arriving soon' : 'See you tomorrow'}
           </Txt>
           <Txt
             variant="serifKr"
@@ -261,7 +285,14 @@ export default function Curation() {
             style={{ marginTop: 12, lineHeight: 34 }}
           >
             {emptyOnly ? (
-              <>오늘 소개할 분을{'\n'}찾지 못했습니다</>
+              beforeFirstSlot ? (
+                <>
+                  오늘의 첫 카드는{'\n'}
+                  {firstSlotLabel}에 도착합니다
+                </>
+              ) : (
+                <>오늘 소개할 분을{'\n'}찾지 못했습니다</>
+              )
             ) : isBlocked ? (
               <>오늘의 큐레이션을{'\n'}숨겼습니다</>
             ) : (
@@ -270,7 +301,9 @@ export default function Curation() {
           </Txt>
           <Txt size={13.5} color="rgba(250,247,242,0.72)" style={{ marginTop: 14, lineHeight: 22 }}>
             {emptyOnly
-              ? '조건에 맞는 분이 준비되면 바로 소개해 드릴게요. 프로필과 인증을 채우실수록 더 잘 맞는 분을 만나실 수 있습니다.'
+              ? beforeFirstSlot
+                ? `카드는 하루 세 번, ${slotHours.map(slotLabel).join(' · ')}에 한 장씩 도착합니다. 다음 카드까지 ${nextIn}.`
+                : '조건에 맞는 분이 준비되면 바로 소개해 드릴게요. 프로필과 인증을 채우실수록 더 잘 맞는 분을 만나실 수 있습니다.'
               : isBlocked
                 ? '차단한 회원은 더 이상 큐레이션·매칭에 노출되지 않습니다. 자정 이후 새로운 한 분을 소개해 드릴게요.'
                 : '자정 이후, 더 잘 맞는 한 분을 다시 소개해 드릴게요. 무한히 고르게 하지 않는 것이 더원의 방식입니다.'}
@@ -278,6 +311,13 @@ export default function Curation() {
           <View style={{ marginTop: 32 }}>
             {/* 어두운 배경 대비 시인성 — 솔리드 샴페인으로(QA: 버튼 인지 어려움) */}
             <Btn label="매칭함 보기" variant="champ" onPress={() => router.push('/inbox')} />
+            <Btn
+              label="지난 카드 보기"
+              variant="outline"
+              labelColor={C.ivory}
+              style={{ marginTop: 10, borderColor: 'rgba(250,247,242,0.4)' }}
+              onPress={() => router.push('/history')}
+            />
             {emptyOnly ? (
               <Btn
                 label="내 프로필 채우기"
@@ -382,7 +422,7 @@ export default function Curation() {
               </Txt>
             </Pressable>
             <Txt variant="mono" size={9} color="rgba(15,16,20,0.5)">
-              NEXT IN
+              NEXT CARD
             </Txt>
             <Txt variant="mono" size={22} weight="600" color={C.ink2}>
               {nextIn}
@@ -494,6 +534,14 @@ export default function Curation() {
         </View>
 
         <View style={{ marginTop: 32, gap: 10 }}>
+          {/* 오늘 앞서 본 분으로 되돌아가기 — 카드가 한 장뿐이면 숨긴다. */}
+          {hasPrev ? (
+            <Pressable onPress={goPrev} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
+              <Txt variant="mono" size={11} color={C.graySoft}>
+                ← 앞서 본 분 ({idx} / {items.length - 1})
+              </Txt>
+            </Pressable>
+          ) : null}
           <Btn
             label="프로필 더 알아보기"
             variant="champ"

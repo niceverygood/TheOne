@@ -9,7 +9,10 @@
 import { Platform } from 'react-native';
 
 const DAILY_ID = 'daily-curation';
-export const DAILY_HOUR = 19; // 저녁 7시 — 퇴근 후 확인 시간대
+/** 카드 도착 시각(기기 로컬시간). 서버 슬롯(12·15·20 KST)과 같은 시각. */
+export const CARD_SLOT_HOURS = [12, 15, 20];
+/** @deprecated 단일 시각 예약은 슬롯 3회로 대체됐다. */
+export const DAILY_HOUR = 12;
 
 /** EAS projectId — 원격 푸시 토큰 발급에 필요. app.json extra.eas.projectId. */
 function easProjectId(): string | undefined {
@@ -84,20 +87,26 @@ export async function ensureDailyCurationReminder(): Promise<boolean> {
     }
     if (!granted) return false;
 
-    // 중복 예약 방지 — 동일 ID 취소 후 재등록
+    // 예전 단일 예약(19시)이 남아 있으면 정리한다.
     await N.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
-    await N.scheduleNotificationAsync({
-      identifier: DAILY_ID,
-      content: {
-        title: '오늘의 큐레이션이 도착했어요',
-        body: '정성껏 고른 한 분 — 자정까지만 만나볼 수 있습니다.',
-      },
-      trigger: {
-        type: N.SchedulableTriggerInputTypes.DAILY,
-        hour: DAILY_HOUR,
-        minute: 0,
-      },
-    });
+
+    // 슬롯마다 하나씩 — 서버 푸시가 닿지 않는 환경(FCM 미설정 등)에서도 도착을 알린다.
+    for (const hour of CARD_SLOT_HOURS) {
+      const id = `${DAILY_ID}-${hour}`;
+      await N.cancelScheduledNotificationAsync(id).catch(() => {});
+      await N.scheduleNotificationAsync({
+        identifier: id,
+        content: {
+          title: '오늘의 한 분이 도착했습니다',
+          body: '하루 세 번, 정성껏 고른 한 분을 소개해 드립니다.',
+        },
+        trigger: {
+          type: N.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute: 0,
+        },
+      });
+    }
     return true;
   } catch {
     return false; // 권한·플랫폼 예외는 기능 비활성으로 처리(앱 흐름에 영향 금지)
