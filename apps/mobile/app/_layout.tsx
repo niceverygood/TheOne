@@ -8,7 +8,9 @@ import { NotoSerifKR_500Medium, NotoSerifKR_700Bold } from '@expo-google-fonts/n
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { C } from '../src/theme';
 import { initSentry, Sentry } from '../src/sentry';
-import { ensureDailyCurationReminder } from '../src/notifications';
+import { ensureDailyCurationReminder, registerForPushToken } from '../src/notifications';
+import { registerPushToken } from '../src/signup-api';
+import { useSignup } from '../src/store';
 import { BrandAlertHost } from '../src/brand-alert';
 
 // Sentry 초기화 — DSN 없으면 no-op
@@ -32,10 +34,24 @@ function RootLayout() {
     if (loaded || error) SplashScreen.hideAsync().catch(() => {});
   }, [loaded, error]);
 
-  // 데일리 큐레이션 리마인더(19시) — 실패는 조용히 무시(권한 거부/웹)
+  // 카드 도착 로컬 알림(12·15·20시) — 실패는 조용히 무시(권한 거부/웹)
   useEffect(() => {
     void ensureDailyCurationReminder();
   }, []);
+
+  // 로그인 상태면 서버 푸시 토큰 등록 — 카드가 열릴 때 서버가 직접 알린다.
+  const sessionToken = useSignup((s) => s.sessionToken);
+  useEffect(() => {
+    if (!sessionToken) return;
+    let alive = true;
+    void (async () => {
+      const token = await registerForPushToken().catch(() => null);
+      if (alive && token) void registerPushToken(token);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [sessionToken]);
 
   if (!loaded && !error) return null; // 폰트 준비 전 빈 화면(스플래시 유지)
 

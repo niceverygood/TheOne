@@ -13,6 +13,10 @@ import {
   toAdjacencyKey,
   type Candidate,
   type VerificationType,
+  kstDayStart,
+  releasedSlotCount,
+  parseSlotHours,
+  nextSlotAt,
 } from '@theone/shared';
 import { spendForLetter } from './economy';
 import { listBlockedIds } from './safety';
@@ -108,8 +112,23 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
   };
 }
 
-/** 하루 큐레이션 수 — env CURATION_PER_DAY(기본 1, 1~5). 풀 부족 시 자동 축소(안전). */
-const CURATION_PER_DAY = Math.max(1, Math.min(5, Number(process.env.CURATION_PER_DAY) || 1));
+/**
+ * 카드 발송 시각(KST) — 기본 12·15·20시, env CURATION_SLOT_HOURS 로 조정("12,15,20").
+ * 하루 총 장수는 슬롯 수와 같다: 정해진 시각에 한 장씩만 열린다.
+ */
+export function curationSlotHours(): number[] {
+  return parseSlotHours(process.env.CURATION_SLOT_HOURS);
+}
+
+/** 지금 이 회원이 오늘 가질 수 있는 카드 최대 장수(= 지금까지 열린 슬롯 수). */
+export function curationQuotaNow(now: Date = new Date()): number {
+  return releasedSlotCount(now, curationSlotHours());
+}
+
+/** 다음 카드가 열리는 시각. */
+export function curationNextSlotAt(now: Date = new Date()): Date {
+  return nextSlotAt(now, curationSlotHours());
+}
 
 /** 후보 1명을 화면용(profile·badges 포함)으로 로드 + 케미 3축 계산. */
 export async function hydrateCandidate(candidateId: string, viewerSurvey: number[]) {
@@ -136,13 +155,15 @@ export async function getCandidateForViewer(candidateId: string, viewerId: strin
 }
 
 /**
- * 오늘의 큐레이션 목록 — 하루 최대 CURATION_PER_DAY 명. 이미 오늘 만든 건 그대로 두고,
+ * 오늘의 큐레이션 목록 — 열린 슬롯 수(12·15·20시 KST)만큼. 이미 오늘 만든 건 그대로 두고,
  * 모자라면 점수순으로 새 후보를 골라 CurationLog 에 스냅샷한다(본인·과거·차단·동성 제외).
- * 풀이 부족하면 만들 수 있는 만큼만 — 데드엔드 대신 자연 축소. 점수 동점은 입력 순서.
+ * 12시 이전에는 0장. 풀이 부족하면 만들 수 있는 만큼만 — 데드엔드 대신 자연 축소.
  */
-export async function getTodayCurations(userId: string) {
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+export async function getTodayCurations(userId: string, now: Date = new Date()) {
+  // 하루 경계는 KST 자정 — 서버(UTC) 로컬시간을 쓰면 한국 사용자의 하루가 09:00 에 바뀐다.
+  const startOfToday = kstDayStart(now);
+  // 지금까지 열린 슬롯 수만큼만 배정한다(12시 전이면 0장).
+  const quota = curationQuotaNow(now);
 
   const viewer = await loadUserForMatch(userId);
   const viewerSurvey = viewer?.survey ?? [];
@@ -163,7 +184,7 @@ export async function getTodayCurations(userId: string) {
   }
 
   // 부족분을 점수순으로 채움
-  if (viewer && items.length < CURATION_PER_DAY) {
+  if (viewer && items.length < quota) {
     const seen = await prisma.curationLog.findMany({
       where: { userId },
       select: { candidateId: true },
@@ -219,7 +240,7 @@ export async function getTodayCurations(userId: string) {
       .sort((a, b) => b.s - a.s)
       .map((x) => x.c);
 
-    for (const chosen of ranked.slice(0, CURATION_PER_DAY - items.length)) {
+    for (const chosen of ranked.slice(0, quota - items.length)) {
       const score = scoreCandidate(viewerCand, chosen.cand);
       const chemistry = surveyAlignment(viewerCand.survey, chosen.cand.survey);
       const log = await prisma.curationLog.create({
@@ -356,15 +377,50 @@ export async function rateCuration(logId: string, actorId: string, rating: numbe
   };
 }
 
-/** CRON: 활동 회원 전원에게 오늘의 큐레이션 발송. 발송 건수 반환. */
-export async function runDailyCuration(): Promise<{ sent: number; skipped: number }> {
-  const users = await prisma.user.findMany({ where: { status: 'active' }, select: { id: true } });
+export interface CurationSlotDelivery {
+  userId: string;
+  pushToken: string | null;
+}
+
+/**
+ * CRON: 지금 열린 슬롯까지 활동 회원 전원의 카드를 채운다(12·15·20시에 한 번씩 호출).
+ *
+ * 이미 그 슬롯 몫을 받은 회원은 건너뛰므로 같은 슬롯에 두 번 돌아도 카드가 늘지 않는다
+ * (재시도·중복 실행 안전). 이번 호출에서 새로 카드를 받은 회원만 delivered 로 돌려주고,
+ * 푸시는 호출한 라우트가 보낸다(패키지가 네트워크를 직접 타지 않도록).
+ */
+export async function runCurationSlot(now: Date = new Date()): Promise<{
+  sent: number;
+  skipped: number;
+  delivered: CurationSlotDelivery[];
+}> {
+  const users = await prisma.user.findMany({
+    where: { status: 'active' },
+    select: { id: true, pushToken: true },
+  });
   let sent = 0;
   let skipped = 0;
+  const delivered: CurationSlotDelivery[] = [];
   for (const u of users) {
-    const items = await getTodayCurations(u.id);
-    if (items.length) sent += items.length;
-    else skipped++;
+    const before = await prisma.curationLog.count({
+      where: { userId: u.id, sentAt: { gte: kstDayStart(now) } },
+    });
+    const items = await getTodayCurations(u.id, now);
+    const added = items.length - before;
+    if (added > 0) {
+      sent += added;
+      delivered.push({ userId: u.id, pushToken: u.pushToken });
+    } else {
+      skipped++;
+    }
   }
-  return { sent, skipped };
+  return { sent, skipped, delivered };
+}
+
+/** 하위호환 별칭 — 기존 CRON 경로가 쓰던 이름. */
+export const runDailyCuration = runCurationSlot;
+
+/** 회원의 Expo 푸시 토큰 저장/갱신. 빈 값이면 해제. */
+export async function saveUserPushToken(userId: string, token: string | null): Promise<void> {
+  await prisma.user.update({ where: { id: userId }, data: { pushToken: token || null } });
 }

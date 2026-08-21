@@ -586,3 +586,22 @@ export async function reviewAdminVerification(args: {
     return { ok: false, reason: 'server' };
   }
 }
+
+// ── 카드 도착 푸시 ────────────────────────────────────────────────
+/**
+ * Expo 푸시 토큰을 서버에 등록 — 12·15·20시 카드 도착 알림 수신용.
+ * best-effort: 실패해도 앱 흐름을 막지 않는다(로컬 예약 알림이 보완).
+ */
+export async function registerPushToken(token: string | null): Promise<boolean> {
+  if (!API_BASE) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/push/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...authHeader() },
+      body: JSON.stringify({ token }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
