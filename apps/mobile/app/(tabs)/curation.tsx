@@ -7,15 +7,15 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { showAlert } from '../src/brand-alert';
+import { showAlert } from '../../src/brand-alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { countdownTo, nextSlotAt, slotLabel } from '@theone/shared';
 import { matchReasons } from '@theone/shared';
-import { C } from '../src/theme';
-import { Btn, Screen, StarRating, Txt, VerifiedDots } from '../src/ui';
-import { previewPortraits } from '../src/preview-assets';
-import { useSignup } from '../src/store';
-import { fetchTodayCuration, rateCuration } from '../src/signup-api';
+import { C } from '../../src/theme';
+import { Btn, Screen, StarRating, Txt, VerifiedDots } from '../../src/ui';
+import { previewPortraits } from '../../src/preview-assets';
+import { useSignup } from '../../src/store';
+import { fetchTodayCuration, rateCuration } from '../../src/signup-api';
 import type { CurationCandidateMeta, CurationEntry } from '@theone/shared';
 
 /** API 미설정/설문 미완료 시 보여줄 목업 케미 3축. */
@@ -256,24 +256,6 @@ export default function Curation() {
     return (
       <Screen dark>
         <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
-          {/* 메뉴 진입점 — 후보가 없어도 마이페이지(프로필·인증·크레딧)로 갈 수 있어야 한다 */}
-          <Pressable
-            onPress={() => router.push('/my')}
-            hitSlop={10}
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 24,
-              borderWidth: 1,
-              borderColor: 'rgba(250,247,242,0.35)',
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-            }}
-          >
-            <Txt variant="mono" size={10} color={C.ivory}>
-              ☰ MENU
-            </Txt>
-          </Pressable>
           <Txt variant="serifEn" size={15} color={C.champagne}>
             {beforeFirstSlot ? 'Arriving soon' : 'See you tomorrow'}
           </Txt>
@@ -311,13 +293,6 @@ export default function Curation() {
           <View style={{ marginTop: 32 }}>
             {/* 어두운 배경 대비 시인성 — 솔리드 샴페인으로(QA: 버튼 인지 어려움) */}
             <Btn label="매칭함 보기" variant="champ" onPress={() => router.push('/inbox')} />
-            <Btn
-              label="지난 카드 보기"
-              variant="outline"
-              labelColor={C.ivory}
-              style={{ marginTop: 10, borderColor: 'rgba(250,247,242,0.4)' }}
-              onPress={() => router.push('/history')}
-            />
             {emptyOnly ? (
               <Btn
                 label="내 프로필 채우기"
@@ -405,22 +380,6 @@ export default function Curation() {
             </Txt>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            {/* 메뉴 진입점 — 마이페이지(프로필·인증·크레딧). App Review: 로그인 후 접근 경로 */}
-            <Pressable
-              onPress={() => router.push('/my')}
-              hitSlop={10}
-              style={{
-                borderWidth: 1,
-                borderColor: 'rgba(15,16,20,0.35)',
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                marginBottom: 8,
-              }}
-            >
-              <Txt variant="mono" size={10} color={C.ink2}>
-                ☰ MENU
-              </Txt>
-            </Pressable>
             <Txt variant="mono" size={9} color="rgba(15,16,20,0.5)">
               NEXT CARD
             </Txt>

@@ -362,6 +362,25 @@ export interface CurationSlotState {
   nextAt: string;
 }
 
+/** 둘러보기 목록의 회원 1명 — 직접식별정보 없이 카드에 필요한 것만. */
+export interface BrowseMember {
+  id: string;
+  age: number | null;
+  region: string | null;
+  jobCategory: string;
+  jobDetail: string | null;
+  /** 대표 사진 1장(없으면 null). 단계별 공개는 프로필 상세가 담당. */
+  photo: string | null;
+  badges: VerificationType[];
+  quote: string | null;
+  /** 이미 대기중 신청서를 보낸 상대. */
+  alreadyRequested: boolean;
+}
+
+export type BrowseMembersResult =
+  | { ok: true; items: BrowseMember[]; nextCursor: string | null }
+  | { ok: false; reason: 'unauthorized' | 'validation' | 'server'; message: string };
+
 /** 지난 카드 1건 — 이미 소개됐던 후보 이력. */
 export interface CurationHistoryEntry {
   logId: string;
