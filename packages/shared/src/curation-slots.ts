@@ -15,6 +15,15 @@ const MS_PER_MIN = 60_000;
 /** 기본 슬롯 시각(KST 기준 시). */
 export const DEFAULT_CURATION_SLOT_HOURS = [12, 15, 20] as const;
 
+/** 슬롯 한 번에 도착하는 카드 장수. 기본 2장 — 12·15·20시 × 2 = 하루 6장. */
+export const DEFAULT_CARDS_PER_SLOT = 2;
+
+/** 슬롯당 장수 정규화 — 1~10 사이 정수만, 벗어나면 기본값. */
+export function normalizeCardsPerSlot(v: unknown): number {
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) && n >= 1 && n <= 10 ? n : DEFAULT_CARDS_PER_SLOT;
+}
+
 /** 슬롯 시각 목록을 정규화 — 0~23 정수만, 오름차순, 중복 제거. */
 export function normalizeSlotHours(hours: readonly number[]): number[] {
   const ok = hours.map((h) => Math.trunc(h)).filter((h) => Number.isFinite(h) && h >= 0 && h <= 23);
@@ -74,6 +83,18 @@ export function nextSlotAt(
   const upcoming = slots.find((h) => minutesIntoDay < h * 60);
   if (upcoming !== undefined) return new Date(day + upcoming * 60 * MS_PER_MIN);
   return new Date(day + 24 * 60 * MS_PER_MIN + slots[0]! * 60 * MS_PER_MIN);
+}
+
+/**
+ * 지금까지 열린 카드 장수 — 열린 슬롯 수 × 슬롯당 장수.
+ * 12시 전 0장 · 12시 2장 · 15시 4장 · 20시 6장(기본값 기준).
+ */
+export function releasedCardCount(
+  now: Date = new Date(),
+  hours: readonly number[] = DEFAULT_CURATION_SLOT_HOURS,
+  perSlot: number = DEFAULT_CARDS_PER_SLOT,
+): number {
+  return releasedSlotCount(now, hours) * normalizeCardsPerSlot(perSlot);
 }
 
 /** 슬롯 시각 표기 — "12:00". 화면·푸시 문구에 그대로 쓴다. */

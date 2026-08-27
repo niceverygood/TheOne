@@ -356,7 +356,9 @@ export type CurationRateResult =
 export interface CurationSlotState {
   /** 발송 시각(KST 기준 시). 기본 [12, 15, 20]. */
   hours: number[];
-  /** 오늘 지금까지 열린 카드 수. */
+  /** 슬롯 한 번에 도착하는 장수. 기본 2. 구버전 서버 응답엔 없을 수 있음. */
+  perSlot?: number;
+  /** 오늘 지금까지 열린 카드 수(= 열린 슬롯 수 × perSlot). */
   released: number;
   /** 다음 카드가 열리는 시각(ISO). */
   nextAt: string;

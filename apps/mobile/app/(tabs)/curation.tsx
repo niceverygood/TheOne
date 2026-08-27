@@ -80,6 +80,8 @@ export default function Curation() {
   /** 서버가 알려준 다음 카드 시각(ISO). 없으면 기본 슬롯으로 계산한다. */
   const [nextAtIso, setNextAtIso] = useState<string | null>(null);
   const [slotHours, setSlotHours] = useState<number[]>([12, 15, 20]);
+  /** 슬롯 한 번에 오는 장수 — 서버가 알려준다(구버전 응답이면 기본 2장). */
+  const [perSlot, setPerSlot] = useState(2);
   /** 오늘 지금까지 열린 카드 수 — 0이면 아직 첫 슬롯 전. */
   const [releasedToday, setReleasedToday] = useState<number | null>(null);
   const [nextIn, setNextIn] = useState(() => countdownTo(nextSlotAt()));
@@ -129,6 +131,7 @@ export default function Curation() {
       if (r.slots) {
         setNextAtIso(r.slots.nextAt);
         setSlotHours(r.slots.hours);
+        setPerSlot(r.slots.perSlot ?? 2);
         setReleasedToday(r.slots.released);
       }
       setItems(list);
@@ -284,7 +287,7 @@ export default function Curation() {
           <Txt size={13.5} color="rgba(250,247,242,0.72)" style={{ marginTop: 14, lineHeight: 22 }}>
             {emptyOnly
               ? beforeFirstSlot
-                ? `카드는 하루 세 번, ${slotHours.map(slotLabel).join(' · ')}에 한 장씩 도착합니다. 다음 카드까지 ${nextIn}.`
+                ? `카드는 ${slotHours.map(slotLabel).join(' · ')}에 ${perSlot}장씩 도착합니다. 다음 카드까지 ${nextIn}.`
                 : '조건에 맞는 분이 준비되면 바로 소개해 드릴게요. 프로필과 인증을 채우실수록 더 잘 맞는 분을 만나실 수 있습니다.'
               : isBlocked
                 ? '차단한 회원은 더 이상 큐레이션·매칭에 노출되지 않습니다. 자정 이후 새로운 한 분을 소개해 드릴게요.'

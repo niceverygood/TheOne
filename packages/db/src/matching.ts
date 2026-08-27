@@ -14,7 +14,8 @@ import {
   type Candidate,
   type VerificationType,
   kstDayStart,
-  releasedSlotCount,
+  releasedCardCount,
+  normalizeCardsPerSlot,
   parseSlotHours,
   nextSlotAt,
 } from '@theone/shared';
@@ -114,15 +115,22 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
 
 /**
  * 카드 발송 시각(KST) — 기본 12·15·20시, env CURATION_SLOT_HOURS 로 조정("12,15,20").
- * 하루 총 장수는 슬롯 수와 같다: 정해진 시각에 한 장씩만 열린다.
  */
 export function curationSlotHours(): number[] {
   return parseSlotHours(process.env.CURATION_SLOT_HOURS);
 }
 
-/** 지금 이 회원이 오늘 가질 수 있는 카드 최대 장수(= 지금까지 열린 슬롯 수). */
+/** 슬롯 한 번에 도착하는 장수 — 기본 2장, env CURATION_CARDS_PER_SLOT 로 조정. */
+export function curationCardsPerSlot(): number {
+  return normalizeCardsPerSlot(process.env.CURATION_CARDS_PER_SLOT);
+}
+
+/**
+ * 지금 이 회원이 오늘 가질 수 있는 카드 최대 장수 = 열린 슬롯 수 × 슬롯당 장수.
+ * 기본값 기준 12시 전 0장 · 12시 2장 · 15시 4장 · 20시 6장.
+ */
 export function curationQuotaNow(now: Date = new Date()): number {
-  return releasedSlotCount(now, curationSlotHours());
+  return releasedCardCount(now, curationSlotHours(), curationCardsPerSlot());
 }
 
 /** 다음 카드가 열리는 시각. */
@@ -244,7 +252,9 @@ export async function getTodayCurations(userId: string, now: Date = new Date()) 
       const score = scoreCandidate(viewerCand, chosen.cand);
       const chemistry = surveyAlignment(viewerCand.survey, chosen.cand.survey);
       const log = await prisma.curationLog.create({
-        data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
+        // sentAt 을 now 로 못박는다 — DB 기본값(now())을 쓰면 호출자가 넘긴 시각과
+        // 어긋나 '오늘 발송분' 복원 쿼리가 방금 만든 카드를 못 찾는다(중복 생성).
+        data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry, sentAt: now },
       });
       const { candidate, breakdown } = await hydrateCandidate(chosen.raw.id, viewerSurvey);
       items.push({ log, candidate, breakdown });
@@ -380,6 +390,8 @@ export async function rateCuration(logId: string, actorId: string, rating: numbe
 export interface CurationSlotDelivery {
   userId: string;
   pushToken: string | null;
+  /** 이번 호출에서 새로 배정된 카드 수 — 푸시 문구에 그대로 쓴다. */
+  added: number;
 }
 
 /**
@@ -409,7 +421,7 @@ export async function runCurationSlot(now: Date = new Date()): Promise<{
     const added = items.length - before;
     if (added > 0) {
       sent += added;
-      delivered.push({ userId: u.id, pushToken: u.pushToken });
+      delivered.push({ userId: u.id, pushToken: u.pushToken, added });
     } else {
       skipped++;
     }

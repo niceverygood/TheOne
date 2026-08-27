@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  curationCardsPerSlot,
   curationNextSlotAt,
   curationQuotaNow,
   curationSlotHours,
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // 카드는 정해진 시각(12·15·20시 KST)에 한 장씩 열린다 — 다음 도착 시각을 함께 내려준다.
     const slots = {
       hours: curationSlotHours(),
+      perSlot: curationCardsPerSlot(),
       released: curationQuotaNow(),
       nextAt: curationNextSlotAt().toISOString(),
     };
