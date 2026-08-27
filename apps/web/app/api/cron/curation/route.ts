@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
   for (const d of result.delivered) {
     if (!d.pushToken) continue;
     const ok = await sendExpoPush(d.pushToken, {
-      title: '오늘의 한 분이 도착했습니다',
+      // 슬롯마다 여러 장이 오므로 실제 배정된 장수를 그대로 말한다.
+      title: d.added > 1 ? `새로운 카드 ${d.added}장이 도착했습니다` : '새로운 카드가 도착했습니다',
       body: '지금 확인해 보세요.',
       data: { screen: 'curation' },
     });

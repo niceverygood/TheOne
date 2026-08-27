@@ -6,6 +6,7 @@ import type {
   CurationCandidateMeta,
   CurationChemistry,
   CurationRateResult,
+  BrowseMembersResult,
   CurationHistoryResult,
   CurationTodayResult,
   IntroSections,
@@ -621,6 +622,34 @@ export async function fetchCurationHistory(cursor?: string | null): Promise<Cura
       headers: authHeader(),
     });
     return (await res.json()) as CurationHistoryResult;
+  } catch {
+    return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
+  }
+}
+
+// ── 회원 둘러보기 ─────────────────────────────────────────────────
+export interface BrowseQuery {
+  cursor?: string | null;
+  region?: string | null;
+  minAge?: number | null;
+  maxAge?: number | null;
+  verifiedOnly?: boolean;
+}
+
+/** 회원 목록(최근 가입순, 커서 페이지네이션). 큐레이션과 별개 탐색 경로. */
+export async function fetchBrowseMembers(q: BrowseQuery = {}): Promise<BrowseMembersResult> {
+  if (!API_BASE) return { ok: false, reason: 'server', message: 'API 주소가 설정되지 않았습니다.' };
+  try {
+    const qs = new URLSearchParams({ limit: '20' });
+    if (q.cursor) qs.set('cursor', q.cursor);
+    if (q.region) qs.set('region', q.region);
+    if (q.minAge != null) qs.set('minAge', String(q.minAge));
+    if (q.maxAge != null) qs.set('maxAge', String(q.maxAge));
+    if (q.verifiedOnly) qs.set('verifiedOnly', '1');
+    const res = await fetch(`${API_BASE}/api/members/browse?${qs.toString()}`, {
+      headers: authHeader(),
+    });
+    return (await res.json()) as BrowseMembersResult;
   } catch {
     return { ok: false, reason: 'server', message: '네트워크 오류가 발생했어요.' };
   }

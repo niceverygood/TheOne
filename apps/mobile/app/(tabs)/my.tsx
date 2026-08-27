@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { C } from '../src/theme';
-import { Hairline, Screen, Txt } from '../src/ui';
-import { useSignup } from '../src/store';
-import { fetchCreditBalance } from '../src/signup-api';
+import { C } from '../../src/theme';
+import { Hairline, Screen, Txt } from '../../src/ui';
+import { useSignup } from '../../src/store';
+import { fetchCreditBalance } from '../../src/signup-api';
 
 type Row = { label: string; href: Href; hint?: string };
 
@@ -82,12 +82,6 @@ export default function MyPage() {
   return (
     <Screen>
       <View style={{ padding: 24 }}>
-        <Pressable onPress={() => router.back()}>
-          <Txt variant="mono" size={18} color={C.ink2}>
-            ←
-          </Txt>
-        </Pressable>
-
         <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginTop: 22 }}>
           My Page
         </Txt>

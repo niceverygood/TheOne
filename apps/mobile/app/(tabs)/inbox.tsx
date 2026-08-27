@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ImageSourcePropType, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { C, RADIUS } from '../src/theme';
-import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../src/ui';
-import { previewPortraits } from '../src/preview-assets';
-import { useSignup } from '../src/store';
-import { fetchReceivedMatches, respondToMatch } from '../src/signup-api';
-import { showAlert } from '../src/brand-alert';
+import { C, RADIUS } from '../../src/theme';
+import { Btn, Portrait, Screen, Txt, VerifiedDots } from '../../src/ui';
+import { previewPortraits } from '../../src/preview-assets';
+import { useSignup } from '../../src/store';
+import { fetchReceivedMatches, respondToMatch } from '../../src/signup-api';
+import { showAlert } from '../../src/brand-alert';
 
 interface Letter {
   id: string;
@@ -130,38 +130,10 @@ export default function Inbox() {
   return (
     <Screen>
       <View style={{ padding: 24 }}>
-        {/* 뒤로가기 — 이전 화면(없으면 큐레이션 홈)으로 (QA: 상단 back 부재) */}
-        <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/curation'))}
-          hitSlop={10}
-          style={{ marginBottom: 10 }}
-        >
-          <Txt variant="mono" size={18} color={C.ink2}>
-            ←
-          </Txt>
-        </Pressable>
-        <View
-          style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
-        >
-          <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 6 }}>
-            The Inbox
-          </Txt>
-          {/* 메뉴 진입점 — 프로필 설정·크레딧 충전 */}
-          <Pressable
-            onPress={() => router.push('/menu')}
-            hitSlop={10}
-            style={{
-              borderWidth: 1,
-              borderColor: C.hairLight,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-            }}
-          >
-            <Txt variant="mono" size={10} color={C.gray}>
-              ☰ MENU
-            </Txt>
-          </Pressable>
-        </View>
+        {/* 탭 루트 — 뒤로가기·MENU 는 하단 탭이 대신한다 */}
+        <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginBottom: 6 }}>
+          The Inbox
+        </Txt>
         <Txt variant="serifKr" size={27} weight="700" color={C.ink2}>
           받은 신청서
         </Txt>

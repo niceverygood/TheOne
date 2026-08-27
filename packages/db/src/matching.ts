@@ -14,7 +14,8 @@ import {
   type Candidate,
   type VerificationType,
   kstDayStart,
-  releasedSlotCount,
+  releasedCardCount,
+  normalizeCardsPerSlot,
   parseSlotHours,
   nextSlotAt,
 } from '@theone/shared';
@@ -114,15 +115,22 @@ async function loadUserForMatch(userId: string): Promise<UserForMatch | null> {
 
 /**
  * 카드 발송 시각(KST) — 기본 12·15·20시, env CURATION_SLOT_HOURS 로 조정("12,15,20").
- * 하루 총 장수는 슬롯 수와 같다: 정해진 시각에 한 장씩만 열린다.
  */
 export function curationSlotHours(): number[] {
   return parseSlotHours(process.env.CURATION_SLOT_HOURS);
 }
 
-/** 지금 이 회원이 오늘 가질 수 있는 카드 최대 장수(= 지금까지 열린 슬롯 수). */
+/** 슬롯 한 번에 도착하는 장수 — 기본 2장, env CURATION_CARDS_PER_SLOT 로 조정. */
+export function curationCardsPerSlot(): number {
+  return normalizeCardsPerSlot(process.env.CURATION_CARDS_PER_SLOT);
+}
+
+/**
+ * 지금 이 회원이 오늘 가질 수 있는 카드 최대 장수 = 열린 슬롯 수 × 슬롯당 장수.
+ * 기본값 기준 12시 전 0장 · 12시 2장 · 15시 4장 · 20시 6장.
+ */
 export function curationQuotaNow(now: Date = new Date()): number {
-  return releasedSlotCount(now, curationSlotHours());
+  return releasedCardCount(now, curationSlotHours(), curationCardsPerSlot());
 }
 
 /** 다음 카드가 열리는 시각. */
@@ -244,7 +252,9 @@ export async function getTodayCurations(userId: string, now: Date = new Date()) 
       const score = scoreCandidate(viewerCand, chosen.cand);
       const chemistry = surveyAlignment(viewerCand.survey, chosen.cand.survey);
       const log = await prisma.curationLog.create({
-        data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry },
+        // sentAt 을 now 로 못박는다 — DB 기본값(now())을 쓰면 호출자가 넘긴 시각과
+        // 어긋나 '오늘 발송분' 복원 쿼리가 방금 만든 카드를 못 찾는다(중복 생성).
+        data: { userId, candidateId: chosen.raw.id, action: 'sent', score, chemistry, sentAt: now },
       });
       const { candidate, breakdown } = await hydrateCandidate(chosen.raw.id, viewerSurvey);
       items.push({ log, candidate, breakdown });
@@ -380,6 +390,8 @@ export async function rateCuration(logId: string, actorId: string, rating: numbe
 export interface CurationSlotDelivery {
   userId: string;
   pushToken: string | null;
+  /** 이번 호출에서 새로 배정된 카드 수 — 푸시 문구에 그대로 쓴다. */
+  added: number;
 }
 
 /**
@@ -409,7 +421,7 @@ export async function runCurationSlot(now: Date = new Date()): Promise<{
     const added = items.length - before;
     if (added > 0) {
       sent += added;
-      delivered.push({ userId: u.id, pushToken: u.pushToken });
+      delivered.push({ userId: u.id, pushToken: u.pushToken, added });
     } else {
       skipped++;
     }
@@ -487,5 +499,93 @@ export async function getCurationHistory(
   return {
     items,
     nextCursor: logs.length > limit ? (page[page.length - 1]?.sentAt ?? null) : null,
+  };
+}
+
+export interface BrowseFilters {
+  /** 거주 지역(한글 시도). 미지정이면 전체. */
+  region?: string | null;
+  /** 나이 범위. 미지정이면 전체. */
+  minAge?: number | null;
+  maxAge?: number | null;
+  /** 인증 뱃지를 1개 이상 가진 회원만. */
+  verifiedOnly?: boolean;
+}
+
+/**
+ * 회원 둘러보기 — 큐레이션과 별개로 회원을 직접 찾아 만남을 신청하는 경로.
+ *
+ * 카드 덱·무한 스와이프가 아니라 **커서 페이지네이션 목록**이다(CLAUDE.md §3 금기 유지).
+ * 이성·활동 회원만, 본인·차단(양방향)·QA 계정은 제외한다. 정렬은 최근 가입순 —
+ * 점수순으로 줄을 세우면 상위 몇 명에게 신청이 쏠린다.
+ *
+ * cursor 는 이전 페이지 마지막 회원의 createdAt(ISO).
+ */
+export async function browseMembers(
+  viewerId: string,
+  opts: { cursor?: Date | null; limit?: number; filters?: BrowseFilters } = {},
+) {
+  const limit = Math.max(1, Math.min(50, opts.limit ?? 20));
+  const f = opts.filters ?? {};
+
+  const self = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: { gender: true, email: true, status: true },
+  });
+  if (!self || self.status !== 'active') return { items: [], nextCursor: null };
+
+  const oppGender = self.gender === 'male' ? 'female' : 'male';
+  const blockedIds = await listBlockedIds(viewerId);
+  const isQaViewer = !!self.email?.startsWith('qa_');
+
+  // 나이 범위 → 생년 범위(나이가 많을수록 생년이 이르다).
+  const now = new Date();
+  const birthCeil =
+    f.minAge != null ? new Date(now.getFullYear() - f.minAge, now.getMonth(), now.getDate()) : null;
+  const birthFloor =
+    f.maxAge != null
+      ? new Date(now.getFullYear() - f.maxAge - 1, now.getMonth(), now.getDate())
+      : null;
+
+  const rows = await prisma.user.findMany({
+    where: {
+      status: 'active',
+      gender: oppGender,
+      id: { notIn: [viewerId, ...blockedIds] },
+      birth: {
+        not: null,
+        ...(birthCeil ? { lte: birthCeil } : {}),
+        ...(birthFloor ? { gte: birthFloor } : {}),
+      },
+      ...(isQaViewer ? {} : { email: { not: { startsWith: 'qa_' } } }),
+      ...(f.region ? { profile: { region: f.region } } : {}),
+      // 유효한(만료 전) 인증 뱃지 보유자만 — 조회 후 거르면 페이지가 뭉텅이로 비어
+      // 다음 커서까지 끊긴다. 관계 조건으로 DB 에서 걸러야 페이지가 온전히 찬다.
+      ...(f.verifiedOnly ? { badges: { some: { expiresAt: { gt: now } } } } : {}),
+      ...(opts.cursor ? { createdAt: { lt: opts.cursor } } : {}),
+    },
+    include: {
+      profile: { select: { region: true, jobDetail: true, photos: true, introSections: true } },
+      badges: { where: { expiresAt: { gt: now } }, select: { type: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit + 1,
+  });
+
+  const page = rows.slice(0, limit);
+
+  // 이미 대기중 신청서를 보낸 상대는 목록에서 '신청함'으로 표시한다(중복 발송 방지 UX).
+  const pending = await prisma.match.findMany({
+    where: { fromId: viewerId, toId: { in: page.map((p) => p.id) }, status: 'pending' },
+    select: { toId: true },
+  });
+  const pendingIds = new Set(pending.map((p) => p.toId));
+
+  return {
+    items: page.map((u) => ({
+      user: u,
+      alreadyRequested: pendingIds.has(u.id),
+    })),
+    nextCursor: rows.length > limit ? (page[page.length - 1]?.createdAt ?? null) : null,
   };
 }

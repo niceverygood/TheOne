@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_CARDS_PER_SLOT,
   DEFAULT_CURATION_SLOT_HOURS,
+  normalizeCardsPerSlot,
+  releasedCardCount,
   countdownTo,
   kstDayStart,
   kstHourToday,
@@ -59,6 +62,24 @@ describe('큐레이션 슬롯 (12·15·20 KST)', () => {
     expect(parseSlotHours('')).toEqual([12, 15, 20]);
     expect(parseSlotHours('abc,99')).toEqual([12, 15, 20]);
     expect(parseSlotHours(undefined)).toEqual([12, 15, 20]);
+  });
+
+  it('슬롯 한 번에 2장 — 12시 전 0 · 12시 2 · 15시 4 · 20시 6', () => {
+    expect(DEFAULT_CARDS_PER_SLOT).toBe(2);
+    expect(releasedCardCount(kst(11, 59))).toBe(0);
+    expect(releasedCardCount(kst(12, 0))).toBe(2);
+    expect(releasedCardCount(kst(15, 0))).toBe(4);
+    expect(releasedCardCount(kst(20, 0))).toBe(6);
+    expect(releasedCardCount(kst(23, 59))).toBe(6);
+  });
+
+  it('슬롯당 장수는 조정 가능하고, 범위를 벗어나면 기본값', () => {
+    expect(releasedCardCount(kst(20, 0), [12, 15, 20], 1)).toBe(3);
+    expect(releasedCardCount(kst(20, 0), [12, 15, 20], 3)).toBe(9);
+    expect(normalizeCardsPerSlot('2')).toBe(2);
+    expect(normalizeCardsPerSlot(0)).toBe(DEFAULT_CARDS_PER_SLOT);
+    expect(normalizeCardsPerSlot(99)).toBe(DEFAULT_CARDS_PER_SLOT);
+    expect(normalizeCardsPerSlot(undefined)).toBe(DEFAULT_CARDS_PER_SLOT);
   });
 
   it('슬롯 표기', () => {

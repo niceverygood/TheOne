@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Image, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { CurationHistoryEntry } from '@theone/shared';
-import { C } from '../src/theme';
-import { Hairline, Screen, Txt } from '../src/ui';
-import { useSignup } from '../src/store';
-import { fetchCurationHistory } from '../src/signup-api';
-import { previewPortraits } from '../src/preview-assets';
+import { C } from '../../src/theme';
+import { Hairline, Screen, Txt } from '../../src/ui';
+import { useSignup } from '../../src/store';
+import { fetchCurationHistory } from '../../src/signup-api';
+import { previewPortraits } from '../../src/preview-assets';
 
 const LETTER_STATUS_KR: Record<string, string> = {
   pending: '신청서 보냄 · 답변 대기',
@@ -73,11 +73,6 @@ export default function History() {
   return (
     <Screen scroll={false}>
       <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
-        <Pressable onPress={() => router.back()}>
-          <Txt variant="mono" size={18} color={C.ink2}>
-            ←
-          </Txt>
-        </Pressable>
         <Txt variant="serifEn" size={15} color={C.champagne} style={{ marginTop: 22 }}>
           Past Cards
         </Txt>
